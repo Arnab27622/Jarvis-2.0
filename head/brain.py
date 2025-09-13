@@ -136,16 +136,7 @@ def brain(text):
             wiki_search(text)
             return
 
-        animate_thread = threading.Thread(
-            target=print_animated_message, args=(response,)
-        )
-        speak_thread = threading.Thread(target=speak, args=(response,))
-
-        animate_thread.start()
-        speak_thread.start()
-
-        animate_thread.join()
-        speak_thread.join()
+        speak(response)
 
         with qa_lock:
             qa_dict[text] = response

@@ -151,6 +151,8 @@ def process_command(text):
         ui.press("volumemute")
     elif "screenshot" in text or "take screenshot" in text:
         take_screenshot()
+    elif "check internet speed" in text or "run speed test" in text or "check internet connection" in text:
+        check_internet_speed()
     elif "scroll up" in text or "scroll down" in text:
         handle_scroll(text)
     elif "scroll to top" in text or "scroll to the top" in text:
@@ -188,3 +190,4 @@ def process_command(text):
         os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
     else:
         brain(text)
+        time.sleep(0.5)

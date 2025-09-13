@@ -22,7 +22,6 @@ from function.activity_monitor import (
 
 def jarvis():
     wish()
-
     command()
 
 

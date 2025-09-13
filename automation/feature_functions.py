@@ -8,6 +8,8 @@ import time
 from head.mouth import speak
 import pyautogui as ui
 import pygetwindow as gw
+import speedtest
+import threading
 
 
 def handle_minimize():
@@ -303,3 +305,69 @@ def recall_info():
             speak(f"On {timestamp}, you said: {info}")
     else:
         speak("I don't have any information stored to recall")
+
+
+def check_internet_speed():
+    """Check and speak internet download and upload speeds with error handling"""
+    def run_speed_test():
+        try:
+            speak("Testing your internet speed, this may take a moment...")
+            
+            # Create speedtest object with timeout
+            st = speedtest.Speedtest()
+            st.timeout = 60  # Set timeout to 60 seconds
+            
+            # Get the best server
+            best_server = st.get_best_server()
+            print(f"Testing against server: {best_server['sponsor']} ({best_server['name']})")
+            
+            # Test download speed
+            speak("Measuring download speed...")
+            download_speed = st.download() / 1_000_000  # Convert to Mbps :cite[2]
+            
+            # Test upload speed
+            speak("Measuring upload speed...")
+            upload_speed = st.upload() / 1_000_000  # Convert to Mbps :cite[2]
+            
+            # Get ping and other details
+            results = st.results.dict()
+            ping_result = results['ping']
+            server_name = results['server']['name']
+            isp = results['client']['isp']
+            
+            # Format results
+            if download_speed > 50:
+                speed_comment = "which is excellent"
+            elif download_speed > 25:
+                speed_comment = "which is good"
+            elif download_speed > 10:
+                speed_comment = "which is average"
+            else:
+                speed_comment = "which is below average"
+                
+            result_message = (
+                f"Your internet speed test results: "
+                f"Download: {download_speed:.2f} Mbps {speed_comment}, "
+                f"Upload: {upload_speed:.2f} Mbps, "
+                f"and Ping: {ping_result:.2f} milliseconds. "
+                f"Tested with {server_name} through your provider {isp}."
+            )
+            
+            # print(f"Speed test results: {result_message}")
+            speak(result_message)
+            
+        except speedtest.SpeedtestBestServerFailure:
+            speak("Could not find a suitable server for testing. Please check your internet connection.")
+        except speedtest.SpeedtestException as e:
+            error_msg = f"Speed test error: {str(e)}"
+            print(error_msg)
+            speak("Sorry, the speed test failed. Please ensure you're connected to the internet.")
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            print(error_msg)
+            speak("An unexpected error occurred during the speed test.")
+    
+    # Run the speed test in a thread
+    speed_thread = threading.Thread(target=run_speed_test)
+    speed_thread.daemon = True
+    speed_thread.start()

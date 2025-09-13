@@ -75,6 +75,7 @@ async def speak_async(text):
 
 def speak(text):
     """Main function to speak text with minimal memory usage"""
+    time.sleep(0.1)
     asyncio.run(speak_async(text))
 
 
