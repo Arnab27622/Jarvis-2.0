@@ -183,7 +183,7 @@ def open_incognito_tab():
         else:
             ui.hotkey("ctrl", "shift", "n")
     else:
-        speak("No browser found, opening Chrome in incognito mode")
+        print("No browser found, opening Chrome in incognito mode")
         os.system("start chrome --incognito")
 
 

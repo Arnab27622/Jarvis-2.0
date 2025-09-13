@@ -1,11 +1,14 @@
+from pathlib import Path
+import sys
 import speech_recognition as sr
-import threading
-import numpy as np
 from colorama import Fore, init
 import time
 import wave
-import os
 from collections import deque
+
+
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir.parent))
 from function.activity_monitor import record_user_activity
 
 init(autoreset=True)
@@ -15,7 +18,7 @@ class AdvancedSpeechRecognizer:
     def __init__(self):
         self.is_listening = False
         self.recognizer = sr.Recognizer()
-        self.energy_threshold = 300  # Initial energy threshold
+        self.energy_threshold = 35100  # Initial energy threshold
         self.ambient_noise_adjusted = False
         self.recognition_history = deque(maxlen=5)  # Keep history for context
 
