@@ -6,6 +6,7 @@ from head.ear import listen
 from head.brain import brain
 from automation.open import open_command
 from automation.close import close_command
+from automation.battery_features import battery_monitor
 from data.dlg_data.dlg import *
 import random
 import re
@@ -151,7 +152,11 @@ def process_command(text):
         ui.press("volumemute")
     elif "screenshot" in text or "take screenshot" in text:
         take_screenshot()
-    elif "check internet speed" in text or "run speed test" in text or "check internet connection" in text:
+    elif (
+        "check internet speed" in text
+        or "run speed test" in text
+        or "check internet connection" in text
+    ):
         check_internet_speed()
     elif "scroll up" in text or "scroll down" in text:
         handle_scroll(text)
@@ -175,6 +180,8 @@ def process_command(text):
         tell_date()
     elif "system info" in text or "system status" in text:
         get_system_info()
+    elif "battery percentage" in text or "battery status" in text:
+        battery_monitor.battery_percentage()
     elif "remember that" in text:
         remember_info(text)
     elif "what did i ask you to remember" in text:

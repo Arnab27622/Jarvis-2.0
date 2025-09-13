@@ -18,10 +18,12 @@ from friday.f2speak import f2speak
 from function.activity_monitor import (
     stop_activity_monitoring,
 )
+from automation.battery_features import battery_monitor
 
 
 def jarvis():
     wish()
+    battery_monitor.start_monitoring()
     command()
 
 
@@ -35,7 +37,9 @@ if __name__ == "__main__":
             fspeak(random.choice(offline_dlg))
     except KeyboardInterrupt:
         stop_activity_monitoring()
+        battery_monitor.start_monitoring()
         print("\nJARVIS shutting down...")
     except Exception as e:
         stop_activity_monitoring()
+        battery_monitor.start_monitoring()
         print(f"An error occurred: {e}")
