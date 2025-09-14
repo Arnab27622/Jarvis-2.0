@@ -18,27 +18,37 @@ import time
 def wait_for_wakeword():
     """
     Wait for the hotword/wake word to be spoken.
-    Returns True once detected.
+    Returns True once detected to start listening,
+    Returns False if a close command is detected to exit loop.
     """
     speak("Awaiting your command...")
     while True:
         text = listen()
         if text is None:
             continue
+
         text_lower = text.lower().strip()
+
         if any(keyword.strip() == text_lower for keyword in wakeup_key_word):
-            welcome()  # Respond to wake word with a greeting
+            welcome()
             return True
-        # Optional: if user says exit keywords here, can exit or ignore
+
+        if any(keyword in text_lower for keyword in bye_key_word):
+            response = random.choice(res_bye)
+            speak(response)
+            stop_activity_monitoring()
+            return False
+
+        # Otherwise ignore and keep waiting
 
 
 def command():
     while True:
         start_activity_monitoring()
 
-        # Wait for wake word first
+        # Wait for wake word first, or exit if closed
         if not wait_for_wakeword():
-            continue  # Should never happen, but safe
+            break  # close command said, break the loop to exit
 
         # After wake word detected, listen for command
         text = listen()
@@ -85,7 +95,6 @@ def process_command(text):
         welcome()
         return
 
-    # The rest is same as original command processing code
     first_word = text.split()[0] if text else ""
 
     if first_word in open_input:

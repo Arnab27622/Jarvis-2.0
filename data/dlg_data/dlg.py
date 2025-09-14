@@ -167,7 +167,9 @@ wakeup_key_word = [
     "wake up",
     "jarvis",
     "jar"
-    "wake up jarvis",
+    "wake up Jarvis",
+    "wake up Jarvis",
+    "wakeup Jarvis",
     "wakeup jarvis",
     "hey jarvis",
     "hello jarvis",
