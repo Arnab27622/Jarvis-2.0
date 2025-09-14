@@ -7,7 +7,7 @@ current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
 from data.dlg_data.dlg import *
-from head.mouth import speak
+from head.speak_selector import speak
 
 today = datetime.date.today()
 formatted_date = today.strftime("%d %b %y")
@@ -28,3 +28,7 @@ def wish():
     else:
         gn_dlg = random.choice(good_nightdlg)
         speak(gn_dlg)
+
+
+if __name__ == "__main__":
+    wish()

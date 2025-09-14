@@ -26,7 +26,7 @@ current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
 try:
-    from head.mouth import speak
+    from head.speak_selector import speak
     from training_model.model import mind
     from function.activity_monitor import record_user_activity
 except ImportError as e:

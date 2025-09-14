@@ -9,7 +9,7 @@ import screen_brightness_control as sbc
 import psutil
 import webbrowser
 import time
-from head.mouth import speak
+from head.speak_selector import speak
 import pyautogui as ui
 import pygetwindow as gw
 import speedtest
@@ -388,9 +388,9 @@ def check_internet_speed():
 
 
 def play_on_youtube(search_query):
-    """Search and play videos on YouTube using the official API"""
+    """Play videos on YouTube using the official API"""
     try:
-        remove_words = ["play", "youtube", "search", "for", "jarvis"]
+        remove_words = ["play", "youtube", "on", "jarvis"]
         for word in remove_words:
             search_query = search_query.replace(word, "")
         search_query = search_query.strip()
@@ -400,6 +400,13 @@ def play_on_youtube(search_query):
             return
 
         YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+        if not YOUTUBE_API_KEY:
+            encoded_query = quote(search_query)
+            url = f"https://www.youtube.com/results?search_query={encoded_query}"
+            webbrowser.open(url)
+            speak(f"Showing results for {search_query} on YouTube")
+            return
 
         youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
@@ -427,3 +434,22 @@ def play_on_youtube(search_query):
         url = f"https://www.youtube.com/results?search_query={encoded_query}"
         webbrowser.open(url)
         speak(f"Showing results for {search_query} on YouTube")
+
+
+def search_on_youtube(search_query):
+    """Search videos on YouTube using the official API"""
+    remove_words = ["youtube", "search", "for", "on", "jarvis"]
+
+    for word in remove_words:
+        search_query = search_query.replace(word, "")
+    
+    search_query = search_query.strip()
+
+    if not search_query:
+        speak("What would you like me to search on YouTube?")
+        return
+
+    encoded_query = quote(search_query)
+    url = f"https://www.youtube.com/results?search_query={encoded_query}"
+    webbrowser.open(url)
+    speak(f"Showing results for {search_query} on YouTube")

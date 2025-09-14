@@ -820,18 +820,6 @@ search_result = [
     "Here are the search results for",
 ]
 
-playsong = [
-    "As you wish, sir. Playing your favorite music on YouTube now.",
-    "I'm queuing up some great tunes for you on YouTube.",
-    "Music is on its way. What genre are you in the mood for?",
-    "Let the music play on YouTube.",
-    "Get ready for a musical experience on YouTube.",
-    "Your command is my pleasure, sir. Initiating music playback on YouTube.",
-    "Your YouTube playlist is ready to roll.",
-    "At your service, sir! Let the music flow on YouTube.",
-    "Sit back and enjoy the music on YouTube.",
-    "Your wish is my command, sir. YouTube is now your personal DJ.",
-]
 q = [
     "What genre or artist are you in the mood for today?",
     " Any specific song or genre you have in mind for me to play?",

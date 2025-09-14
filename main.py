@@ -30,8 +30,8 @@ def jarvis():
 if __name__ == "__main__":
     try:
         if is_online():
-            # f2speak(random.choice(online_dlg))
-            # f2speak("Initializing JARVIS")
+            f2speak(random.choice(online_dlg))
+            f2speak("Initializing JARVIS")
             jarvis()
         else:
             fspeak(random.choice(offline_dlg))

@@ -6,7 +6,7 @@ current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
 from data.dlg_data.dlg import welcomedlg
-from head.mouth import speak
+from head.speak_selector import speak
 
 
 def welcome():
