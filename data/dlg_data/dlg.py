@@ -166,7 +166,9 @@ welcomedlg = [
 wakeup_key_word = [
     "wake up",
     "jarvis",
+    "jar"
     "wake up jarvis",
+    "wakeup jarvis",
     "hey jarvis",
     "hello jarvis",
     "time to wake up",
@@ -185,8 +187,10 @@ wakeup_key_word = [
 
 bye_key_word = [
     "goodbye",
+    "good bye",
     "bye",
     "goodbye jarvis",
+    "good bye jarvis",
     "bye jarvis",
     "see you later",
     "see you",
@@ -200,6 +204,7 @@ bye_key_word = [
     "that's all",
     "stop listening",
     "shut down",
+    "shutdown",
     "power down",
     "rest now",
     "until next time",
