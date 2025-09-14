@@ -1,5 +1,9 @@
 import datetime
 import os
+import random
+import re
+from dotenv import load_dotenv
+from urllib.parse import quote
 import geocoder
 import screen_brightness_control as sbc
 import psutil
@@ -9,7 +13,10 @@ from head.mouth import speak
 import pyautogui as ui
 import pygetwindow as gw
 import speedtest
-import threading
+from data.dlg_data.dlg import search_result
+from googleapiclient.discovery import build
+
+load_dotenv()
 
 
 def handle_minimize():
@@ -137,11 +144,20 @@ def handle_scroll_to_bottom():
 
 def handle_web_search(command_text):
     """Perform a web search"""
-    search_query = command_text.split("for")[-1].strip()
+    search_query = re.sub(
+        r"\b(search|find|look up|for|in|on|google|web)\b",
+        "",
+        command_text,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    search_query = re.sub(r"\s+", " ", search_query).strip()
+
     if search_query:
-        url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
+        encoded_query = quote(search_query)
+        url = f"https://www.google.com/search?q={encoded_query}"
         webbrowser.open(url)
-        speak(f"Here are the results for {search_query}")
+        speak(f"{random.choice(search_result)} {search_query}")
     else:
         speak("What would you like me to search for?")
 
@@ -353,7 +369,6 @@ def check_internet_speed():
             f"and Ping: {ping_result:.2f} milliseconds. "
         )
 
-        # print(f"Speed test results: {result_message}")
         speak(result_message)
 
     except speedtest.SpeedtestBestServerFailure:
@@ -370,3 +385,45 @@ def check_internet_speed():
         error_msg = f"Unexpected error: {str(e)}"
         print(error_msg)
         speak("An unexpected error occurred during the speed test.")
+
+
+def play_on_youtube(search_query):
+    """Search and play videos on YouTube using the official API"""
+    try:
+        remove_words = ["play", "youtube", "search", "for", "jarvis"]
+        for word in remove_words:
+            search_query = search_query.replace(word, "")
+        search_query = search_query.strip()
+
+        if not search_query:
+            speak("What would you like me to play on YouTube?")
+            return
+
+        YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+        youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+
+        request = youtube.search().list(
+            part="snippet", maxResults=1, q=search_query, type="video"
+        )
+        response = request.execute()
+
+        if response["items"]:
+            video_id = response["items"][0]["id"]["videoId"]
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            speak(f"Playing {search_query} on YouTube")
+            webbrowser.open(video_url)
+        else:
+            encoded_query = quote(search_query)
+            url = f"https://www.youtube.com/results?search_query={encoded_query}"
+            webbrowser.open(url)
+            speak(
+                f"No videos found for {search_query}. Showing search results instead."
+            )
+
+    except Exception as e:
+        print(f"Error with YouTube API: {e}")
+        encoded_query = quote(search_query)
+        url = f"https://www.youtube.com/results?search_query={encoded_query}"
+        webbrowser.open(url)
+        speak(f"Showing results for {search_query} on YouTube")

@@ -174,6 +174,23 @@ def process_command(text):
         get_current_location()
     elif "search for" in text and "for" in text:
         handle_web_search(text)
+    elif "youtube" in text or ("play" in text and "youtube" in text):
+        if "play" in text and "youtube" in text:
+            if "on youtube" in text:
+                search_query = text.split("play")[1].split("on youtube")[0].strip()
+            else:
+                search_query = text.split("play")[1].replace("youtube", "").strip()
+        elif "search for" in text and "youtube" in text:
+            search_query = (
+                text.split("search for")[1]
+                .replace("on youtube", "")
+                .replace("youtube", "")
+                .strip()
+            )
+        else:
+            search_query = text.replace("youtube", "").strip()
+
+        play_on_youtube(search_query)
     elif "what time" in text or "what's the time" in text:
         tell_time()
     elif "what date" in text or "what's the date" in text:

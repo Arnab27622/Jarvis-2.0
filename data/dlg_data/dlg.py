@@ -812,55 +812,12 @@ plug_out = [
 ]
 
 search_result = [
-    "Sir, I have compiled the search results for your query.",
-    "Here are the findings based on your search parameters.",
-    "Search complete. The results for your inquiry are ready.",
-    "Sir, here is the information retrieved for your question.",
-    "Compiling the most relevant data from the search.",
-    "Sir, the search has returned these results for you.",
-    "Query processed. Presenting the search results now.",
-    "Based on your request, here is what I found.",
-    "Sir, the data you requested has been retrieved.",
-    "Search executed. The results are as follows.",
-]
-
-yt_search = [
-    "Sir, initiating a YouTube search for your query.",
-    "Searching YouTube for relevant content now.",
-    "Querying YouTube's database for your specified terms.",
-    "Sir, I am retrieving videos related to your search.",
-    "Executing a YouTube search based on your request.",
-    "Sir, scanning YouTube for content matching your inquiry.",
-    "I will find videos on YouTube pertaining to your query.",
-    "Searching the YouTube API for your requested topic.",
-    "Sir, launching a search on YouTube for you.",
-    "Processing your query. Searching YouTube now.",
-]
-
-s1 = [
-    "Sir, now initiating the search for your inquiry.",
-    "I'm currently searching for information based on your query.",
-    "Let me find the relevant details for your inquiry.",
-    "Sir, I'm now conducting the search for the information you requested.",
-    "The search is underway for your specified inquiry.",
-    "Sir, I've begun the search process for your inquiry.",
-    "Let me fetch the information by conducting a search.",
-    "I'm in the process of searching for details based on your request.",
-    "Initiating the search now to provide you with the information.",
-    "Sir, the search is in progress for the details you're looking for.",
-]
-
-s2 = [
-    "The results should now be visible on your screen.",
-    "Sir, you should see the results displayed on your screen shortly.",
-    "The results are expected to appear on your screen.",
-    "Sir, the information you requested should now be visible on your screen.",
-    "Please check your screen for the results you asked for.",
-    "Sir, the relevant results should be visible on your screen.",
-    "The information you sought should now be on your screen.",
-    "Sir, you can expect to see the results on your screen shortly.",
-    "Check your screen for the requested results.",
-    "Sir, the results should now be displayed on your screen.",
+    "Sir, I have compiled the search results for your query",
+    "Here are the findings based on your search query",
+    "Sir, here is the information retrieved for your query",
+    "Sir, the search has returned these results for your query",
+    "Search executed. The results are as follows for the query",
+    "Here are the search results for",
 ]
 
 playsong = [
@@ -882,7 +839,6 @@ q = [
     "Your wish is my command, sir! What song would you like me to play for you?",
     "As your virtual assistant, sir, I'm here to play your preferred music. Any requests?",
     "The musical stage is yours. What song would you like to hear?",
-    "sir Anubhav Chaturvedi! Any particular song on your mind right now?",
     "At your service, sir! Feel free to let me know which song you'd like to play.",
     "Ready to play the perfect song for you. Any specific choice?",
     "Your playlist is in your hands, sir! What song shall I play for you?",

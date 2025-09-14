@@ -12,6 +12,8 @@ VOICE = "en-AU-WilliamNeural"
 pygame.init()
 pygame.mixer.init()
 
+_speak_lock = threading.Lock()
+
 
 def print_animated_message(message):
     for char in message:
@@ -53,7 +55,7 @@ def play_audio_file(file_path):
             os.unlink(file_path)
 
 
-async def speak_async(text):
+async def _speak_async(text):
     """Async function to generate and play audio with minimal memory usage"""
     try:
         # Generate audio file first
@@ -75,8 +77,9 @@ async def speak_async(text):
 
 def speak(text):
     """Main function to speak text with minimal memory usage"""
-    time.sleep(0.1)
-    asyncio.run(speak_async(text))
+    with _speak_lock:
+        time.sleep(0.1)
+        asyncio.run(_speak_async(text))
 
 
 if __name__ == "__main__":

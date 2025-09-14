@@ -4,6 +4,8 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import json
+from pathlib import Path
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -23,10 +25,11 @@ except LookupError:
 
 def load_dataset(file_path):
     with open(file_path, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-        qna_pairs = [line.strip().split(":", 1) for line in lines if ":" in line]
-        dataset = [{"question": q, "answer": a} for q, a in qna_pairs]
-        return dataset
+        with open(file_path, "r", encoding="utf-8") as file:
+            qa_dict = json.load(file)
+
+    dataset = [{"question": q, "answer": a} for q, a in qa_dict.items()]
+    return dataset
 
 
 def preprocess_text(text):
@@ -64,7 +67,7 @@ def get_answer(question, vectorizer, X, dataset, threshold=0.5):
 
 
 def mind(text, threshold=0.7):
-    dataset_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.txt"
+    dataset_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
     dataset = load_dataset(dataset_path)
 
     vectorizer, X = train_tfidf_vectorizer(dataset)

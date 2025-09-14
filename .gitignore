@@ -1,3 +1,5 @@
 .vscode
 .venv
 *__pycache__
+brain_function.log
+.env
