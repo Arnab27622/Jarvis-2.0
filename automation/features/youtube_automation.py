@@ -4,9 +4,43 @@ import os
 import webbrowser
 from urllib.parse import quote
 from googleapiclient.discovery import build
+import pyautogui as ui
+import time
+import pygetwindow as gw
 
 
 load_dotenv()
+
+
+# Global variables for YouTube player control
+youtube_player_state = {
+    "is_playing": False,
+    "is_muted": False,
+    "current_volume": 100,
+    "current_video_id": None,
+}
+
+
+def activate_youtube_window(timeout=5):
+    """
+    Attempt to activate a window with 'youtube' in its title.
+    If multiple found, activate the first one.
+    Wait briefly for focus, return True if successful.
+    """
+    try:
+        all_windows = gw.getAllWindows()
+        youtube_windows = [
+            w for w in all_windows if w.title and "youtube" in w.title.lower()
+        ]
+        if not youtube_windows:
+            print("No YouTube window found to activate.")
+            return False
+        youtube_windows[0].activate()
+        time.sleep(0.5)  # give time for window to become active
+        return True
+    except Exception as e:
+        print(f"Failed to activate YouTube window: {e}")
+        return False
 
 
 def play_on_youtube(search_query):
@@ -42,6 +76,9 @@ def play_on_youtube(search_query):
             video_url = f"https://www.youtube.com/watch?v={video_id}"
             speak(f"Playing {search_query} on YouTube")
             webbrowser.open(video_url)
+            youtube_player_state["current_video_id"] = video_id
+            time.sleep(5)
+            ui.hotkey("alt", "tab")
         else:
             encoded_query = quote(search_query)
             url = f"https://www.youtube.com/results?search_query={encoded_query}"
@@ -75,3 +112,143 @@ def search_on_youtube(search_query):
     url = f"https://www.youtube.com/results?search_query={encoded_query}"
     webbrowser.open(url)
     speak(f"Showing results for {search_query} on YouTube")
+
+
+def control_youtube_video(action):
+    """
+    Control YouTube video playback using keyboard shortcuts.
+    Actions: play, pause, mute, unmute, volume, replay, stop
+    """
+    try:
+        # Focus on the YouTube browser window first
+        if not activate_youtube_window():
+            speak("Could not find an active YouTube window to control.")
+            return
+
+        time.sleep(0.5)
+
+        if action == "play" or action == "resume":
+            speak("Playing the video...")
+            ui.press("k")
+            youtube_player_state["is_playing"] = True
+
+        elif action == "pause":
+            ui.press("k")
+            youtube_player_state["is_playing"] = False
+            speak("Video paused")
+
+        elif action == "mute":
+            ui.press("m")  # Mute toggle in YouTube
+            youtube_player_state["is_muted"] = True
+            speak("Video muted")
+
+        elif action == "unmute":
+            speak("Unmuting the video...")
+            ui.press("m")  # Mute toggle in YouTube
+            youtube_player_state["is_muted"] = False
+
+        elif action == "volume increase":
+            ui.press("up")
+            youtube_player_state["current_volume"] = min(
+                youtube_player_state["current_volume"] + 5, 100
+            )
+            speak(f"Volume increased to {youtube_player_state['current_volume']}%")
+
+        elif action == "volume decrease":
+            ui.press("down")
+            youtube_player_state["current_volume"] = max(
+                youtube_player_state["current_volume"] - 5, 0
+            )
+            speak(f"Volume decreased to {youtube_player_state['current_volume']}%")
+
+        elif action == "skip":
+            ui.press("l")  # Skip forward 10 seconds in YouTube
+            speak("Skipped forward")
+
+        elif action == "skip backward":
+            ui.press("j")  # Skip backward 10 seconds in YouTube
+            speak("Skipped backward")
+
+        elif action == "previous video":
+            speak("Playing previous video...")
+            ui.hotkey("shift", "p")  # Previous video in playlist (if available)
+
+        elif action == "next video":
+            speak("Playing next video...")
+            ui.hotkey("shift", "n")
+
+        elif action == "replay":
+            speak("Replaying the video...")
+            ui.press("0")
+            ui.press("k")
+
+        else:
+            speak("Action not recognized")
+    except Exception as e:
+        print(f"Error controlling YouTube video: {e}")
+        speak("Sorry, I couldn't control the video")
+
+
+def set_volume(volume_level):
+    """Set volume level (0-100) - approximate via multiple volume up/down presses"""
+    current = youtube_player_state["current_volume"]
+    if volume_level < 0 or volume_level > 100:
+        speak("Volume level must be between 0 and 100")
+        return
+    difference = volume_level - current
+    if difference == 0:
+        speak("Volume is already at the requested level")
+        return
+    elif difference > 0:
+        for _ in range(difference // 5):
+            control_youtube_video("volume increase")
+            time.sleep(0.1)
+    else:
+        for _ in range(abs(difference) // 5):
+            control_youtube_video("volume decrease")
+            time.sleep(0.1)
+
+
+def mute_youtube():
+    """Mute YouTube video"""
+    control_youtube_video("mute")
+
+
+def unmute_youtube():
+    """Unmute YouTube video"""
+    control_youtube_video("unmute")
+
+
+def pause_youtube():
+    """Pause YouTube video"""
+    control_youtube_video("pause")
+
+
+def resume_youtube():
+    """Resume YouTube video"""
+    control_youtube_video("play")
+
+
+def skip_video():
+    """Skip forward the video by 10 seconds"""
+    control_youtube_video("skip")
+
+
+def skip_backward_video():
+    """Skip backward the video by 10 seconds"""
+    control_youtube_video("skip backward")
+
+
+def next_video():
+    """Skip to next video in queue"""
+    control_youtube_video("next video")
+
+
+def previous_video():
+    """Go to previous video in queue"""
+    control_youtube_video("previous video")
+
+
+def replay_video():
+    """Replay the current video from the start"""
+    control_youtube_video("replay")

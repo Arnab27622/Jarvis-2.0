@@ -3,7 +3,10 @@ from function.advice import rand_advice
 from function.activity_monitor import *
 from automation.features.window_automation import *
 from automation.features.utility_automation import *
-from automation.features.location_automation import get_current_location, check_ip_address
+from automation.features.location_automation import (
+    get_current_location,
+    check_ip_address,
+)
 from automation.features.check_temperature import get_current_temperature
 from automation.features.google_search_automation import handle_web_search
 from automation.features.task_schedule_automation import recall_info, remember_info
@@ -197,20 +200,6 @@ def process_command(text):
     elif "copy last paragraph" in text:
         ui.hotkey("ctrl", "shift", "c")
 
-    elif "increase volume" in text or "increase the volume" in text:
-        handle_volume_change("increase")
-
-    elif "decrease volume" in text or "decrease the volume" in text:
-        handle_volume_change("decrease")
-
-    elif "unmute" in text:
-        ui.hotkey("volumemute")
-        speak("Volume unmuted")
-
-    elif "mute" in text:
-        speak("Muting volume")
-        ui.press("volumemute")
-
     elif "screenshot" in text or "take screenshot" in text:
         take_screenshot()
 
@@ -255,10 +244,69 @@ def process_command(text):
             search_query = text.split("search for")[1].replace("youtube", "").strip()
         search_on_youtube(search_query)
 
+    elif "previous video" in text:
+        previous_video()
+
+    elif "next video" in text:
+        next_video()
+
+    elif "pause" in text and "video" in text:
+        pause_youtube()
+
+    elif "replay" in text and "video" in text:
+        replay_video()
+
+    elif ("resume" in text or "play" in text) and "video" in text:
+        resume_youtube()
+
+    elif "unmute" in text and "video" in text:  # For youtube video
+        unmute_youtube()
+
+    elif "mute" in text and "video" in text:    # For youtube video
+        mute_youtube()
+
+    elif (
+        "volume up" in text
+        or "increase volume" in text
+        or "increase the volume" in text
+    ) and "video" in text:  # For youtube video
+        control_youtube_video("volume increase")
+
+    elif (
+        "volume down" in text
+        or "decrease volume" in text
+        or "decrease the volume" in text
+    ) and "video" in text:  # For youtube video
+        control_youtube_video("volume decrease")
+
+    elif "skip backward" in text and "video" in text:
+        skip_backward_video()
+
+    elif "skip" in text and "video" in text:
+        skip_video()
+
+    elif "increase volume" in text or "increase the volume" in text:    # For general purpose
+        handle_volume_change("increase")
+
+    elif "decrease volume" in text or "decrease the volume" in text:    # For general purpose
+        handle_volume_change("decrease")
+
+    elif "unmute" in text:  # For general purpose
+        ui.hotkey("volumemute")
+        speak("Volume unmuted")
+
+    elif "mute" in text:    # For general purpose
+        speak("Muting volume")
+        ui.press("volumemute")
+
     elif "search" in text and "for" in text and "google" in text:
         handle_web_search(text)
 
-    elif "what time" in text or "what's the time" in text or "what's the current time" in text:
+    elif (
+        "what time" in text
+        or "what's the time" in text
+        or "what's the current time" in text
+    ):
         tell_time()
 
     elif "what date" in text or "what's the date" in text:
