@@ -1,7 +1,15 @@
 from function.welcome import welcome
-from function.activity_monitor import *
 from function.advice import rand_advice
-from automation.feature_functions import *
+from function.activity_monitor import *
+from automation.features.window_automation import *
+from automation.features.utility_automation import *
+from automation.features.location_automation import get_current_location, check_ip_address
+from automation.features.google_search_automation import handle_web_search
+from automation.features.task_schedule_automation import recall_info, remember_info
+from automation.features.jokes_automation import tell_joke
+from automation.features.datetime_automation import tell_date, tell_time
+from automation.features.internet_speed import check_internet_speed
+from automation.features.youtube_automation import *
 from head.ear import listen
 from head.brain import brain
 from automation.open import open_command
@@ -249,7 +257,7 @@ def process_command(text):
     elif "search" in text and "for" in text and "google" in text:
         handle_web_search(text)
 
-    elif "what time" in text or "what's the time" in text:
+    elif "what time" in text or "what's the time" in text or "what's the current time" in text:
         tell_time()
 
     elif "what date" in text or "what's the date" in text:
@@ -263,6 +271,9 @@ def process_command(text):
 
     elif "battery percentage" in text or "battery status" in text:
         battery_monitor.battery_percentage()
+
+    elif "check ip address" in text or "check my ip address" in text:
+        check_ip_address()
 
     elif "remember that" in text:
         remember_info(text)
@@ -285,3 +296,7 @@ def process_command(text):
     else:
         brain(text)
         time.sleep(0.5)
+
+
+if __name__ == "__main__":
+    pass

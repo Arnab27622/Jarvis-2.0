@@ -20,7 +20,6 @@ def speak(text):
     global _engine
 
     with _speak_lock:
-        # Initialize TTS engine once
         if _engine is None:
             _engine = pyttsx3.init()
             _engine.setProperty("rate", 180)
