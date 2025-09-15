@@ -4,6 +4,7 @@ from function.activity_monitor import *
 from automation.features.window_automation import *
 from automation.features.utility_automation import *
 from automation.features.location_automation import get_current_location, check_ip_address
+from automation.features.check_temperature import get_current_temperature
 from automation.features.google_search_automation import handle_web_search
 from automation.features.task_schedule_automation import recall_info, remember_info
 from automation.features.jokes_automation import tell_joke
@@ -274,6 +275,10 @@ def process_command(text):
 
     elif "check ip address" in text or "check my ip address" in text:
         check_ip_address()
+
+    elif "check temperature" in text or "check the temperature" in text:
+        speak("Checking the temperature. Please wait a moment...")
+        get_current_temperature()
 
     elif "remember that" in text:
         remember_info(text)
