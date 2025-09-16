@@ -1,9 +1,8 @@
 from dotenv import load_dotenv
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import os
 import webbrowser
 from urllib.parse import quote
-from googleapiclient.discovery import build
 import pyautogui as ui
 import time
 import pygetwindow as gw
@@ -36,7 +35,7 @@ def activate_youtube_window(timeout=5):
             print("No YouTube window found to activate.")
             return False
         youtube_windows[0].activate()
-        time.sleep(0.5)  # give time for window to become active
+        time.sleep(2)  # give time for window to become active
         return True
     except Exception as e:
         print(f"Failed to activate YouTube window: {e}")
@@ -46,6 +45,7 @@ def activate_youtube_window(timeout=5):
 def play_on_youtube(search_query):
     """Play videos on YouTube using the official API"""
     try:
+        from googleapiclient.discovery import build
         remove_words = ["play", "youtube", "on", "jarvis"]
         for word in remove_words:
             search_query = search_query.replace(word, "")
@@ -182,6 +182,22 @@ def control_youtube_video(action):
             ui.press("0")
             ui.press("k")
 
+        elif action == "subtitles on":
+            speak("Turning on the subtitles...")
+            ui.press("c")
+
+        elif action == "subtitles off":
+            speak("Turning off the subtitles...")
+            ui.press("c")
+
+        elif action == "turn on fullscreen":
+            speak("Making the video full screen...")
+            ui.press("f")
+
+        elif action == "turn off fullscreen":
+            speak("Exiting the full screen...")
+            ui.press("f")
+
         else:
             speak("Action not recognized")
     except Exception as e:
@@ -252,3 +268,23 @@ def previous_video():
 def replay_video():
     """Replay the current video from the start"""
     control_youtube_video("replay")
+
+
+def turn_on_subtitles():
+    """Turn on subtitles"""
+    control_youtube_video("subtitles on")
+
+
+def turn_off_subtitles():
+    """Turn off subtitles"""
+    control_youtube_video("subtitles off")
+
+
+def fullscreen_youtube():
+    "Full screen the video"
+    control_youtube_video("turn on fullscreen")
+
+
+def exit_fullscreen_youtube():
+    "Exit the Full screen"
+    control_youtube_video("turn off fullscreen")

@@ -9,7 +9,7 @@ import difflib
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import open_dlg, open_website_maybe, sorry_web, websites
 
 

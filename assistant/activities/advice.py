@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 
 # Cache to store recent advice to avoid repeated API calls
 advice_cache = []

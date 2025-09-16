@@ -1,5 +1,5 @@
 import datetime
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 
 remembered_info = {}
 

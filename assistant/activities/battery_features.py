@@ -10,7 +10,7 @@ current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
 
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import last_low, low_b, full_battery, plug_in, plug_out
 
 

@@ -1,5 +1,5 @@
 import os
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import pyautogui as ui
 import pygetwindow as gw
 import time

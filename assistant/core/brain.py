@@ -26,9 +26,9 @@ current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
 try:
-    from head.speak_selector import speak
-    from training_model.model import mind
-    from function.activity_monitor import record_user_activity
+    from assistant.core.speak_selector import speak
+    from assistant.nlp.model import mind
+    from assistant.activities.activity_monitor import record_user_activity
 except ImportError as e:
     logger.error(f"Import error: {e}")
     speak = print
@@ -55,7 +55,7 @@ def load_qa_data(file_path):
     """Load Q&A data from JSON file for better structure"""
     file_path = Path(file_path)
     qa_dict = {}
-    
+
     try:
         if file_path.exists():
             with open(file_path, "r", encoding="utf-8") as f:
@@ -111,7 +111,9 @@ def save_qa_data(file_path, qa_dict):
 
 
 # Use JSON format for better data structure
-qa_file_path = current_dir.parent / "data" / "brain_data" / "qna_data.json"
+qa_file_path = (
+    r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
+)
 qa_dict = load_qa_data(qa_file_path)
 
 

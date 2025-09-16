@@ -9,7 +9,7 @@ from collections import deque
 
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
-from function.activity_monitor import record_user_activity
+from assistant.activities.activity_monitor import record_user_activity
 
 init(autoreset=True)
 

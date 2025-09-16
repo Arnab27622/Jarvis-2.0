@@ -1,24 +1,27 @@
-from function.welcome import welcome
-from function.advice import rand_advice
-from function.activity_monitor import *
-from automation.features.window_automation import *
-from automation.features.utility_automation import *
-from automation.features.location_automation import (
+from assistant.interface.welcome import welcome
+from assistant.activities.advice import rand_advice
+from assistant.activities.activity_monitor import *
+from assistant.automation.features.window_automation import *
+from assistant.automation.features.utility_automation import *
+from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
 )
-from automation.features.check_temperature import get_current_temperature
-from automation.features.google_search_automation import handle_web_search
-from automation.features.task_schedule_automation import recall_info, remember_info
-from automation.features.jokes_automation import tell_joke
-from automation.features.datetime_automation import tell_date, tell_time
-from automation.features.internet_speed import check_internet_speed
-from automation.features.youtube_automation import *
-from head.ear import listen
-from head.brain import brain
-from automation.open import open_command
-from automation.close import close_command
-from automation.battery_features import battery_monitor
+from assistant.automation.integrations.check_temperature import get_current_temperature
+from assistant.automation.integrations.google_search_automation import handle_web_search
+from assistant.automation.integrations.task_schedule_automation import (
+    recall_info,
+    remember_info,
+)
+from assistant.automation.integrations.jokes_automation import tell_joke
+from assistant.automation.integrations.datetime_automation import tell_date, tell_time
+from assistant.automation.integrations.internet_speed import check_internet_speed
+from assistant.automation.integrations.youtube_automation import *
+from assistant.core.ear import listen
+from assistant.core.brain import brain
+from assistant.automation.app_control.open import open_command
+from assistant.automation.app_control.close import close_command
+from assistant.activities.battery_features import battery_monitor
 from data.dlg_data.dlg import *
 import random
 import re
@@ -151,7 +154,17 @@ def process_command(text):
     elif "developer tools" in text or "dev tools" in text:
         open_dev_tools()
 
-    elif "full screen" in text or "fullscreen" in text:
+    elif ("fullscreen" in text or "full screen" in text) and "video" in text:   # For youtube video
+        fullscreen_youtube()
+
+    elif (
+        "turn off" in text
+        and ("fullscreen" in text or "full screen" in text)
+        and "video" in text
+    ):  # For youtube video
+        exit_fullscreen_youtube()
+
+    elif "full screen" in text or "fullscreen" in text: # For general purpose
         toggle_fullscreen()
 
     elif "reload" in text or "refresh" in text:
@@ -205,7 +218,7 @@ def process_command(text):
 
     elif (
         "check internet speed" in text
-        or "run speed test" in text
+        or "run internet speed test" in text
         or "check internet connection" in text
     ):
         check_internet_speed()
@@ -262,8 +275,14 @@ def process_command(text):
     elif "unmute" in text and "video" in text:  # For youtube video
         unmute_youtube()
 
-    elif "mute" in text and "video" in text:    # For youtube video
+    elif "mute" in text and "video" in text:  # For youtube video
         mute_youtube()
+
+    elif "turn on" in text and "subtitles" in text and "video" in text:
+        turn_on_subtitles()
+
+    elif "turn off" in text and "subtitles" in text and "video" in text:
+        turn_off_subtitles()
 
     elif (
         "volume up" in text
@@ -285,21 +304,25 @@ def process_command(text):
     elif "skip" in text and "video" in text:
         skip_video()
 
-    elif "increase volume" in text or "increase the volume" in text:    # For general purpose
+    elif (
+        "increase volume" in text or "increase the volume" in text
+    ):  # For general purpose
         handle_volume_change("increase")
 
-    elif "decrease volume" in text or "decrease the volume" in text:    # For general purpose
+    elif (
+        "decrease volume" in text or "decrease the volume" in text
+    ):  # For general purpose
         handle_volume_change("decrease")
 
     elif "unmute" in text:  # For general purpose
         ui.hotkey("volumemute")
         speak("Volume unmuted")
 
-    elif "mute" in text:    # For general purpose
+    elif "mute" in text:  # For general purpose
         speak("Muting volume")
         ui.press("volumemute")
 
-    elif "search" in text and "for" in text and "google" in text:
+    elif "search for" in text and "google" in text:
         handle_web_search(text)
 
     elif (

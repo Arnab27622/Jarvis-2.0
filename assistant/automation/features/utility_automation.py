@@ -1,5 +1,5 @@
 import psutil
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import pyautogui as ui
 import screen_brightness_control as sbc
 import datetime

@@ -1,7 +1,7 @@
 import re
 from urllib.parse import quote
 import webbrowser
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import random
 from data.dlg_data.dlg import search_result
 

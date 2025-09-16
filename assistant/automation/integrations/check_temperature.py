@@ -1,7 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 
 load_dotenv()
 
@@ -42,6 +42,9 @@ def get_current_temperature(units="metric"):
 
         if "main" not in weather_data or "weather" not in weather_data:
             print("Invalid response from weather API")
+            speak(
+                "Sorry, I couldn't get the temperature right now. Please try again after some time"
+            )
 
         main_data = weather_data["main"]
 

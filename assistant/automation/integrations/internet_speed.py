@@ -1,4 +1,4 @@
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import speedtest
 
 

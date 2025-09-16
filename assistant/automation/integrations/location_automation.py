@@ -1,6 +1,6 @@
 import time
 import requests
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 import geocoder
 
 

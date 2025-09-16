@@ -6,7 +6,7 @@ import sys
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir.parent))
 
-from head.speak_selector import speak
+from assistant.core.speak_selector import speak
 
 
 class ActivityMonitor:
