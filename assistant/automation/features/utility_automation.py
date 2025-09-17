@@ -1,3 +1,4 @@
+import os
 import psutil
 from assistant.core.speak_selector import speak
 import pyautogui as ui
@@ -45,11 +46,16 @@ def handle_brightness(command_text):
 
 
 def take_screenshot():
-    """Take a screenshot and save it with timestamp"""
+    """Take a screenshot and save it with timestamp in the specified directory"""
+    screenshot_dir = r"C:\Users\arnab\OneDrive\Pictures\Screenshots"
+    os.makedirs(screenshot_dir, exist_ok=True)
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"screenshot_{timestamp}.png"
+    full_path = os.path.join(screenshot_dir, filename)
+
     screenshot = ui.screenshot()
-    screenshot.save(filename)
+    screenshot.save(full_path)
     speak(f"Screenshot taken and saved as {filename}")
 
 
