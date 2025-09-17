@@ -274,7 +274,6 @@ open_input = [
     "launch",
     "open",
     "execute",
-    "run",
     "start",
     "initialize",
     "access",

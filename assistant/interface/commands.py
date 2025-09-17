@@ -1,6 +1,7 @@
 from assistant.interface.welcome import welcome
 from assistant.activities.advice import rand_advice
 from assistant.activities.activity_monitor import *
+from assistant.activities.check_speaker_health import speaker_health_test
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
 from assistant.automation.integrations.location_automation import (
@@ -238,10 +239,19 @@ def process_command(text):
 
     elif (
         "check internet speed" in text
+        or "check the internet speed" in text
         or "run internet speed test" in text
         or "check internet connection" in text
     ):
         check_internet_speed()
+
+    elif (
+        "run speaker health test" in text
+        or "check the speaker health" in text
+        or "check speaker health" in text
+        or "check the speaker" in text
+    ):
+        speaker_health_test()
 
     elif "scroll up" in text or "scroll down" in text:
         handle_scroll(text)
