@@ -33,16 +33,25 @@ import time
 def wait_for_wakeword():
     """
     Wait for the hotword/wake word to be spoken.
-    Returns True once detected to start listening,
-    Returns False if a close command is detected to exit loop.
+    Returns:
+        True when wake word detected (entering command mode)
+        False if a close command is detected to exit loop
     """
     speak("Awaiting your command...")
     while True:
         text = listen()
         if text is None:
             continue
-
         text_lower = text.lower().strip()
+
+        # Check for confirmation prompt response as well
+        if activity_monitor.awaiting_confirmation:
+            result = activity_monitor.handle_confirmation_response(text)
+            if result is True:
+                advice = rand_advice()
+                if advice:
+                    speak(advice)
+            continue
 
         if any(keyword.strip() == text_lower for keyword in wakeup_key_word):
             welcome()
@@ -54,61 +63,70 @@ def wait_for_wakeword():
             stop_activity_monitoring()
             return False
 
-        # Otherwise ignore and keep waiting
-
 
 def command():
+    """
+    Main command loop managing wake word state and command mode.
+    Listens for wake word to enter command mode.
+    In command mode, processes commands continuously.
+    'sleep' command returns to waiting for wake word.
+    """
+    start_activity_monitoring()
+    # State: False = waiting for wake word, True = in command mode
+    command_mode = False
+
     while True:
-        start_activity_monitoring()
-
-        # Wait for wake word first, or exit if closed
-        if not wait_for_wakeword():
-            break  # close command said, break the loop to exit
-
-        # After wake word detected, listen for command
         text = listen()
-
         if text is None:
             print("Sorry, I couldn't understand. Please try again.")
             continue
 
-        # Check if this is a response to the confirmation prompt FIRST
+        text_lower = text.lower().strip()
+
+        # Always check confirmation responses first
         if activity_monitor.awaiting_confirmation:
-            # Handle the confirmation response
             result = activity_monitor.handle_confirmation_response(text)
-            # If user confirmed, give advice
             if result is True:
                 advice = rand_advice()
                 if advice:
                     speak(advice)
-            # Continue to next iteration regardless of result
             continue
 
-        # Only record activity and process normally if not a confirmation response
-        record_user_activity()
-
-        text_lower = text.lower().strip()
-
-        # Check bye keywords to exit
+        # Exit commands handled anytime
         if any(keyword in text_lower for keyword in bye_key_word):
             response = random.choice(res_bye)
             speak(response)
             stop_activity_monitoring()
             break
 
+        # If not in command mode, wait for wake word
+        if not command_mode:
+            if any(keyword.strip() == text_lower for keyword in wakeup_key_word):
+                welcome()
+                command_mode = True
+            # Ignore other inputs outside command mode
+            continue
+
+        # In command mode, check if user wants to sleep and exit command mode
+        if any(keyword.strip() == text_lower for keyword in stopcmd):
+            speak(random.choice(stopdlg))
+            command_mode = False
+            continue
+
+        # Record activity for normal commands
+        record_user_activity()
+
+        # Process commands normally in command mode
         process_command(text_lower)
 
 
 def process_command(text):
     """Process command whether they contain 'jarvis' or not"""
-
-    # Check if 'jarvis' is present and clean it out anyway
     if "jarvis" in text:
         text = re.sub(r"\bjarvis\b", "", text).strip()
-
-    if not text:
-        welcome()
-        return
+        if not text:
+            welcome()
+            return
 
     first_word = text.split()[0] if text else ""
 
@@ -154,7 +172,9 @@ def process_command(text):
     elif "developer tools" in text or "dev tools" in text:
         open_dev_tools()
 
-    elif ("fullscreen" in text or "full screen" in text) and "video" in text:   # For youtube video
+    elif (
+        "fullscreen" in text or "full screen" in text
+    ) and "video" in text:  # For youtube video
         fullscreen_youtube()
 
     elif (
@@ -164,7 +184,7 @@ def process_command(text):
     ):  # For youtube video
         exit_fullscreen_youtube()
 
-    elif "full screen" in text or "fullscreen" in text: # For general purpose
+    elif "full screen" in text or "fullscreen" in text:  # For general purpose
         toggle_fullscreen()
 
     elif "reload" in text or "refresh" in text:
@@ -364,10 +384,6 @@ def process_command(text):
     elif "restart" in text:
         speak("Restarting the system in 10 seconds")
         os.system("shutdown /r /t 10")
-
-    elif "sleep" in text:
-        speak("Putting the system to sleep")
-        os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
 
     else:
         brain(text)
