@@ -66,3 +66,31 @@ def get_system_info():
     memory = psutil.virtual_memory()
     memory_percent = memory.percent
     speak(f"Battery is at {percent} percent. Memory usage is {memory_percent} percent")
+
+
+def get_running_apps_windows():
+    try:
+        processes = set()
+        for proc in psutil.process_iter(["name"]):
+            try:
+                processes.add(proc.info["name"])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                # Skip processes that terminate or can't be accessed
+                continue
+        return list(processes)
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def check_running_app():
+    running_apps = get_running_apps_windows()
+    if isinstance(running_apps, str):
+        print(running_apps)  # Print error message
+    else:
+        print("Running Applications:")
+        for app in running_apps:
+            print(app)
+
+
+if __name__ == "__main__":
+    check_running_app()

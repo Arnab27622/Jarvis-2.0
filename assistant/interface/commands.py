@@ -2,6 +2,7 @@ from assistant.interface.welcome import welcome
 from assistant.activities.advice import rand_advice
 from assistant.activities.activity_monitor import *
 from assistant.activities.check_speaker_health import speaker_health_test
+from assistant.activities.check_mic_health import mic_health
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
 from assistant.automation.integrations.location_automation import (
@@ -253,6 +254,18 @@ def process_command(text):
     ):
         speaker_health_test()
 
+    elif (
+        "run mic health test" in text
+        or "check the mic health" in text
+        or "check mic health" in text
+        or "check the mic" in text
+        or "run mike health test" in text
+        or "check the mike health" in text
+        or "check mike health" in text
+        or "check the mike" in text
+    ):
+        mic_health()
+
     elif "scroll up" in text or "scroll down" in text:
         handle_scroll(text)
 
@@ -377,6 +390,8 @@ def process_command(text):
     elif "check ip address" in text or "check my ip address" in text:
         check_ip_address()
 
+    elif "check running apps" in text or "check the running apps" in text:
+        check_running_app()
     elif "check temperature" in text or "check the temperature" in text:
         speak("Checking the temperature. Please wait a moment...")
         get_current_temperature()
