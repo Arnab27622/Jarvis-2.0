@@ -1,6 +1,7 @@
 .vscode
 .venv
 *__pycache__
-brain_function.log
+test.py
+test2.py
 .env
 JARVIS_2.0.egg-info
