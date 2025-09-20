@@ -40,10 +40,12 @@ def wait_for_wakeword():
         False if a close command is detected to exit loop
     """
     speak("Awaiting your command...")
+
     while True:
         text = listen()
         if text is None:
             continue
+
         text_lower = text.lower().strip()
 
         # Check for confirmation prompt response as well
@@ -53,9 +55,19 @@ def wait_for_wakeword():
                 advice = rand_advice()
                 if advice:
                     speak(advice)
-            continue
+                continue
+            elif result is False:
+                # User declined advice, continue listening for wake word
+                continue
+            # If result is None, check for timeout
+            elif activity_monitor.check_confirmation_timeout():
+                # Timeout occurred, reset and continue listening for wake word
+                activity_monitor.reset_confirmation_state()
+                continue
 
         if any(keyword.strip() == text_lower for keyword in wakeup_key_word):
+            # Reset any pending advice confirmation when waking up
+            activity_monitor.reset_confirmation_state()
             welcome()
             return True
 
@@ -74,6 +86,7 @@ def command():
     'sleep' command returns to waiting for wake word.
     """
     start_activity_monitoring()
+
     # State: False = waiting for wake word, True = in command mode
     command_mode = False
 
@@ -92,7 +105,15 @@ def command():
                 advice = rand_advice()
                 if advice:
                     speak(advice)
-            continue
+                continue
+            elif result is False:
+                # User declined advice, continue with normal flow
+                continue
+            # If result is None, check for timeout
+            elif activity_monitor.check_confirmation_timeout():
+                # Timeout occurred, reset and continue with normal flow
+                activity_monitor.reset_confirmation_state()
+                # Don't continue here, let the command processing happen
 
         # Exit commands handled anytime
         if any(keyword in text_lower for keyword in bye_key_word):
@@ -104,6 +125,8 @@ def command():
         # If not in command mode, wait for wake word
         if not command_mode:
             if any(keyword.strip() == text_lower for keyword in wakeup_key_word):
+                # Reset any pending advice confirmation when waking up
+                activity_monitor.reset_confirmation_state()
                 welcome()
                 command_mode = True
             # Ignore other inputs outside command mode
@@ -392,6 +415,7 @@ def process_command(text):
 
     elif "check running apps" in text or "check the running apps" in text:
         check_running_app()
+
     elif "check temperature" in text or "check the temperature" in text:
         speak("Checking the temperature. Please wait a moment...")
         get_current_temperature()

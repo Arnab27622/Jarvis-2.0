@@ -1,11 +1,5 @@
 import time
 import threading
-from pathlib import Path
-import sys
-
-current_dir = Path(__file__).parent
-sys.path.append(str(current_dir.parent))
-
 from assistant.core.speak_selector import speak
 
 
@@ -34,6 +28,7 @@ class ActivityMonitor:
             "go ahead",
             "yes jarvis",
         ]
+
         self.decline_phrases = [
             "no thanks",
             "not now",
@@ -81,6 +76,7 @@ class ActivityMonitor:
         # Check for positive responses
         if any(phrase in text_lower for phrase in self.confirm_phrases):
             return True
+
         # Check for negative responses
         elif any(phrase in text_lower for phrase in self.decline_phrases):
             return True
@@ -98,6 +94,7 @@ class ActivityMonitor:
         if any(phrase in text_lower for phrase in self.confirm_phrases):
             self.awaiting_confirmation = False
             return True
+
         # Check for negative responses
         elif any(phrase in text_lower for phrase in self.decline_phrases):
             self.awaiting_confirmation = False
@@ -117,11 +114,17 @@ class ActivityMonitor:
         """Check if confirmation timeout has been reached"""
         if (
             self.awaiting_confirmation
-            and time.time() - self.confirmation_start_time > 5
+            and time.time() - self.confirmation_start_time > 6
         ):
             self.awaiting_confirmation = False
             return True
         return False
+
+    def reset_confirmation_state(self):
+        """Reset the confirmation state - useful when returning to normal command listening"""
+        self.awaiting_confirmation = False
+        self.confirmation_response = None
+        self.confirmation_start_time = 0
 
     def _monitor_loop(self):
         """Main monitoring loop"""

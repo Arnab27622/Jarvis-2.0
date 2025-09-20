@@ -1,7 +1,6 @@
 .vscode
 .venv
 *__pycache__
-brain2.py
 test.py
 test2.py
 .env
