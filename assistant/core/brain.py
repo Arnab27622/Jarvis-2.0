@@ -1,48 +1,59 @@
-from assistant.LLM.llm1 import (
-    Client,
-    strip_markdown as strip_markdown1,
-)
-from assistant.LLM.llm2 import llm2 as llm2_func
+import sys
+from assistant.LLM.model import mind
+from assistant.activities.activity_monitor import record_user_activity
 from assistant.core.speak_selector import speak
+from assistant.automation.integrations.wiki_search import wiki_search
+from assistant.automation.features.save_data_locally import (
+    qa_lock,
+    qa_file_path,
+    qa_dict,
+    save_qa_data,
+)
 
 
-class LLM1Wrapper:
-    def __init__(self):
-        self.client = Client()
-        self.system_prompt = (
-            "You are Jarvis, a helpful AI assistant for a software engineer. "
-            "Your creator is Arnab Dey. Arnab Dey is the only one to use you. "
-            "Provide concise, accurate answers to questions. "
-            "You answer questions, no matter how long, very quickly with low latency."
-        )
-        self.conversation_history = [{"role": "system", "content": self.system_prompt}]
-
-    def ask(self, user_input):
-        self.conversation_history.append({"role": "user", "content": user_input})
-        response = self.client.chat.completions.create(
-            model="deepseek-v3",
-            messages=self.conversation_history,
-            web_search=True,
-        )
-        assistant_reply = strip_markdown1.strip_markdown(
-            response.choices[0].message.content.strip()
-        )
-        self.conversation_history.append(
-            {"role": "assistant", "content": assistant_reply}
-        )
-        speak(assistant_reply)
-        return assistant_reply
-
-
-llm1_wrapper = LLM1Wrapper()
-
-
-def brain(user_input: str) -> str:
+def brain(text, threshold=0.7):
+    """Main function to process queries"""
     try:
-        # Try llm1 first
-        print("Using LLM1...")
-        return llm1_wrapper.ask(user_input)
+        # Record user activity
+        record_user_activity()
+
+        # Check if query is in Q&A database first
+        if text in qa_dict:
+            response = qa_dict[text]
+            speak(response)
+            return
+
+        # Use local dataset for response first
+        response = mind(text, threshold=threshold)
+
+        if (
+            response is None
+            or not response.strip()
+            or "i don't know" in response.lower()
+            or "i'm not sure" in response.lower()
+        ):
+            wiki_search(text)
+            return
+
+        # Speak the response and save to database
+        speak(response)
+
+        with qa_lock:
+            qa_dict[text] = response
+            save_qa_data(qa_file_path, qa_dict)
+
     except Exception as e:
-        # Fallback to llm2 on failure
-        print(f"Using LLM2...")
-        return llm2_func(user_input)
+        error_msg = f"Error in brain function: {e}"
+        print(error_msg)
+        # Fallback to Wikipedia search
+        wiki_search(text, use_cache=False)
+
+
+if __name__ == "__main__":
+    while True:
+        text = input()
+
+        if text == "exit":
+            sys.exit()
+        else:
+            brain(text)

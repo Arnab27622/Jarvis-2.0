@@ -73,8 +73,6 @@ def mind(text, threshold=0.7):
     user_question = text
     answer, similarity = get_answer(user_question, vectorizer, X, dataset, threshold)
 
-    print(f"Query: {text}, Answer: {answer}, Similarity: {similarity}")
-
     return answer
 
 

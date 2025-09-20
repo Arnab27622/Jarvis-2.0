@@ -8,6 +8,12 @@ from bs4 import BeautifulSoup
 import strip_markdown
 from assistant.core.speak_selector import speak
 from assistant.activities.activity_monitor import record_user_activity
+from assistant.automation.features.save_data_locally import (
+    qa_lock,
+    qa_file_path,
+    qa_dict,
+    save_qa_data,
+)
 
 load_dotenv()
 
@@ -144,7 +150,11 @@ def llm2(user_input):
     raw_reply_str = _extract_text_from_content(raw_reply)
     reply = clean_output_parser(raw_reply_str)
     conversation.append({"role": "assistant", "content": reply})
-    # speak(reply)
+    speak(reply)
+
+    with qa_lock:
+        qa_dict[user_input] = reply
+        save_qa_data(qa_file_path, qa_dict)
 
 
 if __name__ == "__main__":

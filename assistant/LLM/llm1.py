@@ -1,9 +1,12 @@
 from g4f.client import Client
 from assistant.core.speak_selector import speak
 import strip_markdown
+from assistant.activities.activity_monitor import record_user_activity
 
 
 def llm1():
+    record_user_activity()
+
     client = Client()
     system_prompt = (
         "You are Jarvis, a helpful AI assistant for a software engineer. "
