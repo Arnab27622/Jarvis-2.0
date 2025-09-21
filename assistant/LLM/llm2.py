@@ -1,5 +1,4 @@
 import sys
-import time
 from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
