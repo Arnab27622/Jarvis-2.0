@@ -17,7 +17,11 @@ from assistant.automation.integrations.alarm_reminder import (
     cancel_all_alarms,
     cancel_all_reminders,
 )
-from assistant.automation.integrations.check_temperature import get_current_temperature
+from assistant.automation.integrations.check_weather import (
+    get_current_temperature,
+    get_overall_weather,
+    get_weather_by_address,
+)
 from assistant.automation.integrations.google_search_automation import handle_web_search
 from assistant.automation.integrations.task_schedule_automation import (
     recall_info,
@@ -484,6 +488,19 @@ def process_command(text):
     elif "check temperature" in text or "check the temperature" in text:
         speak("Checking the temperature. Please wait a moment...")
         get_current_temperature()
+
+    elif "what's the weather today" in text or "check today's weather" in text:
+        speak("Checking Today's weather conditions. Please wait a moment...")
+        get_overall_weather()
+
+    elif "check the weather of" in text or "check weather of" in text:
+        weather_patterns = ["check the weather of", "check weather of"]
+        for pattern in weather_patterns:
+            if pattern in text:
+                address = text.replace(pattern, "").strip()
+
+        speak(f"Checking the weather in {address}. Please wait a moment...")
+        get_weather_by_address(address=address)
 
     elif "remember that" in text:
         remember_info(text)

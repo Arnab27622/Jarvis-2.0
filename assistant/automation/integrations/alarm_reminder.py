@@ -187,7 +187,7 @@ def play_alarm_sound():
 
 def play_reminder_sound():
     """Play reminder sound from data/reminder.mp3"""
-    play_audio_file(REMINDER_SOUND_FILE, repeat_times=2)
+    play_audio_file(REMINDER_SOUND_FILE, repeat_times=3)
 
 
 def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
