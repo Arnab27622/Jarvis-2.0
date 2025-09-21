@@ -5,6 +5,7 @@ from assistant.activities.check_speaker_health import speaker_health_test
 from assistant.activities.check_mic_health import mic_health
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
+from assistant.automation.integrations.text_to_image import generate_image_from_text
 from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
@@ -484,6 +485,25 @@ def process_command(text):
 
     elif "check running apps" in text or "check the running apps" in text:
         check_running_app()
+
+    elif (
+        "create an image of" in text
+        or "create image of" in text
+        or "generate an image of" in text
+        or "generate image of" in text
+    ):
+        patterns = [
+            "create an image of",
+            "create image of",
+            "generate an image of",
+            "generate image of",
+        ]
+        for pattern in patterns:
+            if pattern in text:
+                prompt = text.replace(pattern, "").strip()
+
+        speak(f"Generating image of {prompt}. Please wait a moment...")
+        generate_image_from_text(prompt)
 
     elif "check temperature" in text or "check the temperature" in text:
         speak("Checking the temperature. Please wait a moment...")
