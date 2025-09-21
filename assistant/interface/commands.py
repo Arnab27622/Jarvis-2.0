@@ -6,6 +6,7 @@ from assistant.activities.check_mic_health import mic_health
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
 from assistant.automation.integrations.text_to_image import generate_image_from_text
+from assistant.automation.integrations.detailed_web_search import generate
 from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
@@ -457,6 +458,15 @@ def process_command(text):
     elif "mute" in text:  # For general purpose
         speak("Muting volume")
         ui.press("volumemute")
+
+    elif "search the web for" in text or "search web for" in text:
+        patterns = ["search the web for", "search web for"]
+        for pattern in patterns:
+            if pattern in text:
+                search_text = text.replace(pattern, "").strip()
+                
+        speak(f"Searching the web for {search_text}. Please wait a moment...")
+        generate(user_prompt=text, prints=True)
 
     elif "search for" in text and "google" in text:
         handle_web_search(text)

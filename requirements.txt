@@ -4,7 +4,7 @@ aiohttp==3.12.15
 aiosignal==1.4.0
 annotated-types==0.7.0
 anyio==4.10.0
--e git+https://github.com/Arnab27622/Jarvis-2.0.git@8075808ed04d8f24a48485b700a436608dd1bd5c#egg=assistant
+-e git+https://github.com/Arnab27622/Jarvis-2.0.git@f801ed19a7eeea5c59ba54bb97a905a2eaa33dae#egg=assistant
 attrs==25.3.0
 audioop-lts==0.2.2
 av==15.1.0
@@ -51,9 +51,12 @@ google-api-python-client==2.181.0
 google-auth==2.40.3
 google-auth-httplib2==0.2.0
 google-generativeai==0.8.5
+google_search_results==2.4.2
 googleapis-common-protos==1.70.0
+googlesearch-python==1.3.0
 googletrans==4.0.0rc1
 gradio_client==1.13.1
+groq==0.31.1
 grpcio==1.74.0
 grpcio-status==1.71.2
 h11==0.16.0
@@ -69,7 +72,7 @@ humanfriendly==10.0
 hyperframe==5.2.0
 idna==2.10
 invoke==2.2.0
--e git+https://github.com/Arnab27622/Jarvis-2.0.git@8075808ed04d8f24a48485b700a436608dd1bd5c#egg=JARVIS_2.0
+-e git+https://github.com/Arnab27622/Jarvis-2.0.git@f801ed19a7eeea5c59ba54bb97a905a2eaa33dae#egg=JARVIS_2.0
 Jinja2==3.1.6
 jiter==0.11.0
 joblib==1.5.2
@@ -148,6 +151,7 @@ safetensors==0.6.2
 scikit-learn==1.7.2
 scipy==1.16.1
 screen_brightness_control==0.24.2
+serpapi==0.1.5
 setuptools==80.9.0
 six==1.17.0
 sniffio==1.3.1
