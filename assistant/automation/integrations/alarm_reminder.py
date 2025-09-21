@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import re
 import pygame
 from assistant.core.speak_selector import speak
+from assistant.activities.notification import notification
 
 # Global storage for alarms and reminders
 active_alarms = {}
@@ -186,7 +187,7 @@ def play_alarm_sound():
 
 def play_reminder_sound():
     """Play reminder sound from data/reminder.mp3"""
-    play_audio_file(REMINDER_SOUND_FILE, repeat_times=1)
+    play_audio_file(REMINDER_SOUND_FILE, repeat_times=2)
 
 
 def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
@@ -198,8 +199,8 @@ def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
         time.sleep(wait_time)
 
     # Trigger alarm
-    alarm_message = f"ALARM! {message}" if message else "ALARM! Time's up!"
-    speak(alarm_message)
+    alarm_message = message if message else "Time's up!"
+    notification(title="ALARM!", message=alarm_message)
     play_alarm_sound()
 
     # Remove from active alarms
@@ -217,10 +218,8 @@ def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: s
         time.sleep(wait_time)
 
     # Trigger reminder
-    reminder_message = (
-        f"REMINDER: {message}" if message else "REMINDER: You have a reminder!"
-    )
-    speak(reminder_message)
+    reminder_message = message if message else "You have a reminder!"
+    notification(title="REMINDER!", message=reminder_message)
     play_reminder_sound()
 
     # Remove from active reminders
