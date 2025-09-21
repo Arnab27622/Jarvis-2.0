@@ -9,6 +9,14 @@ from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
 )
+from assistant.automation.integrations.alarm_reminder import (
+    set_alarm,
+    set_reminder,
+    list_alarms,
+    list_reminders,
+    cancel_all_alarms,
+    cancel_all_reminders,
+)
 from assistant.automation.integrations.check_temperature import get_current_temperature
 from assistant.automation.integrations.google_search_automation import handle_web_search
 from assistant.automation.integrations.task_schedule_automation import (
@@ -29,7 +37,6 @@ import random
 import re
 import pyautogui as ui
 import os
-import time
 
 
 def wait_for_wakeword():
@@ -161,6 +168,64 @@ def process_command(text):
 
     elif first_word in close_input:
         close_command()
+
+    elif any(
+        phrase in text
+        for phrase in ["set alarm", "set an alarm", "alarm for", "alarm at"]
+    ):
+        set_alarm(text)
+
+    elif any(
+        phrase in text
+        for phrase in ["set reminder", "remind me", "reminder for", "reminder at"]
+    ):
+        set_reminder(text)
+
+    elif any(
+        phrase in text
+        for phrase in [
+            "list alarms",
+            "show alarms",
+            "what alarms",
+            "my alarms",
+            "check alarms",
+        ]
+    ):
+        list_alarms()
+
+    elif any(
+        phrase in text
+        for phrase in [
+            "list reminders",
+            "show reminders",
+            "what reminders",
+            "my reminders",
+            "check reminders",
+        ]
+    ):
+        list_reminders()
+
+    elif any(
+        phrase in text
+        for phrase in [
+            "cancel all alarms",
+            "delete all alarms",
+            "remove all alarms",
+            "clear alarms",
+        ]
+    ):
+        cancel_all_alarms()
+
+    elif any(
+        phrase in text
+        for phrase in [
+            "cancel all reminders",
+            "delete all reminders",
+            "remove all reminders",
+            "clear reminders",
+        ]
+    ):
+        cancel_all_reminders()
 
     elif (
         "minimize" in text
