@@ -1,7 +1,8 @@
 import sys
 from assistant.LLM.llm2 import llm2 as llm2_func
 from assistant.LLM.llm1 import llm1 as llm1_func
-from assistant.LLM.llm3 import llm3 as llm3_func
+from assistant.LLM.llm3 import llm3_text as llm3_func
+from assistant.LLM.llm4 import llm4 as llm4_func
 
 
 def llm_response(user_input: str) -> str:

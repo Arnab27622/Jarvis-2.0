@@ -155,7 +155,7 @@ def generate(
     return clean_completion
 
 
-def generate_text(text: str) -> str:
+def llm4(text: str) -> str:
     """
     Simple text input function like llm3_text.
     Add the user's message to global history, trim it, call generate, and return the assistant's reply.
@@ -202,4 +202,4 @@ if __name__ == "__main__":
             print("Context cleared.")
             continue
         else:
-            generate_text(text_input)
+            llm4(text_input)
