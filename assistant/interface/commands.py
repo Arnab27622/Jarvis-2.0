@@ -5,7 +5,7 @@ from assistant.activities.check_speaker_health import speaker_health_test
 from assistant.activities.check_mic_health import mic_health
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
-from assistant.automation.integrations.text_to_image import generate_image_from_text
+from assistant.automation.text_to_image.text_to_image import generate_image_from_text
 from assistant.automation.integrations.detailed_web_search import generate
 from assistant.automation.integrations.location_automation import (
     get_current_location,

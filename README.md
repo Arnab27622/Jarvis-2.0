@@ -1,5 +1,4 @@
 ## Setup Project
 ```bash
-pip install -e .
-
+pip install -e . --use-pep517
 ```
