@@ -182,7 +182,6 @@ def llm3(
         # Append assistant reply to history for future context
         conversation_history.append({"role": "assistant", "content": clean_completion})
 
-        # Speak and persist Q/A
         speak(clean_completion)
         with qa_lock:
             qa_dict[user_input] = clean_completion
