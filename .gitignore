@@ -6,3 +6,7 @@ test2.py
 .env
 JARVIS_2.0.egg-info
 images
+claps
+noise2
+Clap_Detect_Model2.pth
+Clap_Detect_Model.pth
