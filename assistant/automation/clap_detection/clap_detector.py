@@ -1,6 +1,9 @@
 import os
 import time
 import warnings
+import atexit
+import signal
+import sys
 from collections import deque
 from typing import Any
 import numpy as np
@@ -53,6 +56,9 @@ class AudioProcessor:
 
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(self.temp_filename), exist_ok=True)
+        
+        # Register cleanup function to delete temp file on exit
+        self._register_cleanup()
 
         self.stream = sd.InputStream(
             device=device_index,
@@ -61,6 +67,27 @@ class AudioProcessor:
             dtype=dtype,
             blocksize=self.chunk_samples,
         )
+
+    def _register_cleanup(self):
+        """Register cleanup function to delete temp file on program termination."""
+        def cleanup():
+            if os.path.exists(self.temp_filename):
+                try:
+                    os.remove(self.temp_filename)
+                    print(f"\nCleaned up temporary file: {self.temp_filename}")
+                except Exception as e:
+                    print(f"\nError deleting temporary file: {e}")
+        
+        # Register for normal exit
+        atexit.register(cleanup)
+        
+        # Register for signal handlers (Ctrl+C, etc.)
+        def signal_handler(signum, frame):
+            cleanup()
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
+        signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
     def save_buffer_to_wav(self, filename: str) -> None:
         """
@@ -121,6 +148,14 @@ class AudioProcessor:
                 print("\nRecording stopped by user.")
             except Exception as e:
                 print(f"Error: {e}")
+            finally:
+                # Cleanup temp file when loop ends
+                if os.path.exists(self.temp_filename):
+                    try:
+                        os.remove(self.temp_filename)
+                        print("Cleaned up temporary file.")
+                    except Exception as e:
+                        print(f"Error deleting temporary file: {e}")
 
 
 def list_devices() -> None:
@@ -157,9 +192,10 @@ def detect_claps(device_index: int, chunk_duration: float = 1.0) -> None:
     audio_processor.record_and_detect()
 
 
-if __name__ == "__main__":
-    list_devices()
+def main():
+    """Main function with proper cleanup."""
     try:
+        list_devices()
         device_index = int(
             input("\nEnter the index of the input device you want to use: ")
         )
@@ -169,3 +205,9 @@ if __name__ == "__main__":
         print("Please enter a valid number!")
     except KeyboardInterrupt:
         print("\nExiting...")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()
