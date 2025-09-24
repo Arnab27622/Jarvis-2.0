@@ -228,6 +228,15 @@ res_bye = [
     "Okay, I'm out. Catch you later.",
 ]
 
+stop_music_word = [
+    "stop playing music",
+    "stop playing the music",
+    "stop the music",
+    "turn off the music",
+    "end the music",
+    "turn off the music player",
+]
+
 stopcmd = [
     "stop listening",
     "go to sleep",
@@ -287,9 +296,7 @@ close_input = [
     "terminate",
     "exit",
     "shut down",
-    "end",
     "kill",
-    "stop",
     "abort",
     "cease",
     "deactivate",
