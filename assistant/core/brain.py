@@ -2,7 +2,7 @@ import sys
 from assistant.LLM.model import mind
 from assistant.activities.activity_monitor import record_user_activity
 from assistant.core.speak_selector import speak
-from assistant.automation.integrations.wiki_search import wiki_search
+from assistant.LLM.llm_search import llm_response
 from assistant.automation.features.save_data_locally import (
     qa_lock,
     qa_file_path,
@@ -32,7 +32,7 @@ def brain(text, threshold=0.7):
             or "i don't know" in response.lower()
             or "i'm not sure" in response.lower()
         ):
-            wiki_search(text)
+            llm_response(text)
             return
 
         # Speak the response and save to database
@@ -45,13 +45,13 @@ def brain(text, threshold=0.7):
     except Exception as e:
         error_msg = f"Error in brain function: {e}"
         print(error_msg)
-        # Fallback to Wikipedia search
-        wiki_search(text, use_cache=False)
+        # Fallback to llm search
+        llm_response(text)
 
 
 if __name__ == "__main__":
     while True:
-        text = input()
+        text = input("Query:")
 
         if text == "exit":
             sys.exit()

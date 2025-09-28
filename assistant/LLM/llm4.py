@@ -93,7 +93,7 @@ def trim_history(
 
 def generate(
     prompt: List[Dict[str, str]],
-    system_prompt: str = "You are Jarvis, a helpful AI assistant for a software engineer. Your creator is Arnab Dey. Arnab Dey is the only one to use you. Provide concise, accurate answers to questions. You answer questions, no matter how long, very quickly with low latency.",
+    system_prompt: str = "You are Jarvis, a helpful AI assistant for a programmer. Your creator is Arnab Dey. Arnab Dey is the only one to use you. Provide concise, accurate answers to questions. You answer questions, no matter how long, very quickly with low latency.",
     model: str = "Phind-70B",
     stream_chunk_size: int = 12,
     stream: bool = True,

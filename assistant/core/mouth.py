@@ -1,3 +1,4 @@
+# mouth.py (modified for queue-based streaming)
 import asyncio
 import os
 import edge_tts
@@ -6,13 +7,18 @@ import tempfile
 import sys
 import time
 import threading
+import queue
+import re
 
 VOICE = "en-AU-WilliamNeural"
 
 pygame.init()
 pygame.mixer.init()
 
-_speak_lock = threading.Lock()
+# Global queue for TTS sentences
+tts_queue = queue.Queue()
+_is_tts_running = False
+_tts_lock = threading.Lock()
 
 
 def print_animated_message(message):
@@ -56,18 +62,18 @@ def play_audio_file(file_path):
 
 
 async def _speak_async(text):
-    """Async function to generate and play audio with minimal memory usage"""
+    """Async function to generate and play audio"""
     try:
         # Generate audio file first
         audio_file_path = await stream_audio(text, VOICE)
-        
+
         # Create and start a thread for animated printing
         print_thread = threading.Thread(target=print_animated_message, args=(text,))
         print_thread.start()
-        
-        # Play audio in the main thread (this will block until audio finishes)
+
+        # Play audio in the main thread
         play_audio_file(audio_file_path)
-        
+
         # Wait for the printing thread to finish
         print_thread.join()
 
@@ -76,10 +82,74 @@ async def _speak_async(text):
 
 
 def speak(text):
-    """Main function to speak text with minimal memory usage"""
-    with _speak_lock:
+    """Main function to speak text (for single sentences)"""
+    with _tts_lock:
         time.sleep(0.1)
         asyncio.run(_speak_async(text))
+
+
+def _tts_consumer():
+    """Background thread that consumes sentences from the queue and speaks them"""
+    global _is_tts_running
+
+    while _is_tts_running or not tts_queue.empty():
+        try:
+            # Get sentence from queue with timeout
+            sentence = tts_queue.get(timeout=1.0)
+            if sentence is None:  # Shutdown signal
+                break
+
+            if sentence.strip():  # Only speak non-empty sentences
+                asyncio.run(_speak_async(sentence))
+
+            tts_queue.task_done()
+
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"Error in TTS consumer: {e}")
+            continue
+
+
+def start_tts_consumer():
+    """Start the TTS consumer thread"""
+    global _is_tts_running
+    with _tts_lock:
+        if not _is_tts_running:
+            _is_tts_running = True
+            consumer_thread = threading.Thread(target=_tts_consumer, daemon=True)
+            consumer_thread.start()
+
+
+def stop_tts_consumer():
+    """Stop the TTS consumer thread"""
+    global _is_tts_running
+    with _tts_lock:
+        _is_tts_running = False
+
+
+def speak_streaming(sentences):
+    """Stream sentences to the TTS queue"""
+    # Clear any existing queue items to avoid backlog
+    while not tts_queue.empty():
+        try:
+            tts_queue.get_nowait()
+            tts_queue.task_done()
+        except queue.Empty:
+            break
+
+    # Start the consumer if not running
+    start_tts_consumer()
+
+    # Add sentences to queue
+    for sentence in sentences:
+        if sentence.strip():  # Only queue non-empty sentences
+            tts_queue.put(sentence)
+
+
+def wait_for_tts_completion():
+    """Wait for all queued TTS tasks to complete"""
+    tts_queue.join()
 
 
 if __name__ == "__main__":

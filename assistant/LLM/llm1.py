@@ -16,7 +16,7 @@ def llm1(user_input):
 
     client = Client()
     system_prompt = (
-        "You are Jarvis, a helpful AI assistant for a software engineer. "
+        "You are Jarvis, a helpful AI assistant for a programmer. "
         "Your creator is Arnab Dey. Arnab Dey is the only one to use you. "
         "Provide concise, accurate answers to questions. "
         "You answer questions, no matter how long, very quickly with low latency."

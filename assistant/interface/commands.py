@@ -7,6 +7,7 @@ from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
 from assistant.automation.text_to_image.text_to_image import generate_image_from_text
 from assistant.automation.integrations.detailed_web_search import generate
+from assistant.automation.integrations.wiki_search import wiki_search
 from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
@@ -464,12 +465,23 @@ def process_command(text):
         for pattern in patterns:
             if pattern in text:
                 search_text = text.replace(pattern, "").strip()
-                
+
         speak(f"Searching the web for {search_text}. Please wait a moment...")
         generate(user_prompt=text, prints=True)
 
     elif "search for" in text and "google" in text:
         handle_web_search(text)
+
+    elif "search for" in text and (
+        "in wikipedia" in text or "from wikipedia" in text or "on wikipedia" in text
+    ):
+        patterns = ["search for", "in wikipedia", "from wikipedia", "on wikipedia"]
+        for pattern in patterns:
+            if pattern in text:
+                search_text = text.replace(pattern, "").strip()
+
+        speak("Searching the wikipedia...")
+        wiki_search(search_text)
 
     elif (
         "what time" in text
