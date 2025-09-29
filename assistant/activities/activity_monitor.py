@@ -4,7 +4,7 @@ from assistant.core.speak_selector import speak
 
 
 class ActivityMonitor:
-    def __init__(self, initial_delay=80, check_interval=40, inactivity_threshold=100):
+    def __init__(self, initial_delay=80, check_interval=80, inactivity_threshold=100):
         """
         Initialize the activity monitor
         """

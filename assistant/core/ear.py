@@ -5,10 +5,6 @@ from colorama import Fore, init
 import time
 import wave
 from collections import deque
-
-
-current_dir = Path(__file__).parent
-sys.path.append(str(current_dir.parent))
 from assistant.activities.activity_monitor import record_user_activity
 
 init(autoreset=True)

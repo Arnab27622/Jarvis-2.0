@@ -24,3 +24,7 @@ def handle_web_search(command_text):
         speak(f"{random.choice(search_result)} {search_query}")
     else:
         speak("What would you like me to search for?")
+
+
+if __name__ == "__main__":
+    handle_web_search("hianime")
