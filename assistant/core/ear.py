@@ -1,5 +1,19 @@
-from pathlib import Path
-import sys
+"""
+Ear Module - Advanced Speech Recognition System
+
+This module provides sophisticated speech recognition capabilities using Google's Web Speech API.
+It features ambient noise calibration, dynamic energy threshold adjustment, and robust error handling
+for reliable voice input processing in various environments.
+
+Key Features:
+- Real-time speech recognition with continuous listening
+- Adaptive ambient noise calibration
+- Multiple recognition fallback strategies
+- Audio debugging capabilities
+- Recognition history tracking
+- User activity monitoring
+"""
+
 import speech_recognition as sr
 from colorama import Fore, init
 import time
@@ -7,48 +21,90 @@ import wave
 from collections import deque
 from assistant.activities.activity_monitor import record_user_activity
 
+# Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
 
 
 class AdvancedSpeechRecognizer:
+    """
+    Advanced speech recognition system with calibration and error handling.
+
+    This class provides a robust interface for converting speech to text using
+    Google's Web Speech API with enhanced features for reliability and accuracy.
+
+    Attributes:
+        is_listening (bool): Tracks whether the system is currently listening
+        recognizer (sr.Recognizer): SpeechRecognition recognizer instance
+        energy_threshold (int): Initial energy threshold for speech detection
+        ambient_noise_adjusted (bool): Flag indicating if noise calibration completed
+        recognition_history (deque): Circular buffer of recent recognitions for context
+        calibration_duration (int): Duration in seconds for noise calibration
+    """
+
     def __init__(self):
+        """Initialize the speech recognizer with optimized settings."""
         self.is_listening = False
         self.recognizer = sr.Recognizer()
-        self.energy_threshold = 35100  # Initial energy threshold
+        self.energy_threshold = 35100  # Initial energy threshold for speech detection
         self.ambient_noise_adjusted = False
-        self.recognition_history = deque(maxlen=5)  # Keep history for context
+        self.recognition_history = deque(maxlen=5)  # Keep history for context analysis
 
-        # Optimize recognizer settings
-        self.recognizer.dynamic_energy_threshold = True
-        self.recognizer.pause_threshold = 1.2  # Longer pause for natural speech
+        # Configure recognizer with optimized parameters
+        self.recognizer.dynamic_energy_threshold = True  # Auto-adjust to ambient noise
+        self.recognizer.pause_threshold = 1.2  # Longer pause for natural speech patterns
         self.recognizer.non_speaking_duration = 0.8  # Shorter non-speaking duration
-        self.recognizer.operation_timeout = None
+        self.recognizer.operation_timeout = None  # No operation timeout
         self.recognizer.phrase_threshold = 0.3  # Sensitivity to speech detection
 
-        # Audio calibration values
+        # Audio calibration settings
         self.calibration_duration = 2  # Longer calibration for better noise adjustment
 
     def clear_line(self):
-        """Clear the current line in terminal"""
+        """
+        Clear the current line in terminal output.
+
+        Uses ANSI escape codes to clear from cursor to end of line.
+        """
         print("\033[K", end="", flush=True)
 
     def print_listening(self):
-        """Print listening message without newline"""
+        """
+        Display listening indicator without newline.
+
+        Shows a green 'Listening...' message that stays on the same line
+        until speech is processed or timeout occurs.
+        """
         if not self.is_listening:
             print(Fore.LIGHTGREEN_EX + "Listening...", end="\r", flush=True)
             self.is_listening = True
 
     def stop_listening_message(self):
-        """Stop and clear the listening message"""
+        """
+        Stop and clear the listening indicator.
+
+        Clears the 'Listening...' message and resets the listening flag.
+        """
         if self.is_listening:
             self.clear_line()
             self.is_listening = False
 
     def save_audio_debug(self, audio, filename="debug_audio.wav"):
-        """Save audio data for debugging purposes"""
+        """
+        Save audio data to WAV file for debugging purposes.
+
+        Useful for troubleshooting recognition issues by analyzing
+        the actual audio data that was processed.
+
+        Args:
+            audio: AudioData object from speech_recognition
+            filename (str): Output filename for saved audio
+
+        Returns:
+            None
+        """
         try:
             with wave.open(filename, "wb") as wf:
-                wf.setnchannels(1)
+                wf.setnchannels(1)  # Mono audio
                 wf.setsampwidth(audio.sample_width)
                 wf.setframerate(audio.sample_rate)
                 wf.writeframes(audio.get_raw_data())
@@ -57,7 +113,18 @@ class AdvancedSpeechRecognizer:
             print(Fore.RED + f"Error saving audio: {e}")
 
     def calibrate_microphone(self, source):
-        """Enhanced calibration with multiple attempts"""
+        """
+        Perform enhanced microphone calibration with multiple attempts.
+
+        Adjusts the recognizer for ambient noise to improve speech detection
+        accuracy. Uses multiple calibration attempts for reliability.
+
+        Args:
+            source: Microphone source object
+
+        Returns:
+            None
+        """
         print(Fore.YELLOW + "Calibrating microphone for ambient noise...")
 
         # Multiple calibration attempts for better accuracy
@@ -80,7 +147,18 @@ class AdvancedSpeechRecognizer:
                     self.recognizer.energy_threshold = 300
 
     def recognize_with_google(self, audio):
-        """Use Google Web Speech API for recognition"""
+        """
+        Use Google Web Speech API for speech recognition.
+
+        Primary recognition method that sends audio to Google's service
+        for conversion to text.
+
+        Args:
+            audio: AudioData object containing recorded speech
+
+        Returns:
+            str: Recognized text, or None if recognition failed
+        """
         recognized_text = None
 
         # Try Google Web Speech API
@@ -96,6 +174,19 @@ class AdvancedSpeechRecognizer:
         return recognized_text
 
     def listen(self):
+        """
+        Main listening function that captures and processes speech.
+
+        Handles the complete speech recognition pipeline:
+        - Microphone initialization and calibration
+        - Audio capture with timeout handling
+        - Speech recognition using Google Web Speech API
+        - Error handling and fallback strategies
+        - History tracking for contextual analysis
+
+        Returns:
+            str: Lowercase recognized text, or None if recognition failed
+        """
         self.is_listening = False
 
         try:
@@ -106,14 +197,14 @@ class AdvancedSpeechRecognizer:
 
                 print(Fore.YELLOW + "Microphone ready. Speak now...")
 
-                # Listen with longer timeout and phrase limit
+                # Listen with optimized parameters
                 try:
                     self.print_listening()
 
-                    # Listen with optimized parameters
+                    # Capture audio with optimized settings
                     audio = self.recognizer.listen(
                         source,
-                        timeout=5,
+                        timeout=5,  # Wait 5 seconds for speech to start
                         phrase_time_limit=7,  # Increased time limit for longer commands
                     )
 
@@ -125,7 +216,7 @@ class AdvancedSpeechRecognizer:
 
                     self.clear_line()
                     if recognized_txt:
-                        # Add to history for context
+                        # Add to history for context analysis
                         self.recognition_history.append(recognized_txt)
 
                         print(Fore.BLUE + "You said: " + Fore.CYAN + recognized_txt)
@@ -167,20 +258,40 @@ class AdvancedSpeechRecognizer:
             return None
 
 
-# Create a global instance
+# Create a global instance for module-level access
 recognizer = AdvancedSpeechRecognizer()
 
 
-# Define the listen function that will be imported
 def listen():
+    """
+    Module-level function for easy speech recognition access.
+
+    Provides a simplified interface to the advanced speech recognizer
+    and automatically records user activity upon successful recognition.
+
+    Returns:
+        str: Recognized text in lowercase, or None if recognition failed
+    """
     result = recognizer.listen()
     if result:
-        record_user_activity()  # Add this line
+        record_user_activity()  # Log successful user interaction
         return result
     return None
 
 
 if __name__ == "__main__":
+    """
+    Main execution block for testing the speech recognition system.
+
+    Provides an interactive command-line interface for testing
+    the speech recognition capabilities independently.
+
+    Usage:
+        python ear.py
+        - Speak when prompted
+        - Press Ctrl+C to exit
+        - View recognition results and debug information
+    """
     asr = AdvancedSpeechRecognizer()
 
     try:

@@ -3,11 +3,34 @@ import os
 from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
 
+# Load environment variables from .env file for secure API key storage
 load_dotenv()
 
 
 def get_location():
-    """Helper function to get current location from IP address"""
+    """
+    Determine current geographical location using IP address geolocation.
+
+    Uses the ipapi.co service to get approximate location based on the
+    device's public IP address. This provides automatic location detection
+    without requiring manual input from the user.
+
+    Returns:
+        dict or None: Dictionary containing location information with keys:
+            - latitude (float): Geographic latitude coordinate
+            - longitude (float): Geographic longitude coordinate
+            - city (str): City name based on IP geolocation
+            - country (str): Country name based on IP geolocation
+        Returns None if location cannot be determined or network error occurs.
+
+    Example:
+        >>> get_location()
+        {'latitude': 40.7128, 'longitude': -74.0060, 'city': 'New York', 'country': 'United States'}
+
+    Note:
+        IP-based location may not be precise and can vary based on ISP
+        and network configuration. Accuracy is typically at city level.
+    """
     try:
         location_response = requests.get("https://ipapi.co/json/", timeout=5)
         location_data = location_response.json()
@@ -28,7 +51,32 @@ def get_location():
 
 
 def get_current_temperature(units="metric"):
-    """Get current temperature information for your location"""
+    """
+    Get and announce current temperature for the user's location.
+
+    Fetches current weather data from OpenWeatherMap API and provides
+    a voice report of the current temperature along with daily high/low.
+
+    Args:
+        units (str): Temperature unit system. Options:
+                   "metric" - Celsius (default)
+                   "imperial" - Fahrenheit
+                   "standard" - Kelvin
+
+    Process:
+        1. Retrieves API key from environment variables
+        2. Determines current location via IP geolocation
+        3. Fetches weather data from OpenWeatherMap API
+        4. Extracts temperature information
+        5. Provides voice report to user
+
+    Example Output:
+        "Current temperature in New York, United States is 22°C. Low: 18°C and High: 26°C."
+
+    Note:
+        Requires WEATHER_API_KEY environment variable to be set with a valid
+        OpenWeatherMap API key.
+    """
     try:
         WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
         if not WEATHER_API_KEY:
@@ -88,7 +136,43 @@ def get_current_temperature(units="metric"):
 
 
 def get_overall_weather(units="metric"):
-    """Get comprehensive weather information for your location"""
+    """
+    Get comprehensive weather report for current location.
+
+    Provides a detailed weather analysis including temperature, feels-like temperature,
+    humidity, pressure, wind conditions, cloud cover, and visibility.
+
+    Args:
+        units (str): Measurement unit system. Options:
+                   "metric" - Celsius, m/s (default)
+                   "imperial" - Fahrenheit, mph
+                   "standard" - Kelvin, m/s
+
+    Returns:
+        dict or None: Comprehensive weather data dictionary with keys:
+            - location: Dictionary with city and country
+            - temperature: Current temperature
+            - feels_like: Apparent temperature
+            - weather: Main weather condition (e.g., "Clear", "Rain")
+            - description: Detailed weather description
+            - humidity: Relative humidity percentage
+            - pressure: Atmospheric pressure in hPa
+            - wind_speed: Wind speed in selected units
+            - wind_direction: Cardinal wind direction
+            - clouds: Cloud coverage percentage
+            - visibility: Visibility distance in kilometers
+            - units: Unit system used for measurements
+
+    Example Output:
+        "Weather report for New York, United States: It's currently Clear Sky with a
+         temperature of 22°C, feels like 24°C. Humidity is 65%, atmospheric pressure
+         is 1013 hPa. Wind is blowing from the Northeast at 3.5 m/s. Cloud cover is
+         10%. Visibility is 10.0 kilometers."
+
+    Note:
+        Wind direction is calculated from degrees to cardinal directions using
+        8-point compass rose (N, NE, E, SE, S, SW, W, NW).
+    """
     try:
         WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
         if not WEATHER_API_KEY:
@@ -128,7 +212,7 @@ def get_overall_weather(units="metric"):
         main_data = weather_data["main"]
         weather_desc = weather_data["weather"][0]
         wind_data = weather_data.get("wind", {})
-        visibility = weather_data.get("visibility", 0) / 1000
+        visibility = weather_data.get("visibility", 0) / 1000  # Convert meters to km
         clouds = weather_data.get("clouds", {}).get("all", 0)
 
         temp = main_data["temp"]
@@ -142,8 +226,17 @@ def get_overall_weather(units="metric"):
         wind_speed = wind_data.get("speed", 0)
         wind_deg = wind_data.get("deg", 0)
 
-        # Determine wind direction
+        # Determine wind direction from degrees
         def get_wind_direction(degrees):
+            """
+            Convert wind direction in degrees to cardinal direction.
+
+            Args:
+                degrees (float): Wind direction in degrees (0-360)
+
+            Returns:
+                str: Cardinal direction (N, NE, E, SE, S, SW, W, NW)
+            """
             directions = [
                 "North",
                 "Northeast",
@@ -159,7 +252,7 @@ def get_overall_weather(units="metric"):
 
         wind_direction = get_wind_direction(wind_deg) if wind_deg else "Unknown"
 
-        # Set unit symbols
+        # Set unit symbols based on measurement system
         if units == "metric":
             temp_unit = "°C"
             speed_unit = "m/s"
@@ -213,12 +306,30 @@ def get_overall_weather(units="metric"):
 
 def get_weather_by_address(address: str, units: str = "metric"):
     """
-    Get comprehensive weather information for a given address/city name.
+    Get comprehensive weather information for a specific location by address.
 
-    address: city name, or "city,state,country" (ISO 3166 country code recommended).
-    units: "metric", "imperial", or leave default for Kelvin (no units param).
+    Allows users to query weather for any city or location worldwide by providing
+    an address string. Supports city names, city+country combinations, and other
+    location formats recognized by OpenWeatherMap.
 
-    Returns a dict similar to get_overall_weather and uses speak(...) to announce the report.
+    Args:
+        address (str): Location description. Can be:
+                     - City name (e.g., "London")
+                     - City,country code (e.g., "London,UK")
+                     - City,state,country (e.g., "New York,NY,US")
+        units (str): Measurement unit system. Same options as get_overall_weather.
+
+    Returns:
+        dict or None: Same comprehensive weather data structure as get_overall_weather,
+                     but for the specified address location.
+
+    Example:
+        >>> get_weather_by_address("Paris,FR", "metric")
+        # Provides weather report for Paris, France in Celsius
+
+    Note:
+        For best results, include country code with city names to avoid ambiguity
+        between cities with the same name in different countries.
     """
     try:
         if not address or not isinstance(address, str):
@@ -350,11 +461,17 @@ def get_weather_by_address(address: str, units: str = "metric"):
 
 
 if __name__ == "__main__":
-    # Option 1: Just temperature
+    """
+    Demonstration and testing entry point for weather functions.
+
+    When run as a standalone script, this demonstrates different ways to use
+    the weather checking capabilities. Uncomment the desired function call.
+    """
+    # Option 1: Just temperature for current location
     # get_current_temperature(units="metric")
 
-    # Option 2: Comprehensive weather information
+    # Option 2: Comprehensive weather information for current location
     get_overall_weather(units="metric")
 
-    # Option 3: Get weather by address
+    # Option 3: Get weather for specific address/location
     # get_weather_by_address("Bangalore")

@@ -1,7 +1,17 @@
-# Usage warning: the api token expires every 5 minutes
-# To get a new token go to https://www.decohere.ai/realtime website an create an image, click f12 and open networks tab
-# check the turbo thread and open it to get the Authorization token
+"""
+Decohere AI Turbo Image Generation Module
 
+Warning: The Decohere AI API token expires every 5 minutes for security reasons.
+To obtain a new token:
+1. Visit https://www.decohere.ai/realtime
+2. Create an image on their platform
+3. Open browser Developer Tools (F12) and go to Network tab
+4. Look for 'turbo' network requests and copy the Authorization token
+5. Update your DECOHERE_AI environment variable with the new token
+
+This module provides fast image generation using Decohere AI's Turbo model with
+optimized parameters for quick turnaround times while maintaining quality.
+"""
 
 import time
 import requests
@@ -11,13 +21,33 @@ import os
 from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
 
+# Load environment variables for API key access
 load_dotenv()
 
+# Default storage path for generated images
 file_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\images"
 
 
 def validate_token() -> bool:
-    """Validate the DECOHERE_AI token before making API calls"""
+    """
+    Validate the Decohere AI API token before making image generation requests.
+
+    Performs basic validation checks on the token to ensure it's properly set
+    and appears to be in the correct format before attempting API calls.
+
+    Returns:
+        bool: True if token passes basic validation checks, False otherwise
+
+    Validation Checks:
+        - Token exists in environment variables
+        - Token has reasonable length (minimum 20 characters)
+        - Basic format validation
+
+    Example:
+        >>> validate_token()
+        Token length: 145 characters
+        True
+    """
     token = os.getenv("DECOHERE_AI")
     if not token:
         print("❌ DECOHERE_AI environment variable not set")
@@ -46,44 +76,61 @@ def generate(
     image_path: str = None,
 ) -> Tuple[bool, Optional[str]]:
     """
-    Generates an image based on the given parameters and saves it to a file.
+    Generate images using Decohere AI's Turbo API with optimized fast generation.
 
-    Parameters:
-    - prompt (str): Description of the image to generate.
-    - seed (int): Seed for the image generation process.
-    - width (int): Width of the generated image.
-    - height (int): Height of the generated image.
-    - steps (int): Number of steps for the image generation process. More the Steps More Clear and Realistic Image
-    - enhance (bool): Whether to enhance the image quality.
-    - safety_filter (bool): Whether to apply a safety filter to the image.
+    This function provides rapid image generation with quality optimization through
+    intelligent parameter defaults. It's designed for quick turnaround while
+    maintaining good image quality for most use cases.
 
-    - For Square Image Size: 768x768
-    - For Portrait Image Size: 1024x576
-    - For Landscape Image Size: 576x1024
+    Args:
+        prompt (str): Text description of the desired image content
+        seed (int): Random seed for reproducible results (default: 1800647681)
+        width (int): Output image width in pixels
+        height (int): Output image height in pixels
+        steps (int): Number of generation steps (more steps = higher quality but slower)
+        enhance (bool): Enable quality enhancement algorithms
+        safety_filter (bool): Enable content safety filtering
+        image_path (str, optional): Custom file path for saving the image
 
     Returns:
-    - Tuple[bool, Optional[str]]: A tuple containing a boolean indicating the success of the API call,
-      and an optional string with the file path where the image is saved if successful.
-    """
+        Tuple[bool, Optional[str]]:
+            - Success status (True/False)
+            - File path if successful, error message if failed
 
-    # Validate token first
+    Recommended Image Dimensions:
+        - Square: 768x768 pixels
+        - Portrait: 1024x576 pixels (default)
+        - Landscape: 576x1024 pixels
+
+    Performance Notes:
+        - Default 5 steps provide fast generation with acceptable quality
+        - Increase steps to 10-15 for higher quality when speed isn't critical
+        - Turbo model optimized for rapid generation (seconds vs minutes)
+
+    Example:
+        >>> generate("A beautiful sunset over mountains")
+        (True, "C:/Users/.../image_1640995200000.jpg")
+    """
+    # Validate token first to avoid failed API calls
     if not validate_token():
         return False, "Token validation failed"
 
+    # Generate timestamp-based filename if no custom path provided
     if image_path is None:
         image_path = f"{file_path}/image_{int(time.time()*1000)}.jpg"
 
+    # Ensure storage directory exists
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
 
     token = os.getenv("DECOHERE_AI")
 
-    # Define the URL and headers for the API call
+    # Decohere AI Turbo API endpoint
     url = "https://turbo.decohere.ai/generate/turbo"
     headers = {
         "Authorization": f"Bearer {token}",
     }
 
-    # Define the payload for the POST request
+    # API request payload with generation parameters
     payload = {
         "prompt": prompt,
         "seed": seed,
@@ -97,16 +144,18 @@ def generate(
     try:
         print(f"Generating image with prompt: {prompt[:100]}...")
 
-        # Make the POST request to the API
+        # Make API request with 60-second timeout
         response = requests.post(url, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
+        response.raise_for_status()  # Raise exception for HTTP errors
 
+        # Extract base64 image data from response
         base64_image_data = response.json().get("image", "")
         if not base64_image_data:
             error_msg = "No image data received in response"
             print(error_msg)
             return False, error_msg
 
+        # Decode base64 data and save as image file
         image_bytes = base64.b64decode(base64_image_data)
 
         with open(image_path, "wb") as image_file:
@@ -126,6 +175,7 @@ def generate(
         error_msg = f"API returned error: {e.response.status_code} - {e.response.text}"
         print(error_msg)
 
+        # Handle specific HTTP status codes with appropriate user feedback
         if e.response.status_code == 401:
             print("Authentication failed. Please check your DECOHERE AI token.")
         elif e.response.status_code == 429:
@@ -147,15 +197,36 @@ def generate(
 
 
 def test_token():
-    """Test function to check token validity"""
+    """
+    Test Decohere AI token validity and API connectivity.
+
+    Performs comprehensive testing of the API token and connection to ensure
+    the image generation service is accessible and properly configured.
+
+    Tests Performed:
+        - Token existence and basic validation
+        - Token masking for security display
+        - API endpoint connectivity with minimal test request
+        - Response status validation
+
+    Output:
+        Diagnostic information about token and API status
+
+    Example:
+        >>> test_token()
+        Testing DECOHERE_AI token...
+        Token appears valid: sk-1234567890...1234567890
+        API connectivity test passed!
+    """
     print("Testing DECOHERE_AI token...")
 
     if validate_token():
         token = os.getenv("DECOHERE_AI")
+        # Mask token for secure display (show first and last 10 characters)
         masked_token = f"{token[:10]}...{token[-10:]}" if len(token) > 20 else token
         print(f"Token appears valid: {masked_token}")
 
-        # Test API connectivity with a minimal request
+        # Test API connectivity with minimal request to avoid charges
         url = "https://turbo.decohere.ai/generate/turbo"
         headers = {"Authorization": f"Bearer {token}"}
         test_payload = {"prompt": "test", "width": 16, "height": 16, "steps": 1}
@@ -175,19 +246,33 @@ def test_token():
 
 
 if __name__ == "__main__":
-    # Test token first
+    """
+    Standalone testing and demonstration entry point.
+
+    When run directly, this script provides:
+    1. Token validation testing
+    2. Interactive prompt input
+    3. Image generation demonstration
+    4. Result reporting
+
+    Usage:
+        python text_to_image2.py
+        # Follow the prompts to test token and generate images
+    """
+    # Test token first to ensure API accessibility
     test_token()
     print("\n" + "=" * 50)
 
-    # Use input or predefined prompt
+    # Interactive prompt selection
     use_input = input("Use custom prompt? (y/n): ").lower().strip()
 
     if use_input == "y":
         prompt = input("Enter the prompt: ")
     else:
-        # Use a simple test prompt
+        # Use a simple test prompt for demonstration
         prompt = "A beautiful sunset over mountains, digital art"
 
+    # Generate image if prompt provided
     if prompt.strip():
         success, result_path = generate(prompt)
         if success:

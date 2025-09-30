@@ -5,7 +5,15 @@ from assistant.core.speak_selector import speak
 
 
 def list_input_devices():
-    """List all available input devices"""
+    """
+    List all available audio input devices on the system.
+
+    Uses PyAudio to enumerate all audio devices and filters for those with
+    input capabilities. Provides voice feedback listing each available device.
+
+    Returns:
+        list: A list of tuples containing (device_index, device_name) for each input device
+    """
     audio = pyaudio.PyAudio()
     info = audio.get_host_api_info_by_index(0)
     numdevices = info.get("deviceCount")
@@ -23,10 +31,35 @@ def list_input_devices():
 
 
 def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
-    CHUNK = 1024  # Audio chunk size
+    """
+    Perform comprehensive microphone health analysis.
+
+    Records audio from the specified microphone and analyzes multiple quality metrics:
+    - Audio activity detection
+    - Signal-to-noise ratio (SNR)
+    - Clipping detection (distortion)
+    - Frequency response analysis
+    - Dynamic noise floor estimation
+
+    Args:
+        seconds (int): Duration of recording for analysis (default: 5)
+        threshold_multiplier (float): Multiplier for dynamic noise threshold (default: 3.0)
+        device_index (int, optional): Specific device index to test. Uses default if None.
+
+    Returns:
+        dict or None: Dictionary containing health metrics if successful, None if failed.
+                      Metrics include:
+                      - Microphone Health (%): Percentage of time audio activity detected
+                      - Average Signal-to-Noise Ratio (dB): Quality of signal vs background noise
+                      - Clipping Percentage (%): Percentage of audio that was distorted
+                      - Frequency Range Coverage (%): How well frequency spectrum is captured
+                      - Noise Floor: Estimated background noise level
+    """
+    # Audio stream configuration constants
+    CHUNK = 1024  # Audio chunk size (samples per buffer)
     FORMAT = pyaudio.paInt16  # 16-bit resolution
     CHANNELS = 1  # Mono audio
-    RATE = 44100  # Sampling rate
+    RATE = 44100  # Sampling rate (Hz) - CD quality
 
     # Initialize PyAudio
     audio = pyaudio.PyAudio()
@@ -42,7 +75,7 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
             device_index = 0
 
     try:
-        # Open the stream with explicit device index
+        # Open the audio stream with explicit device index
         stream = audio.open(
             format=FORMAT,
             channels=CHANNELS,
@@ -57,19 +90,21 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
         return None
 
     speak(f"Recording for {seconds} seconds...")
-    time.sleep(1)  # Small pause before recording
+    time.sleep(1)  # Small pause before recording to stabilize
 
-    # Initialize variables
-    sound_count = 0
-    total_chunks = int(RATE / CHUNK * seconds)
-    noise_floor = 10.0  # Start with a reasonable noise floor estimate
-    clipping_count = 0
-    signal_sum = 0  # Sum of sound levels
-    noise_sum = 0  # Sum of background noise levels (below threshold)
-    freq_analysis = []  # Frequency analysis data
+    # Initialize analysis variables
+    sound_count = 0  # Count of chunks with detected sound
+    total_chunks = int(RATE / CHUNK * seconds)  # Total chunks to process
+    noise_floor = 10.0  # Initial noise floor estimate
+    clipping_count = 0  # Count of clipped audio chunks
+    signal_sum = 0  # Sum of sound levels for SNR calculation
+    noise_sum = 0  # Sum of background noise levels
+    freq_analysis = []  # Frequency analysis data storage
 
+    # Process audio data in chunks
     for i in range(0, total_chunks):
         try:
+            # Read audio data from stream
             data = np.frombuffer(
                 stream.read(CHUNK, exception_on_overflow=False), dtype=np.int16
             )
@@ -77,44 +112,44 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
             print(f"Error reading audio: {e}")
             continue
 
-        # Calculate volume (RMS)
+        # Calculate volume using Root Mean Square (RMS)
         if len(data) > 0:
             rms = np.sqrt(np.mean(np.square(data.astype(np.float32))))
         else:
             rms = 0
 
-        # Frequency analysis (FFT) - only positive frequencies
+        # Frequency analysis using Fast Fourier Transform (FFT)
         if len(data) > 0:
             fft_data = np.fft.fft(data.astype(np.float32))
             freqs = np.fft.fftfreq(len(fft_data), 1.0 / RATE)
-            positive_freq_idx = np.where(freqs > 0)
+            positive_freq_idx = np.where(freqs > 0)  # Only positive frequencies
             fft_spectrum = np.abs(fft_data[positive_freq_idx])
             freq_analysis.append(fft_spectrum)
         else:
             fft_spectrum = np.array([0])
             freq_analysis.append(fft_spectrum)
 
-        # Update ambient noise level dynamically (exponential moving average)
+        # Update ambient noise level using exponential moving average
         if rms < noise_floor * 1.5:  # Only update if not too far from current estimate
             noise_floor = 0.95 * noise_floor + 0.05 * rms
 
         # Dynamic threshold based on ambient noise
         dynamic_threshold = noise_floor * threshold_multiplier
 
-        # Check for sound detection
+        # Check for sound detection above threshold
         if rms > dynamic_threshold:  # Sound detected
             sound_count += 1
             signal_sum += rms
-        else:  # No sound detected (background noise)
+        else:  # Background noise
             noise_sum += rms
 
-        # Detect clipping (when the sound is too loud for the mic)
+        # Detect clipping (audio distortion when signal exceeds maximum range)
         if (
             len(data) > 0 and np.max(np.abs(data)) > 32700
-        ):  # Slightly below max to account for potential spikes
+        ):  # 32700 is slightly below 16-bit max (32767)
             clipping_count += 1
 
-    # Calculate metrics
+    # Calculate final metrics
     if total_chunks == 0:
         print("No chunks processed")
         stream.stop_stream()
@@ -122,6 +157,7 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
         audio.terminate()
         return None
 
+    # Microphone health percentage (activity detection rate)
     mic_health = (sound_count / total_chunks) * 100
 
     # Calculate average signal and noise with protection against division by zero
@@ -132,15 +168,16 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
         else noise_floor
     )
 
-    # Calculate SNR with protection against invalid values
+    # Calculate Signal-to-Noise Ratio (SNR) in decibels
     if avg_signal > 0 and avg_noise > 0:
         snr = 10 * np.log10(avg_signal / avg_noise)
     else:
         snr = 0  # Default value when SNR can't be calculated
 
+    # Calculate clipping percentage
     avg_clipping = (clipping_count / total_chunks) * 100
 
-    # Frequency analysis (average frequencies captured)
+    # Frequency response analysis
     if freq_analysis and len(freq_analysis) > 0:
         try:
             avg_fft_spectrum = np.mean(freq_analysis, axis=0)
@@ -156,12 +193,12 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
     else:
         freq_range_coverage = 0
 
-    # Close the stream
+    # Clean up audio resources
     stream.stop_stream()
     stream.close()
     audio.terminate()
 
-    # Output advanced health metrics
+    # Compile comprehensive health report
     health_report = {
         "Microphone Health (%)": mic_health,
         "Average Signal-to-Noise Ratio (dB)": snr,
@@ -174,6 +211,17 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
 
 
 def mic_health():
+    """
+    Main microphone health checking routine with user interaction.
+
+    Guides the user through:
+    1. Listing available input devices
+    2. Selecting a device to test
+    3. Performing health analysis
+    4. Reporting results via voice
+
+    Handles user input errors gracefully with fallback to default device.
+    """
     # List available devices
     devices = list_input_devices()
 
@@ -191,7 +239,10 @@ def mic_health():
         speak("Invalid input. Using default device.")
         choice = None
 
+    # Perform microphone health analysis
     health_metrics = get_mic_health(seconds=3, device_index=choice)
+
+    # Report results
     if health_metrics:
         for metric, value in health_metrics.items():
             output = f"{metric}: {value:.2f}"
@@ -203,4 +254,13 @@ def mic_health():
 
 
 if __name__ == "__main__":
+    """
+    Entry point for standalone microphone health testing.
+
+    When run directly, this script will:
+    1. List available microphones
+    2. Allow user selection
+    3. Perform comprehensive health analysis
+    4. Report results via voice
+    """
     mic_health()
