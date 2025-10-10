@@ -223,7 +223,7 @@ def mind(text, threshold=0.7):
         cached to avoid retraining on every query.
     """
     # Dataset path - consider making this configurable
-    dataset_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
+    dataset_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
 
     # Load Q&A dataset from file
     dataset = load_dataset(dataset_path)

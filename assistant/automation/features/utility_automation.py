@@ -128,7 +128,7 @@ def take_screenshot():
         Example: screenshot_20231201_143022.png
     
     Save Location:
-        C:\\Users\\arnab\\OneDrive\\Pictures\\Screenshots
+        "C:\\Users\\ARNAB DEY\\Pictures\\Screenshots"
     
     Process:
         1. Ensures the screenshot directory exists
@@ -139,10 +139,10 @@ def take_screenshot():
     
     Example:
         >>> take_screenshot()
-        # Saves: C:\\Users\\arnab\\OneDrive\\Pictures\\Screenshots\\screenshot_20231201_143022.png
+        # Saves: C:\\Users\\ARNAB DEY\\Pictures\\Screenshots\\screenshot_20231201_143022.png
         # Speaks: "Screenshot taken and saved as screenshot_20231201_143022.png"
     """
-    screenshot_dir = r"C:\Users\arnab\OneDrive\Pictures\Screenshots"
+    screenshot_dir = r"C:\Users\ARNAB DEY\Pictures\Screenshots"
     os.makedirs(screenshot_dir, exist_ok=True)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

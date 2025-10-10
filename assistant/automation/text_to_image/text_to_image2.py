@@ -25,7 +25,7 @@ from assistant.core.speak_selector import speak
 load_dotenv()
 
 # Default storage path for generated images
-file_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\images"
+file_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
 
 
 def validate_token() -> bool:

@@ -95,7 +95,7 @@ def generate_image_from_text(prompt_text):
     data = response.json()
 
     # Define storage directory for generated images
-    folder_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\images"
+    folder_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
     os.makedirs(folder_path, exist_ok=True)  # Create directory if it doesn't exist
 
     # Process and save each generated image from the response

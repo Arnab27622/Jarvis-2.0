@@ -122,7 +122,7 @@ def save_qa_data(file_path, qa_dict):
 
 # Use JSON format for better data structure
 qa_file_path = (
-    r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
+    r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
 )
 
 # Global Q&A dictionary loaded at module import

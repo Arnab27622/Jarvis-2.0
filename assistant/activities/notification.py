@@ -2,7 +2,7 @@ from winotify import Notification
 
 # Absolute path to the application icon file
 # Used for Windows toast notifications to provide brand identification
-icon_path = r"C:\Users\arnab\OneDrive\Python\Projects\Jarvis 2.0\data\logo.ico"
+icon_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\logo.ico"
 
 
 def notification(title, message):
