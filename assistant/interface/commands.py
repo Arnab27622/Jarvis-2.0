@@ -218,12 +218,32 @@ def process_command(text):
     # Alarm and Reminder Management
     elif any(
         phrase in text
-        for phrase in ["set alarm", "set an alarm", "alarm for", "alarm at"]
+        for phrase in [
+            "set alarm",
+            "set an alarm",
+            "alarm for",
+            "alarm at",
+            "wake me",
+            "wake up",
+            "alarm in",
+            "alarm after",
+        ]
     ):
         set_alarm(text)
     elif any(
         phrase in text
-        for phrase in ["set reminder", "remind me", "reminder for", "reminder at"]
+        for phrase in [
+            "set reminder",
+            "remind me",
+            "reminder for",
+            "reminder at",
+            "remember to",
+            "don't forget",
+            "remind me in",
+            "remind me after",
+            "reminder in",
+            "reminder after",
+        ]
     ):
         set_reminder(text)
     elif any(
