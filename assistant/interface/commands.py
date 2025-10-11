@@ -17,6 +17,7 @@ from assistant.automation.features.utility_automation import *
 from assistant.automation.text_to_image.text_to_image import generate_image_from_text
 from assistant.automation.integrations.detailed_web_search import generate
 from assistant.automation.integrations.wiki_search import wiki_search
+from assistant.automation.integrations.news_automation import tell_news
 from assistant.automation.integrations.location_automation import (
     get_current_location,
     check_ip_address,
@@ -577,6 +578,21 @@ def process_command(text):
                 address = text.replace(pattern, "").strip()
         speak(f"Checking the weather in {address}. Please wait a moment...")
         get_weather_by_address(address=address)
+
+    # News Information
+    elif any(
+        phrase in text
+        for phrase in [
+            "tell me news",
+            "what's the news",
+            "today's news",
+            "latest news",
+            "news headlines",
+            "top headlines",
+            "current news",
+        ]
+    ):
+        tell_news()
 
     # Memory Functions
     elif "remember that" in text:
