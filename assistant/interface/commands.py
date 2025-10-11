@@ -14,6 +14,7 @@ from assistant.activities.check_mic_health import mic_health
 from assistant.activities.battery_features import battery_monitor
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
+from assistant.automation.features.music_player import music_player
 from assistant.automation.text_to_image.text_to_image import generate_image_from_text
 from assistant.automation.integrations.detailed_web_search import generate
 from assistant.automation.integrations.wiki_search import wiki_search
@@ -430,6 +431,122 @@ def process_command(text):
     elif "page down" in text:
         speak("Scrolling page down")
         ui.press("pagedown")
+
+    # Music Control
+    elif any(
+        phrase in text
+        for phrase in [
+            "play music",
+            "play some music",
+            "start music",
+            "play random music",
+        ]
+    ):
+        music_player.play_random_music()
+    elif any(
+        phrase in text
+        for phrase in [
+            "play song",
+            "play the song",
+        ]
+    ):
+        # Extract song name from command
+        if "play song" in text:
+            song_name = text.split("play song")[1].strip()
+        elif "play the song" in text:
+            song_name = text.split("play the song")[1].strip()
+        else:
+            song_name = text.replace("play", "").strip()
+
+        if song_name:
+            music_player.play_specific_song(song_name)
+        else:
+            speak("Which song would you like me to play?")
+    elif any(
+        phrase in text
+        for phrase in [
+            "pause music",
+            "pause the music",
+            "pause song",
+            "pause the song",
+        ]
+    ):
+        music_player.pause_music()
+    elif any(
+        phrase in text
+        for phrase in [
+            "resume music",
+            "resume the music",
+            "continue music",
+            "unpause music",
+        ]
+    ):
+        music_player.resume_music()
+    elif any(
+        phrase in text
+        for phrase in [
+            "stop music",
+            "stop the music",
+            "stop song",
+            "stop the song",
+        ]
+    ):
+        music_player.stop_music()
+    elif any(
+        phrase in text
+        for phrase in [
+            "next track",
+            "next song",
+            "play next",
+            "play next song",
+            "play the next song",
+        ]
+    ):
+        music_player.next_track()
+    elif any(
+        phrase in text
+        for phrase in [
+            "previous track",
+            "previous song",
+            "play previous",
+            "play previous song",
+            "play the previous song",
+            "last song",
+        ]
+    ):
+        music_player.previous_track()
+    elif any(
+        phrase in text
+        for phrase in [
+            "increase music volume",
+            "music volume up",
+            "louder music",
+        ]
+    ):
+        music_player.increase_volume()
+    elif any(
+        phrase in text
+        for phrase in [
+            "decrease music volume",
+            "music volume down",
+            "softer music",
+        ]
+    ):
+        music_player.decrease_volume()
+    elif any(
+        phrase in text
+        for phrase in [
+            "what's playing",
+            "current track",
+            "which song is this",
+            "what song is playing",
+        ]
+    ):
+        current_track = music_player.get_current_track()
+        if current_track:
+            speak(f"Currently playing: {current_track}")
+        else:
+            speak("No music is currently playing")
 
     # Location Services
     elif "current location" in text or "where am i" in text:
