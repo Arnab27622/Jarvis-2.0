@@ -19,11 +19,11 @@ def get_wav_files(directory: str) -> list:
     Returns:
         list: List of WAV file paths.
     """
-    return [
-        os.path.join(directory, filename)
-        for filename in os.listdir(directory)
-        if filename.endswith(".wav")
-    ]
+    wav_files = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".wav"):
+            wav_files.append(os.path.join(directory, filename))
+    return wav_files
 
 
 class AudioDataset(Dataset):
@@ -46,6 +46,8 @@ class AudioDataset(Dataset):
         self.clap_dir = clap_dir
         self.file_list = noise_files + clap_files
         self.labels = [0] * len(noise_files) + [1] * len(clap_files)
+
+        print(f"Loaded {len(noise_files)} noise files and {len(clap_files)} clap files")
 
     def __len__(self) -> int:
         """
@@ -70,24 +72,46 @@ class AudioDataset(Dataset):
         """
         try:
             waveform, sample_rate = torchaudio.load(self.file_list[idx])
+
+            # Ensure we have mono audio
+            if waveform.shape[0] > 1:
+                waveform = torch.mean(waveform, dim=0, keepdim=True)
+
+            # Resample to consistent rate if needed
+            if sample_rate != 22050:
+                resampler = T.Resample(sample_rate, 22050)
+                waveform = resampler(waveform)
+                sample_rate = 22050
+
+            # Generate mel spectrogram
+            mel_spectrogram = T.MelSpectrogram(
+                sample_rate=sample_rate,
+                n_fft=n_fft,
+                win_length=n_fft,
+                hop_length=hop_length,
+                n_mels=n_mels,
+            )(waveform)
+
+            # Convert to log scale (dB)
+            mel_spectrogram = torchaudio.transforms.AmplitudeToDB()(mel_spectrogram)
+
+            # Resize to consistent dimensions
+            mel_spectrogram = Resize((256, 256))(mel_spectrogram)
+
+            # Normalize
+            if mel_spectrogram.std() > 0:
+                mel_spectrogram = (
+                    mel_spectrogram - mel_spectrogram.mean()
+                ) / mel_spectrogram.std()
+            else:
+                mel_spectrogram = mel_spectrogram - mel_spectrogram.mean()
+
+            label = self.labels[idx]
+            return mel_spectrogram, torch.tensor(label, dtype=torch.long)
+
         except Exception as e:
             print(f"Error loading {self.file_list[idx]}: {e}")
-            # Return a dummy tensor if file can't be loaded
-            dummy_spec = torch.zeros((1, 64, 256))
+            # Return a properly shaped dummy tensor
+            dummy_spec = torch.zeros((1, 256, 256))
             label = self.labels[idx]
-            return dummy_spec, torch.tensor(label)
-        
-        if waveform.shape[0] > 1:
-            waveform = torch.mean(waveform, dim=0, keepdim=True)
-
-        spec = T.MelSpectrogram(
-            sample_rate=sample_rate,
-            n_fft=n_fft,
-            win_length=n_fft,
-            hop_length=hop_length,
-            n_mels=n_mels,
-        )(waveform)
-        spec = Resize((256, 256))(spec)
-        spec = (spec - spec.mean()) / spec.std()  # normalize the spectrogram
-        label = self.labels[idx]
-        return spec, torch.tensor(label)
+            return dummy_spec, torch.tensor(label, dtype=torch.long)

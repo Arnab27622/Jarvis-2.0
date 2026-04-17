@@ -27,7 +27,10 @@ class AudioClassifierTrainer:
         self.model = AudioClassifier().to(self.device)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(
-            self.model.parameters(), lr=1e-5, weight_decay=0.02
+            self.model.parameters(), lr=1e-4, weight_decay=0.01
+        )
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer, mode="min", patience=3, factor=0.5
         )
 
     def prepare_dataloaders(self) -> Tuple[DataLoader, DataLoader]:
@@ -40,8 +43,12 @@ class AudioClassifierTrainer:
         train_size = int(0.8 * len(self.dataset))
         val_size = len(self.dataset) - train_size
         train_dataset, val_dataset = random_split(self.dataset, [train_size, val_size])
-        train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
+        train_loader = DataLoader(
+            train_dataset, batch_size=16, shuffle=True, num_workers=2
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=16, shuffle=False, num_workers=2
+        )
         return train_loader, val_loader
 
     def train(self, num_epochs: int) -> None:
@@ -51,17 +58,29 @@ class AudioClassifierTrainer:
         Args:
             num_epochs (int): Number of epochs to train.
         """
+        best_val_accuracy = 0
+
         for epoch in range(num_epochs):
             train_loss, train_accuracy = self.run_epoch(
                 self.train_dataloader, training=True
             )
             val_loss, val_accuracy = self.run_epoch(self.val_dataloader, training=False)
+
+            self.scheduler.step(val_loss)
+
             print(
-                f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}, Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}"
+                f"Epoch {epoch + 1}/{num_epochs}, "
+                f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}, "
+                f"Val Loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}, "
+                f"LR: {self.optimizer.param_groups[0]['lr']:.2e}"
             )
-        model_path = os.path.join("data", "Clap_Detect_Model.pth")
-        self.save_model(model_path)
-        print(f"Model saved to {model_path}")
+
+            # Save best model
+            if val_accuracy > best_val_accuracy:
+                best_val_accuracy = val_accuracy
+                model_path = os.path.join("data", "Clap_Detect_Model.pth")
+                self.save_model(model_path)
+                print(f"New best model saved with val accuracy: {val_accuracy:.4f}")
 
     def run_epoch(self, dataloader: DataLoader, training: bool) -> Tuple[float, float]:
         """
@@ -100,8 +119,11 @@ class AudioClassifierTrainer:
                     _, predicted = torch.max(outputs, 1)
                     total_predictions += labels.size(0)
                     correct_predictions += (predicted == labels).sum().item()
-                    if batch_idx % 10 == 0:
-                        print(f"Batch {batch_idx}/{len(dataloader)}")
+
+                    if batch_idx % 10 == 0 and training:
+                        print(
+                            f"Batch {batch_idx}/{len(dataloader)}, Loss: {loss.item():.4f}"
+                        )
 
                 except Exception as e:
                     print(f"Error in batch {batch_idx}: {e}")
@@ -141,4 +163,4 @@ if __name__ == "__main__":
         print(f"Error: Clap directory not found at {clap_dir}")
 
     trainer = AudioClassifierTrainer(noise_dir, clap_dir, device)
-    trainer.train(num_epochs=5)
+    trainer.train(num_epochs=20)  # Increased epochs for better training

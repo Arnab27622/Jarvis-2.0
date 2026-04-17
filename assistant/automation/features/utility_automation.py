@@ -142,7 +142,10 @@ def take_screenshot():
         # Saves: C:\\Users\\ARNAB DEY\\Pictures\\Screenshots\\screenshot_20231201_143022.png
         # Speaks: "Screenshot taken and saved as screenshot_20231201_143022.png"
     """
-    screenshot_dir = r"C:\Users\ARNAB DEY\Pictures\Screenshots"
+    # Calculate project root (4 levels up from this file)
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    screenshot_dir = os.path.join(project_root, "data", "screenshots")
+
     os.makedirs(screenshot_dir, exist_ok=True)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

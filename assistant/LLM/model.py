@@ -30,6 +30,7 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
+import os
 
 # Ensure required NLTK data packages are available
 # Download necessary NLTK datasets if not already present
@@ -223,7 +224,10 @@ def mind(text, threshold=0.7):
         cached to avoid retraining on every query.
     """
     # Dataset path - consider making this configurable
-    dataset_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
+    # Calculate project root (3 levels up from this file)
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    dataset_path = os.path.join(project_root, "data", "brain_data", "qna_data.json")
+
 
     # Load Q&A dataset from file
     dataset = load_dataset(dataset_path)

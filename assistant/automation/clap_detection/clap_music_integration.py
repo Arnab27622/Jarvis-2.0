@@ -139,7 +139,7 @@ class FinalClapMusicSystem:
 def main():
     """Main function."""
     # Music directory
-    default_music_dir = r"C:\\Users\\arnab\\OneDrive\\Music\\Playlists"
+    default_music_dir = r"C:\Users\ARNAB DEY\Music"
 
     print("🎯 FINAL Clap-to-Music Integration System")
     print("=" * 70)
