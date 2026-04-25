@@ -1,23 +1,9 @@
 """
-Mouth Module - Text-to-Speech (TTS) System with Queue-based Streaming
+Mouth Module - Unified Text-to-Speech (TTS) System
 
-This module provides advanced text-to-speech capabilities using Edge TTS and Pygame
-for audio playback. It supports both single-sentence speaking and queue-based streaming
-for continuous dialogue with animated text display.
-
-Key Features:
-- Asynchronous TTS generation using Microsoft Edge TTS
-- Queue-based streaming for continuous speech
-- Animated text display synchronized with audio
-- Thread-safe operations with locking mechanisms
-- Temporary file management for audio streaming
-- Support for multiple sentences in sequence
-
-Dependencies:
-- edge_tts: Microsoft Edge TTS service integration
-- pygame: Audio playback and mixing
-- asyncio: Asynchronous operations handling
-- threading: Concurrent processing for UI and audio
+Consolidates online (Edge TTS) and offline (pyttsx3) capabilities into a 
+single module. Features intelligent online/offline fallback and 
+emotion-aware offline speech synthesis.
 """
 
 import asyncio
@@ -29,278 +15,166 @@ import sys
 import time
 import threading
 import queue
+import pyttsx3
+import random
+from textblob import TextBlob
+from assistant.activities.check_status import is_online
 
-# Voice configuration for TTS - Australian English, William Neural voice
-VOICE = "en-AU-WilliamNeural"
+# Voice configurations
+ONLINE_VOICE = "en-AU-WilliamNeural"  # High quality Australian voice
+OFFLINE_VOICE_INDEX = 1               # Typically female voice for pyttsx3
 
 # Initialize pygame mixer for audio playback
 pygame.init()
 pygame.mixer.init()
 
-# Global queue for TTS sentences - enables streaming multiple sentences
+# Global state for synchronized operations
+_tts_lock = threading.Lock()
 tts_queue = queue.Queue()
-_is_tts_running = False  # Control flag for TTS consumer thread
-_tts_lock = threading.Lock()  # Thread lock for synchronization
+_is_tts_running = False
 
+# --- Emotion Analysis Logic ---
 
-def print_animated_message(message):
+def get_emotional_params(text):
     """
-    Print message with character-by-character animation effect.
-
-    Creates a typewriter-like effect by printing each character with a slight delay,
-    enhancing user experience during speech synthesis.
-
-    Args:
-        message (str): Text to display with animation
-
-    Returns:
-        None
+    Analyze text sentiment and return suggested speech rate and volume.
+    Used for offline TTS to make it sound more natural.
     """
-    for char in message:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(0.065)  # Delay between characters for natural reading pace
-    print()  # Newline after message completion
+    try:
+        sentiment = TextBlob(text).sentiment.polarity
+        if sentiment > 0.7: return 220, 1.5   # Ecstatic
+        elif sentiment > 0.3: return 170, 1.1  # Happy
+        elif sentiment > -0.1: return 150, 1.0 # Neutral
+        elif sentiment > -0.5: return 110, 1.0 # Sad
+        else: return 100, 0.8                  # Distressed
+    except:
+        return 150, 1.0 # Default fallback
 
+# --- Offline Engine Logic ---
 
-async def stream_audio(text, voice):
+def _offline_speak(text):
     """
-    Generate audio file from text using Edge TTS service.
-
-    Converts text to speech asynchronously and saves to a temporary file
-    for playback. Uses Microsoft Edge TTS for high-quality neural voice synthesis.
-
-    Args:
-        text (str): Text content to convert to speech
-        voice (str): Voice identifier for TTS service
-
-    Returns:
-        str: Path to the generated temporary audio file
-
-    Raises:
-        Exception: If audio generation or file saving fails
+    Executes offline TTS using pyttsx3 with dynamic emotion adjustment.
     """
-    communicate = edge_tts.Communicate(text, voice)
+    try:
+        engine = pyttsx3.init()
+        rate, volume = get_emotional_params(text)
+        
+        voices = engine.getProperty("voices")
+        if len(voices) > OFFLINE_VOICE_INDEX:
+            engine.setProperty("voice", voices[OFFLINE_VOICE_INDEX].id)
+            
+        engine.setProperty("rate", rate)
+        engine.setProperty("volume", volume)
+        
+        # Start animated printing in a thread
+        print_thread = threading.Thread(target=print_animated_message, args=(text,))
+        print_thread.start()
+        
+        engine.say(text)
+        engine.runAndWait()
+        print_thread.join()
+    except Exception as e:
+        print(f"Offline TTS Error: {e}")
+        # Final fallback: just print the message
+        print_animated_message(text)
 
-    # Create temporary file for audio storage
+# --- Online Engine Logic ---
+
+async def _generate_online_audio(text):
+    communicate = edge_tts.Communicate(text, ONLINE_VOICE)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
         tmp_path = tmp_file.name
+    await communicate.save(tmp_path)
+    return tmp_path
 
+def _play_audio_file(file_path):
     try:
-        # Generate and save audio file
-        await communicate.save(tmp_path)
-        return tmp_path
-    except Exception as e:
-        # Clean up temporary file on error
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-        raise e
-
-
-def play_audio_file(file_path):
-    """
-    Play audio file using Pygame mixer and clean up afterward.
-
-    Loads audio file, plays it synchronously, and deletes the temporary file
-    after playback completion to manage disk space.
-
-    Args:
-        file_path (str): Path to audio file for playback
-
-    Returns:
-        None
-    """
-    try:
-        # Load and play audio file
         sound = pygame.mixer.Sound(file_path)
         sound.play()
-
-        # Wait for audio playback to complete
         while pygame.mixer.get_busy():
-            pygame.time.Clock().tick(10)  # 10 FPS check for playback status
-
-    except Exception as e:
-        print(f"Error playing audio: {e}")
+            pygame.time.Clock().tick(10)
     finally:
-        # Always clean up temporary audio file
         if os.path.exists(file_path):
             os.unlink(file_path)
 
-
-async def _speak_async(text):
-    """
-    Asynchronous core function for text-to-speech processing.
-
-    Coordinates the complete TTS pipeline:
-    - Audio file generation
-    - Animated text display in separate thread
-    - Synchronized audio playback
-
-    Args:
-        text (str): Text content to speak and display
-
-    Returns:
-        None
-    """
+async def _online_speak_async(text):
     try:
-        # Generate audio file from text
-        audio_file_path = await stream_audio(text, VOICE)
-
-        # Create and start a thread for animated printing
+        audio_path = await _generate_online_audio(text)
         print_thread = threading.Thread(target=print_animated_message, args=(text,))
         print_thread.start()
-
-        # Play audio in the main thread (blocks until completion)
-        play_audio_file(audio_file_path)
-
-        # Wait for the printing thread to finish
+        _play_audio_file(audio_path)
         print_thread.join()
-
     except Exception as e:
-        print(f"Error in text-to-speech: {e}")
+        print(f"Online TTS Error: {e}. Falling back to offline...")
+        _offline_speak(text)
 
+# --- Core Printing Logic ---
+
+def print_animated_message(message):
+    for char in message:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(0.065)
+    print()
+
+# --- Public API ---
 
 def speak(text):
     """
-    Main synchronous function for single-sentence text-to-speech.
-
-    Provides a thread-safe interface for speaking individual sentences.
-    Uses locking to prevent overlapping TTS operations.
-
-    Args:
-        text (str): Single sentence to speak
-
-    Returns:
-        None
+    Unified entry point for Jarvis's voice. 
+    Automatically selects Online High-Quality vs Offline Emotion-Aware TTS.
     """
     with _tts_lock:
-        time.sleep(0.1)  # Brief delay for system stability
-        asyncio.run(_speak_async(text))
-
-
-def _tts_consumer():
-    """
-    Background consumer thread for processing TTS queue.
-
-    Continuously monitors the TTS queue and processes sentences
-    in sequence. Runs as long as the system is active or until
-    queue is empty.
-
-    Workflow:
-        - Checks queue for new sentences
-        - Processes each sentence through TTS pipeline
-        - Handles shutdown signals
-        - Manages exceptions gracefully
-
-    Returns:
-        None
-    """
-    global _is_tts_running
-
-    while _is_tts_running or not tts_queue.empty():
-        try:
-            # Get sentence from queue with timeout
-            sentence = tts_queue.get(timeout=1.0)
-            if sentence is None:  # Shutdown signal
-                break
-
-            if sentence.strip():  # Only speak non-empty sentences
-                asyncio.run(_speak_async(sentence))
-
-            tts_queue.task_done()
-
-        except queue.Empty:
-            continue  # No sentences available, continue waiting
-        except Exception as e:
-            print(f"Error in TTS consumer: {e}")
-            continue
-
-
-def start_tts_consumer():
-    """
-    Start the background TTS consumer thread.
-
-    Initializes and starts the consumer thread if not already running.
-    Uses thread locking to ensure only one consumer is active.
-
-    Returns:
-        None
-    """
-    global _is_tts_running
-    with _tts_lock:
-        if not _is_tts_running:
-            _is_tts_running = True
-            # Create daemon thread that won't block program exit
-            consumer_thread = threading.Thread(target=_tts_consumer, daemon=True)
-            consumer_thread.start()
-
-
-def stop_tts_consumer():
-    """
-    Stop the background TTS consumer thread.
-
-    Signals the consumer thread to stop processing and exit.
-    Does not force immediate termination - completes current task.
-
-    Returns:
-        None
-    """
-    global _is_tts_running
-    with _tts_lock:
-        _is_tts_running = False
-
+        if is_online():
+            asyncio.run(_online_speak_async(text))
+        else:
+            _offline_speak(text)
 
 def speak_streaming(sentences):
-    """
-    Stream multiple sentences to TTS queue for sequential playback.
-
-    Clears any existing queue backlog and streams new sentences
-    for continuous dialogue. Starts consumer thread if not running.
-
-    Args:
-        sentences (list): List of sentence strings to speak in sequence
-
-    Returns:
-        None
-    """
-    # Clear any existing queue items to avoid backlog
+    """Streams a list of sentences to the TTS consumer."""
+    global _is_tts_running
+    # Clear queue
     while not tts_queue.empty():
-        try:
+        try: 
             tts_queue.get_nowait()
             tts_queue.task_done()
-        except queue.Empty:
+        except: 
             break
+    
+    # Start consumer if needed
+    if not _is_tts_running:
+        _is_tts_running = True
+        threading.Thread(target=_tts_consumer, daemon=True).start()
+        
+    for s in sentences:
+        if s.strip(): 
+            tts_queue.put(s)
 
-    # Start the consumer if not running
-    start_tts_consumer()
-
-    # Add sentences to queue for processing
-    for sentence in sentences:
-        if sentence.strip():  # Only queue non-empty sentences
-            tts_queue.put(sentence)
-
+def _tts_consumer():
+    global _is_tts_running
+    while _is_tts_running:
+        try:
+            sentence = tts_queue.get(timeout=2.0)
+            speak(sentence)
+            tts_queue.task_done()
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"Streaming error: {e}")
 
 def wait_for_tts_completion():
-    """
-    Wait for all queued TTS tasks to complete.
-
-    Blocks until the TTS queue is empty and all audio playback
-    has finished. Useful for ensuring complete dialogue delivery.
-
-    Returns:
-        None
-    """
     tts_queue.join()
 
+def start_tts_consumer():
+    global _is_tts_running
+    _is_tts_running = True
+    threading.Thread(target=_tts_consumer, daemon=True).start()
+
+def stop_tts_consumer():
+    global _is_tts_running
+    _is_tts_running = False
 
 if __name__ == "__main__":
-    """
-    Main execution block for testing TTS functionality.
+    speak("System consolidation complete. I am now using a unified voice module.")
 
-    Provides a simple test case to verify the TTS system is working
-    by speaking a sample phrase.
-
-    Usage:
-        python mouth.py
-    """
-    speak("hello, how are you?")
