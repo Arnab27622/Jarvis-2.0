@@ -201,43 +201,47 @@ def get_answer(question, vectorizer, X, dataset, threshold=0.5):
         return None, best_similarity
 
 
+# --- Caching Mechanism ---
+# These variables store the trained model in memory to avoid redundant processing
+_cached_dataset = None
+_cached_vectorizer = None
+_cached_matrix = None
+_last_mtime = 0
+
+def ensure_model_loaded(dataset_path):
+    """
+    Ensure the Q&A model is loaded and up-to-date.
+    Uses a caching mechanism to avoid redundant training.
+    """
+    global _cached_dataset, _cached_vectorizer, _cached_matrix, _last_mtime
+
+    try:
+        current_mtime = os.path.getmtime(dataset_path)
+    except OSError:
+        current_mtime = 0
+
+    # Re-train only if model is not loaded OR dataset file has changed
+    if _cached_dataset is None or current_mtime > _last_mtime:
+        print(f"Training intelligence model... (Source: {os.path.basename(dataset_path)})")
+        _cached_dataset = load_dataset(dataset_path)
+        _cached_vectorizer, _cached_matrix = train_tfidf_vectorizer(_cached_dataset)
+        _last_mtime = current_mtime
+
+
 def mind(text, threshold=0.7):
     """
     Main interface function for the local Q&A intelligence system.
-
-    Orchestrates the complete pipeline from user query to answer retrieval:
-    - Loads and prepares the Q&A dataset
-    - Trains the TF-IDF vectorizer (or uses cached version in production)
-    - Processes user query and finds best matching answer
-    - Returns answer if confidence threshold is met
-
-    Args:
-        text (str): User's input question or query
-        threshold (float): Confidence threshold for answer quality (0.0-1.0)
-                          Higher values = more strict matching
-
-    Returns:
-        str or None: Best matching answer if found, None otherwise
-
-    Note:
-        In a production environment, the vectorizer and dataset would be
-        cached to avoid retraining on every query.
+    Orchestrates query processing using cached TF-IDF models.
     """
-    # Dataset path - consider making this configurable
-    # Calculate project root (3 levels up from this file)
+    # Calculate dataset path
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "data", "brain_data", "qna_data.json")
 
-
-    # Load Q&A dataset from file
-    dataset = load_dataset(dataset_path)
-
-    # Train TF-IDF vectorizer on the dataset
-    vectorizer, X = train_tfidf_vectorizer(dataset)
+    # Ensure the latest version of the model is in memory
+    ensure_model_loaded(dataset_path)
 
     # Process user question and retrieve best answer
-    user_question = text
-    answer, similarity = get_answer(user_question, vectorizer, X, dataset, threshold)
+    answer, similarity = get_answer(text, _cached_vectorizer, _cached_matrix, _cached_dataset, threshold)
 
     return answer
 
