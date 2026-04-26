@@ -35,7 +35,7 @@ def handle_write(text):
     speak("Writing...")
     write_text = text.replace("write", "").replace("right", "").strip()
     if write_text:
-        ui.write(write_text)
+        ui.write(write_text, interval=0.05)
     else:
         speak("I didn't hear any text to write")
 
