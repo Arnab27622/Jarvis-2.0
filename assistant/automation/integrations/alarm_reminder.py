@@ -125,6 +125,13 @@ def parse_time(time_str: str) -> Optional[Tuple[int, int]]:
         if special in time_str:
             return time_val
 
+    # Format: "HHMM" (Military time - 4 digits)
+    if len(time_str) == 4 and time_str.isdigit():
+        hour = int(time_str[:2])
+        minute = int(time_str[2:])
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return (hour, minute)
+
     # Format: "HH:MM AM/PM" with various punctuation
     am_pm_pattern = r"(\d{1,2}):?(\d{0,2})\s*(a\.?m\.?|p\.?m\.?)"
     match = re.search(am_pm_pattern, time_str)
@@ -325,9 +332,10 @@ def parse_absolute_time(
     command_lower = command_text.lower()
     now = datetime.datetime.now()
 
-    # Extract time part first
+    # Extract time part first - improved to handle military time (HHMM) and standard formats
     time_match = re.search(
-        r"(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)", command_lower
+        r"(\d{1,2}:\d{2}(?:\s*[ap]\.?m\.?)?|\d{3,4}|\d{1,2}(?:\s*[ap]\.?m\.?)?)",
+        command_lower,
     )
     if not time_match:
         return None, ""
@@ -722,6 +730,10 @@ def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
     if wait_time > 0:
         time.sleep(wait_time)
 
+    # Check if this alarm was cancelled while we were sleeping
+    if alarm_id not in active_alarms:
+        return
+
     # Trigger alarm
     alarm_message = message if message else "Time's up!"
     notification(title="ALARM!", message=alarm_message)
@@ -749,6 +761,10 @@ def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: s
 
     if wait_time > 0:
         time.sleep(wait_time)
+
+    # Check if this reminder was cancelled while we were sleeping
+    if reminder_id not in active_reminders:
+        return
 
     # Trigger reminder
     reminder_message = message if message else "You have a reminder!"
