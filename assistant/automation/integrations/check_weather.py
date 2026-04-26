@@ -1,5 +1,6 @@
 import requests
 import os
+import geocoder
 from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
 
@@ -32,21 +33,44 @@ def get_location():
         and network configuration. Accuracy is typically at city level.
     """
     try:
+        # Primary: ipapi.co
         location_response = requests.get("https://ipapi.co/json/", timeout=5)
-        location_data = location_response.json()
+        if location_response.status_code == 200:
+            location_data = location_response.json()
+            lat = location_data.get("latitude")
+            lon = location_data.get("longitude")
+            city = location_data.get("city", "your location")
+            country = location_data.get("country_name", "")
+            
+            if lat is not None and lon is not None:
+                return {"latitude": lat, "longitude": lon, "city": city, "country": country}
 
-        lat = location_data.get("latitude")
-        lon = location_data.get("longitude")
-        city = location_data.get("city", "your location")
-        country = location_data.get("country_name", "")
-
-        if lat is None or lon is None:
-            print("Could not determine location from IP address")
-            return None
-
-        return {"latitude": lat, "longitude": lon, "city": city, "country": country}
-    except requests.exceptions.RequestException as e:
+        # Fallback: geocoder
+        g = geocoder.ip("me")
+        if g.ok:
+            return {
+                "latitude": g.latlng[0],
+                "longitude": g.latlng[1],
+                "city": g.city if g.city else "your location",
+                "country": g.country if g.country else ""
+            }
+        
+        print("Could not determine location from any service")
+        return None
+    except Exception as e:
         print(f"Error getting location: {str(e)}")
+        # Final attempt fallback
+        try:
+            g = geocoder.ip("me")
+            if g.ok:
+                return {
+                    "latitude": g.latlng[0],
+                    "longitude": g.latlng[1],
+                    "city": g.city if g.city else "your location",
+                    "country": g.country if g.country else ""
+                }
+        except:
+            pass
         return None
 
 
@@ -130,9 +154,11 @@ def get_current_temperature(units="metric"):
         )
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error: Please check your internet connection. {str(e)}")
+        print(f"Network error: {str(e)}")
+        speak("I'm having trouble connecting to the weather service. Please check your internet connection.")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
+        speak("Sorry, I encountered an unexpected error while checking the weather.")
 
 
 def get_overall_weather(units="metric"):
@@ -299,9 +325,11 @@ def get_overall_weather(units="metric"):
         }
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error: Please check your internet connection. {str(e)}")
+        print(f"Network error: {str(e)}")
+        speak("I couldn't reach the weather server. Please check your internet connection.")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
+        speak("I encountered a problem while fetching the weather report.")
 
 
 def get_weather_by_address(address: str, units: str = "metric"):
@@ -455,9 +483,11 @@ def get_weather_by_address(address: str, units: str = "metric"):
         }
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error: Please check your internet connection. {str(e)}")
+        print(f"Network error: {str(e)}")
+        speak(f"I'm sorry, I couldn't get the weather for {address} due to a network issue.")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
+        speak(f"I had trouble fetching the weather information for {address}.")
 
 
 if __name__ == "__main__":

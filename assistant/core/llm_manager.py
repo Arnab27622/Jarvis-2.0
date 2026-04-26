@@ -140,7 +140,10 @@ class LLMManager:
                 if res: break
 
         if not res:
-            return "I am unable to reach any of my thinking modules at the moment."
+            error_msg = "I am unable to reach any of my thinking modules at the moment. Please check your internet connection."
+            from assistant.core.speak_selector import speak
+            speak(error_msg)
+            return error_msg
 
         # Clean and store
         clean_text = clean_llm_output(res)

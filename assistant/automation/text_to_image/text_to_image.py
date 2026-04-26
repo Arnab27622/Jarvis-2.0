@@ -81,15 +81,27 @@ def generate_image_from_text(prompt_text):
     }
 
     # Send POST request to Stability AI API
-    response = requests.post(
-        url,
-        headers=headers,
-        json=body,
-    )
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=body,
+        )
 
-    # Check for API errors and raise exception if request failed
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
+        # Check for API errors and handle them gracefully
+        if response.status_code != 200:
+            try:
+                error_data = response.json()
+                if error_data.get("name") == "content_moderation":
+                    speak("I'm sorry, but your prompt was flagged by the content moderation system. I cannot generate that image.")
+                    return False
+            except:
+                pass
+            raise Exception(f"API Error (Status {response.status_code}): {response.text}")
+    except Exception as e:
+        print(f"Image generation failed: {e}")
+        speak("I encountered an error while trying to generate that image.")
+        return False
 
     # Parse JSON response containing generated image data
     data = response.json()

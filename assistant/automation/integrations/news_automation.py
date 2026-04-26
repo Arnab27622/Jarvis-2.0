@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 import os
 import time
+import re
 from assistant.core.speak_selector import speak
 from assistant.core.ear import listen
 
@@ -18,10 +19,28 @@ def get_country_by_ip():
     """
     try:
         response = requests.get(f"https://ipinfo.io", timeout=10)
-        data = response.json()
-        country = data.get("country", "in").lower()
-        return country
+        if response.status_code == 200:
+            data = response.json()
+            country = data.get("country", "").lower()
+            if country:
+                return country
+        
+        # Fallback to geocoder
+        import geocoder
+        g = geocoder.ip("me")
+        if g.ok and g.country:
+            return g.country.lower()
+            
+        return "in"
     except Exception as e:
+        print(f"Location lookup error: {e}")
+        try:
+            import geocoder
+            g = geocoder.ip("me")
+            if g.ok and g.country:
+                return g.country.lower()
+        except:
+            pass
         return "in"  # Default to India if the lookup fails
 
 
@@ -85,9 +104,25 @@ def get_news_everything_endpoint(category="general", limit=3):
                     source = html.unescape(
                         article.get("source", {}).get("name", "Unknown source")
                     )
+                    description = html.unescape(article.get("description", ""))
 
-                    speak(f"Story {idx}: {title}")
-                    time.sleep(1)  # Pause between headlines
+                    # "News anchor" style transitions
+                    if idx == 1:
+                        speak(f"Our top story today comes from {source}.")
+                    else:
+                        speak(f"In other news, {source} reports:")
+                    
+                    speak(title)
+                    
+                    if description:
+                        # Clean HTML tags if any and truncate for brevity
+                        clean_desc = re.sub(r'<[^>]+>', '', description)
+                        if len(clean_desc) > 250:
+                            clean_desc = clean_desc[:247] + "..."
+                        speak(f"Here are the details. {clean_desc}")
+                    
+                    # Small pause for the user to digest the information
+                    time.sleep(1.2)
                 return
             else:
                 print("No valid articles found in the response.")
@@ -138,10 +173,16 @@ def tell_news():
         "science": "science",
     }
 
-    category = category.lower().strip()
-    category = category_mapping.get(category, "general")
+    category_raw = category.lower().strip()
+    
+    # Identify category by checking if keywords exist in the user's speech
+    final_category = "general"
+    for key, val in category_mapping.items():
+        if key in category_raw:
+            final_category = val
+            break
 
-    get_news_everything_endpoint(category, limit=3)
+    get_news_everything_endpoint(final_category, limit=3)
 
 
 if __name__ == "__main__":

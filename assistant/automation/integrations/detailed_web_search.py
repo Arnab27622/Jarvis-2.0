@@ -51,8 +51,13 @@ def get_web_info(query, max_results=5, prints=False) -> str:
         "num": max_results,
     }
 
-    search = GoogleSearch(params)
-    results = search.get_dict()
+    try:
+        search = GoogleSearch(params)
+        results = search.get_dict()
+    except Exception as e:
+        print(f"SerpApi Error: {e}")
+        speak("I'm sorry, I encountered an error while searching the web.")
+        return "[]"
 
     items = results.get("organic_results", [])
 
@@ -145,13 +150,18 @@ def generate(user_prompt, system_prompt="Be Short and Concise", prints=False) ->
     groq_client = Groq(api_key=api_key)
 
     # Initial chat completion with tool call capability
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages,
-        tools=function_descriptions,  # Enable function calling
-        tool_choice="auto",  # Let the model decide if it needs to use the function
-        max_tokens=4096,
-    )
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            tools=function_descriptions,  # Enable function calling
+            tool_choice="auto",  # Let the model decide if it needs to use the function
+            max_tokens=4096,
+        )
+    except Exception as e:
+        print(f"Groq API Error: {e}")
+        speak("I had trouble connecting to my brain. Please check your internet connection.")
+        return ""
 
     response_message = response.choices[0].message
 
