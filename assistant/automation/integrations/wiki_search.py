@@ -107,12 +107,16 @@ def wiki_search(prompt, use_cache=True):
         wikipedia.set_lang("en")
 
         # Fetch Wikipedia summary with auto-suggest and redirect handling
-        wiki_summary = wikipedia.summary(
-            search_prompt,
-            sentences=1,  # Limit to one sentence for concise responses
-            auto_suggest=True,  # Allow Wikipedia to suggest similar topics
-            redirect=True,  # Follow redirects to correct articles
-        )
+        # We disable auto_suggest because it can lead to incorrect matches (e.g., 'reddit' -> 'edit')
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, module='wikipedia')
+            wiki_summary = wikipedia.summary(
+                search_prompt,
+                sentences=1,  # Limit to one sentence for concise responses
+                auto_suggest=False,  # Use exact match to avoid incorrect mapping
+                redirect=True,  # Follow redirects to correct articles
+            )
 
         # Cache the successful result with current timestamp
         wiki_cache[search_prompt] = {

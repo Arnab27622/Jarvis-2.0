@@ -4,6 +4,7 @@ from groq import Groq
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
+from assistant.core.llm_utils import clean_llm_output, save_to_brain
 
 # Load environment variables from .env file for secure API key storage
 load_dotenv()
@@ -137,7 +138,15 @@ def generate(user_prompt, system_prompt="Be Short and Concise", prints=False) ->
         }
     ]
 
-    # Initialize conversation with system instructions and user prompt
+    # Initialize conversation with tool-friendly system instructions
+    if system_prompt == "Be Short and Concise":
+        system_prompt = (
+            "You are a helpful assistant with access to real-time web search. "
+            "If the user asks for information you don't have or that requires a search, "
+            "use the get_web_info tool. Do not explain your tool use. "
+            "Respond in a concise, friendly manner."
+        )
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -152,11 +161,12 @@ def generate(user_prompt, system_prompt="Be Short and Concise", prints=False) ->
     # Initial chat completion with tool call capability
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
-            tools=function_descriptions,  # Enable function calling
-            tool_choice="auto",  # Let the model decide if it needs to use the function
+            tools=function_descriptions,
+            tool_choice="auto",
             max_tokens=4096,
+            temperature=0,  # Set to 0 for strict adherence to tool schema
         )
     except Exception as e:
         print(f"Groq API Error: {e}")
@@ -195,15 +205,19 @@ def generate(user_prompt, system_prompt="Be Short and Concise", prints=False) ->
 
         # Second API call with web search results included in context
         second_response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
         )
         res = second_response.choices[0].message.content
-        speak(res)
+        clean_res = clean_llm_output(res)
+        save_to_brain(user_prompt, clean_res)
+        speak(clean_res)
     else:
         # No web search needed - use the initial response
         res = response_message.content
-        speak(res)
+        clean_res = clean_llm_output(res)
+        save_to_brain(user_prompt, clean_res)
+        speak(clean_res)
 
 
 if __name__ == "__main__":
