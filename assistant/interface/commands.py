@@ -55,61 +55,149 @@ import re
 import pyautogui as ui
 import os
 import inspect
+from rapidfuzz import process, fuzz
+
+FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run"]
+
+def normalize_command(text):
+    """
+    Normalizes the command text by:
+    1. Converting to lowercase
+    2. Stripping punctuation
+    3. Removing wake word 'jarvis'
+    4. Removing common filler words
+    5. Trimming whitespace
+    """
+    if not text:
+        return ""
+    
+    # 1. Lowercase
+    text = text.lower().strip()
+    
+    # 2. Strip punctuation
+    text = re.sub(r'[.,?!;:]', '', text)
+    
+    # 3. Remove wake word 'jarvis'
+    text = re.sub(r'\bjarvis\b', '', text).strip()
+    
+    # 4. Remove filler words from start/end (repeatedly until clean)
+    changed = True
+    while changed:
+        changed = False
+        for word in FILLER_WORDS:
+            new_text = re.sub(rf'^{word}\b', '', text).strip()
+            new_text = re.sub(rf'\b{word}$', '', new_text).strip()
+            if new_text != text:
+                text = new_text
+                changed = True
+    
+    return text
 
 class CommandRegistry:
     """
     A registry system for managing and executing voice commands.
-    Allows for decoupled command definitions using decorators.
+    Supports tiered matching: Keyword/Exact -> Regex -> Fuzzy.
     """
     def __init__(self):
-        self._handlers = []
+        self._keyword_handlers = []
+        self._regex_handlers = []
+        self._fuzzy_handlers = []
 
-    def register(self, condition, priority=0):
-        """
-        Register a command handler with a specific condition.
-        
-        Args:
-            condition (callable): A function that takes the command text and returns True if it matches.
-            priority (int): Execution priority (higher executes first).
-        """
-        def decorator(handler_func):
-            self._handlers.append((condition, handler_func, priority))
-            # Sort by priority, maintaining insertion order for equal priorities
-            self._handlers.sort(key=lambda x: x[2], reverse=True)
-            return handler_func
-        return decorator
+    def register_keyword(self, keywords, handler, priority=0):
+        if isinstance(keywords, str):
+            keywords = [keywords]
+        self._keyword_handlers.append((keywords, handler, priority))
+        self._keyword_handlers.sort(key=lambda x: x[2], reverse=True)
+
+    def register_regex(self, pattern, handler, priority=0):
+        self._regex_handlers.append((re.compile(pattern, re.IGNORECASE), handler, priority))
+        self._regex_handlers.sort(key=lambda x: x[2], reverse=True)
+
+    def register_fuzzy(self, phrases, handler, score_cutoff=80, priority=0):
+        if isinstance(phrases, str):
+            phrases = [phrases]
+        self._fuzzy_handlers.append((phrases, handler, score_cutoff, priority))
+        self._fuzzy_handlers.sort(key=lambda x: x[3], reverse=True)
 
     def execute(self, text):
         """
-        Find and execute the first matching command handler.
-        
-        Returns:
-            bool: True if a command was matched and executed, False otherwise.
+        Find and execute the first matching command handler across tiers.
         """
-        for condition, handler, _ in self._handlers:
-            if condition(text):
-                # Auto-detect if handler needs the text argument
-                sig = inspect.signature(handler)
-                if len(sig.parameters) > 0:
-                    handler(text)
-                else:
-                    handler()
-                return True
+        # Tier 1: Keyword / Exact Match
+        for keywords, handler, _ in self._keyword_handlers:
+            if any(kw in text for kw in keywords):
+                return self._run_handler(handler, text)
+
+        # Tier 2: Regex Match (for parameters)
+        for pattern, handler, _ in self._regex_handlers:
+            match = pattern.search(text)
+            if match:
+                return self._run_handler(handler, text, match)
+
+        # Tier 3: Fuzzy Match (for variations)
+        best_overall_match = None
+        for phrases, handler, cutoff, _ in self._fuzzy_handlers:
+            # Check all phrases for this handler
+            match = process.extractOne(text, phrases, scorer=fuzz.WRatio)
+            if match and match[1] >= cutoff:
+                if best_overall_match is None or match[1] > best_overall_match[1]:
+                    best_overall_match = (handler, match[1])
+        
+        if best_overall_match:
+            return self._run_handler(best_overall_match[0], text)
+
         return False
+
+    def _run_handler(self, handler, text, match=None):
+        sig = inspect.signature(handler)
+        params = sig.parameters
+        
+        args = []
+        if "text" in params:
+            args.append(text)
+        elif len(params) > 0 and match:
+            # If handler takes arguments and we have a regex match, pass groups
+            groups = match.groups()
+            if groups:
+                args.extend(groups)
+            else:
+                args.append(match.group(0))
+        elif len(params) > 0:
+            # Fallback: pass text as first argument
+            args.append(text)
+            
+        handler(*args[:len(params)])
+        return True
 
 # Main registry instance
 cmd_registry = CommandRegistry()
 
-# Helper decorators for common patterns
+# Helper decorators
 def on_keywords(keywords, priority=0):
-    """Decorator for matching any of the provided keywords in the text."""
-    if isinstance(keywords, str):
-        keywords = [keywords]
-    return cmd_registry.register(lambda text: any(kw in text for kw in keywords), priority)
+    def decorator(handler_func):
+        cmd_registry.register_keyword(keywords, handler_func, priority)
+        return handler_func
+    return decorator
+
+def on_regex(pattern, priority=0):
+    def decorator(handler_func):
+        cmd_registry.register_regex(pattern, handler_func, priority)
+        return handler_func
+    return decorator
+
+def on_fuzzy(phrases, score_cutoff=80, priority=0):
+    def decorator(handler_func):
+        cmd_registry.register_fuzzy(phrases, handler_func, score_cutoff, priority)
+        return handler_func
+    return decorator
 
 def on_condition(condition_func, priority=0):
-    """Decorator for custom matching logic."""
-    return cmd_registry.register(condition_func, priority)
+    """Legacy/Custom condition support"""
+    def decorator(handler_func):
+        # We wrap it as a keyword-like check for simplicity in the new loop
+        cmd_registry.register_keyword([], lambda text: condition_func(text) and handler_func(text), priority)
+        return handler_func
+    return decorator
 
 
 
@@ -251,11 +339,13 @@ def handle_open(text):
 def handle_close():
     close_command()
 
-@on_keywords(["set alarm", "set an alarm", "alarm for", "alarm at", "wake me", "wake up", "alarm in", "alarm after"])
+@on_regex(r"^(?:set\s+)?(?:an\s+)?alarm\s+(?:for|at|in|after)?\s*(.*)$")
+@on_fuzzy(["set alarm", "wake me up", "alarm at"])
 def handle_set_alarm(text):
     set_alarm(text)
 
-@on_keywords(["set reminder", "remind me", "reminder for", "reminder at", "remember to", "don't forget", "remind me in", "remind me after", "reminder in", "reminder after"])
+@on_regex(r"^(?:set\s+)?(?:a\s+)?reminder\s+(?:for|at|to|in|after)?\s*(.*)$")
+@on_fuzzy(["set reminder", "remind me to", "remember to"])
 def handle_set_reminder(text):
     set_reminder(text)
 
@@ -469,20 +559,12 @@ def handle_current_track_query():
 def handle_location():
     get_current_location()
 
-@on_condition(lambda text: "play" in text and "youtube" in text)
-def handle_youtube_play(text):
-    if "on youtube" in text:
-        q = text.split("play")[1].split("on youtube")[0].strip()
-    else:
-        q = text.split("play")[1].replace("youtube", "").strip()
+@on_regex(r"^play\s+(.*?)\s*(?:on\s+youtube|youtube)?$")
+def handle_youtube_play(q):
     play_on_youtube(q)
 
-@on_condition(lambda text: "search for" in text and "youtube" in text)
-def handle_youtube_search(text):
-    if "on youtube" in text:
-        q = text.split("search for")[1].split("on youtube")[0].strip()
-    else:
-        q = text.split("search for")[1].replace("youtube", "").strip()
+@on_regex(r"^search\s+for\s+(.*?)\s*(?:on\s+youtube|youtube)?$")
+def handle_youtube_search(q):
     search_on_youtube(q)
 
 @on_keywords("previous video")
@@ -537,11 +619,11 @@ def handle_yt_skip_back():
 def handle_yt_skip_fwd():
     skip_video()
 
-@on_keywords(["increase volume", "increase the volume"])
+@on_fuzzy(["increase volume", "volume up", "make it louder", "louder", "up the volume"])
 def handle_system_vol_up():
     handle_volume_change("increase")
 
-@on_keywords(["decrease volume", "decrease the volume"])
+@on_fuzzy(["decrease volume", "volume down", "make it softer", "softer", "lower volume", "down the volume"])
 def handle_system_vol_down():
     handle_volume_change("decrease")
 
@@ -555,20 +637,15 @@ def handle_sys_mute():
     speak("Muting volume")
     ui.press("volumemute")
 
-@on_keywords(["search the web for", "search web for"])
-def handle_web_search_action(text):
-    patterns = ["search the web for", "search web for"]
-    search_text = text
-    for pattern in patterns:
-        if pattern in text:
-            search_text = text.replace(pattern, "").strip()
-            break
+@on_regex(r"^search\s+the\s+web\s+for\s+(.*)$")
+@on_regex(r"^search\s+web\s+for\s+(.*)$")
+def handle_web_search_action(search_text):
     speak(f"Searching the web for {search_text}. Please wait a moment...")
-    generate(user_prompt=text, prints=True)
+    generate(user_prompt=search_text, prints=True)
 
-@on_condition(lambda text: "search for" in text and "google" in text)
-def handle_google_search(text):
-    handle_web_search(text)
+@on_regex(r"^search\s+for\s+(.*?)\s*(?:on\s+google|google)?$")
+def handle_google_search(search_text):
+    handle_web_search(search_text)
 
 @on_condition(lambda text: "search for" in text and any(phrase in text for phrase in ["in wikipedia", "from wikipedia", "on wikipedia"]))
 def handle_wiki_search_action(text):
@@ -667,17 +744,17 @@ def process_command(text):
     """
     Process and execute voice commands using a modular registry system.
     """
-    # Remove wake word from command if present
-    if "jarvis" in text:
-        text = re.sub(r"\bjarvis\b", "", text).strip()
-        if not text:
-            welcome()
-            return
+    # Normalize the text (removes jarvis, filler words, etc.)
+    normalized_text = normalize_command(text)
+    
+    if not normalized_text:
+        welcome()
+        return
 
     # Attempt to execute command from registry
-    if not cmd_registry.execute(text):
+    if not cmd_registry.execute(normalized_text):
         # Fallback to AI brain for unrecognized commands
-        brain(text)
+        brain(normalized_text)
 
 
 if __name__ == "__main__":

@@ -95,11 +95,11 @@ def play_on_youtube(search_query):
     try:
         from googleapiclient.discovery import build
 
-        # Remove common command words to extract the core search query
+        # Remove common command words to extract the core search query using word boundaries
+        import re
         remove_words = ["play", "youtube", "on", "jarvis"]
         for word in remove_words:
-            search_query = search_query.replace(word, "")
-        search_query = search_query.strip()
+            search_query = re.sub(rf'\b{word}\b', '', search_query, flags=re.IGNORECASE).strip()
 
         if not search_query:
             speak("What would you like me to play on YouTube?")
@@ -118,19 +118,28 @@ def play_on_youtube(search_query):
         # Initialize YouTube Data API client
         youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
-        # Execute search for videos
+        # Execute search for videos and playlists (better for tutorials/series)
         request = youtube.search().list(
-            part="snippet", maxResults=1, q=search_query, type="video"
+            part="snippet", maxResults=1, q=search_query, type="video,playlist"
         )
         response = request.execute()
 
         if response["items"]:
-            # Extract video ID from the first search result
-            video_id = response["items"][0]["id"]["videoId"]
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            speak(f"Playing {search_query} on YouTube")
+            item = response["items"][0]
+            item_id = item["id"]
+            
+            if item_id["kind"] == "youtube#playlist":
+                playlist_id = item_id["playlistId"]
+                video_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+                speak(f"Playing {search_query} playlist on YouTube")
+                youtube_player_state["current_video_id"] = playlist_id
+            else:
+                video_id = item_id["videoId"]
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                speak(f"Playing {search_query} on YouTube")
+                youtube_player_state["current_video_id"] = video_id
+                
             webbrowser.open(video_url)
-            youtube_player_state["current_video_id"] = video_id
             time.sleep(5)
             ui.hotkey("alt", "tab")  # Switch back to previous window
         else:
@@ -173,12 +182,11 @@ def search_on_youtube(search_query):
         # Opens: https://www.youtube.com/results?search_query=python%20tutorials
         # Speaks: "Showing results for python tutorials on YouTube"
     """
+    import re
     remove_words = ["youtube", "search", "for", "on", "jarvis"]
 
     for word in remove_words:
-        search_query = search_query.replace(word, "")
-
-    search_query = search_query.strip()
+        search_query = re.sub(rf'\b{word}\b', '', search_query, flags=re.IGNORECASE).strip()
 
     if not search_query:
         speak("What would you like me to search on YouTube?")
