@@ -82,7 +82,7 @@ def llm1(user_input):
 
     # Generate response using DeepSeek model with web search
     response = client.chat.completions.create(
-        model="deepseek-v3",  # DeepSeek V3 model
+        model="gpt-4o-mini",
         messages=conversation_history,
         web_search=True,  # Enable web search for current information
     )

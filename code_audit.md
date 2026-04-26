@@ -2,32 +2,10 @@
 
 This document provides a detailed analysis of the current state of the **Jarvis 2.0** codebase, highlighting critical security vulnerabilities, architectural flaws, and performance bottlenecks, along with recommended improvements.
 
----
-
-## 1. ⚠️ Critical Security Vulnerabilities
-
-### 1.1 Hardcoded Secrets and Environment Leakage
-- **Issue**: The `.env` file contains sensitive API keys (YouTube, Weather, HuggingFace, OpenRouter, Groq, etc.) in plain text.
-- **Location**: `.env` (root directory).
-- **Risk**: **High**. If this repository is shared or Version Controlled (Git) without proper `.gitignore` enforcement, all API credits and private data are exposed.
-- **Improvement**: Use `python-dotenv` (already partially used) but ensure `.env` is never committed. Provide a `.env.example` instead.
-
-### 1.2 Absolute Path Hardcoding
-- **Issue**: Several modules use absolute paths specific to the developer's machine.
-- **Location**: `assistant/LLM/model.py` (line 226): `dataset_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"`.
-- **Risk**: **Portability**. The application will fail on any other machine or if the folder is moved.
-- **Improvement**: Use `os.path` or `pathlib` to define paths relative to the project root or a configuration-based base path.
-
----
 
 ## 2. 🏗️ Architectural & Structural Issues
 
-### 2.1 Massive Command Router (`commands.py`)
-- **Issue**: `assistant/interface/commands.py` contains a 700+ line `if/elif` chain inside `process_command()`.
-- **Risk**: **Extremely poor maintainability**. Adding new features becomes increasingly difficult and prone to merge conflicts.
-- **Improvement**: Implement a **Command Pattern** or a **Registry System**. Decorators can be used to register functions to specific keywords (e.g., `@register("play music")`).
-
-### 2.2 Redundant Core Modules
+### 2.1 Redundant Core Modules
 - **Issue**: The codebase contains multiple versions of the same functionality.
     - **TTS**: `mouth.py`, `mouth2.py`, `fspeak.py`, `f2speak.py`.
     - **LLM**: `llm1.py`, `llm2.py`, `llm3.py`, `llm4.py`.
