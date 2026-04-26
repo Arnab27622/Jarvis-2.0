@@ -87,7 +87,10 @@ class LLMManager:
             client = Client()
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
                 web_search=True
             )
             return response.choices[0].message.content

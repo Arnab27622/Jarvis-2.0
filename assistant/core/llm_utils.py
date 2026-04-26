@@ -47,7 +47,16 @@ def clean_llm_output(raw_text: str) -> str:
     # 4. Remove non-printable characters
     clean = re.sub(r"[^\x20-\x7E\u00A0-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D]", "", clean)
 
-    # 5. Normalize whitespace
+    # 5. Remove promotional ads (specifically g4f/op.wtf)
+    ad_patterns = [
+        r"Need proxies cheaper than the market\?https://op\.wtf.*",
+        r"Give us a star on GitHub.*",
+        r"Enjoying g4f\?.*"
+    ]
+    for pattern in ad_patterns:
+        clean = re.sub(pattern, "", clean, flags=re.IGNORECASE)
+
+    # 6. Normalize whitespace
     clean = clean.strip()
     clean = re.sub(r"\n{2,}", "\n\n", clean)
     clean = re.sub(r"[ \t]{2,}", " ", clean)
