@@ -1,10 +1,11 @@
 import pyautogui as ui
 import random
+import psutil
 from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import closedlg
 
 
-def close_command():
+def close_command(app_name=None):
     """
     Close the currently active application or window.
 
@@ -30,5 +31,21 @@ def close_command():
         - speak: For voice feedback to the user
         - closedlg: For random closing dialogue messages
     """
-    speak(random.choice(closedlg))
-    ui.hotkey("alt", "f4")
+    if app_name:
+        speak(f"Closing {app_name}")
+        app_name_lower = app_name.lower()
+        killed = False
+        for proc in psutil.process_iter(['name']):
+            try:
+                name = proc.info['name']
+                if name and app_name_lower in name.lower():
+                    proc.kill()
+                    killed = True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+                
+        if not killed:
+            speak(f"I couldn't find {app_name} running.")
+    else:
+        speak(random.choice(closedlg))
+        ui.hotkey("alt", "f4")

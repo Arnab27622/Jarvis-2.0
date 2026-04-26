@@ -1,3 +1,4 @@
+import os
 import pyautogui as ui
 import webbrowser
 import time
@@ -5,6 +6,23 @@ import random
 import difflib
 from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import open_dlg, open_website_maybe, sorry_web, websites
+
+common_apps = {
+    "notepad": "notepad",
+    "calculator": "calc",
+    "command prompt": "cmd",
+    "terminal": "wt",
+    "paint": "mspaint",
+    "explorer": "explorer",
+    "file explorer": "explorer",
+    "settings": "ms-settings:",
+    "task manager": "taskmgr",
+    "control panel": "control",
+    "wordpad": "write",
+    "chrome": "chrome",
+    "edge": "msedge",
+    "firefox": "firefox"
+}
 
 
 def appOpen(text: str) -> bool:
@@ -30,10 +48,18 @@ def appOpen(text: str) -> bool:
         application actually launched successfully.
     """
     try:
+        clean_name = text.lower().strip()
         speak(f"{random.choice(open_dlg)} {text}")
+        
+        # 1. Direct launch for common apps (instant, no UI macros needed)
+        if clean_name in common_apps:
+            os.system(f"start {common_apps[clean_name]}")
+            return True
+            
+        # 2. Fallback: Windows Start Menu macro
         ui.press("win")  # Open Start menu
         time.sleep(0.7)  # Wait for Start menu to open
-        ui.write(text)  # Type application name
+        ui.write(text, interval=0.05)  # Type application name
         time.sleep(0.5)  # Wait for search results
         ui.press("enter")  # Launch the application
         return True
