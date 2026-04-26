@@ -18,7 +18,7 @@ import sys
 from assistant.LLM.model import mind
 from assistant.activities.activity_monitor import record_user_activity
 from assistant.core.speak_selector import speak
-from assistant.LLM.llm_search import llm_response
+from assistant.LLM.llm_search import llm_response_streaming
 from assistant.automation.features.save_data_locally import (
     qa_lock,
     qa_file_path,
@@ -72,8 +72,7 @@ def brain(text, threshold=0.7):
             or "i don't know" in response.lower()
             or "i'm not sure" in response.lower()
         ):
-            # Fallback to external LLM search for uncertain responses
-            llm_response(text)
+            llm_response_streaming(text)
             return
 
         # Speak the validated response to user
@@ -88,8 +87,7 @@ def brain(text, threshold=0.7):
         # Handle any processing errors gracefully
         error_msg = f"Error in brain function: {e}"
         print(error_msg)
-        # Fallback to external LLM search in case of errors
-        llm_response(text)
+        llm_response_streaming(text)
 
 
 if __name__ == "__main__":
