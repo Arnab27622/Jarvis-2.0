@@ -1,3 +1,6 @@
+from assistant.automation.integrations.youtube_automation import search_on_youtube
+from assistant.automation.integrations import wiki_search
+from assistant.automation.integrations.google_search_automation import handle_web_search
 import os
 import json
 from groq import Groq
@@ -234,3 +237,31 @@ if __name__ == "__main__":
     # Example usage - search for current movie information
     prompt = "Search the web for Demon Slayer Infinity Castle Arc2 movie release date and features."
     generate(user_prompt=prompt, prints=True)
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex
+
+@on_regex(r"search\s+(?:the\s+web\s+for\s+|web\s+for\s+|for\s+)?(?P<query>.*?)(?:\s+(?:on|in|from)\s+(?P<provider>google|youtube|wikipedia|wiki))?$", priority=2)
+def handle_unified_search(query, provider=None):
+    """
+    Unified search handler that routes queries to the correct provider.
+    Priority: Explicit Provider > Web/Google Fallback.
+    """
+    p = (provider or "").lower()
+    q = query.strip()
+
+    if p == "youtube":
+        speak(f"Searching for {q} on YouTube")
+        search_on_youtube(q)
+    elif p in ["wikipedia", "wiki"]:
+        speak(f"Searching Wikipedia for {q}")
+        wiki_search(q)
+    elif p == "google":
+        speak(f"Searching Google for {q}")
+        handle_web_search(q)
+    else:
+        # No explicit provider or just "web"
+        speak(f"Searching the web for {q}. Please wait a moment...")
+        generate(user_prompt=q, prints=True)
+

@@ -2,7 +2,7 @@ import numpy as np
 import pyaudio
 import time
 from scipy import signal
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import speak, wait_for_tts_completion
 
 
 from typing import Optional
@@ -134,35 +134,41 @@ def speaker_health_test() -> None:
         measurements, specialized audio testing equipment is recommended.
     """
     speak("Playing test tones...")
+    wait_for_tts_completion()
     health_score = 0
     p = pyaudio.PyAudio()  # Initialize PyAudio once for efficiency
 
     try:
         # Test low-frequency response (bass capabilities)
         speak("Playing 100 Hz tone...")
+        wait_for_tts_completion()
         play_tone(100, duration=2, p=p)
         time.sleep(1)  # Brief pause between tones
         health_score += 25  # Low frequency test passed
 
         # Test mid-frequency response (vocal range)
         speak("Playing 1000 Hz tone...")
+        wait_for_tts_completion()
         play_tone(1000, duration=2, p=p)
         time.sleep(1)
         health_score += 25  # Mid frequency test passed
 
         # Test high-frequency response (treble capabilities)
         speak("Playing 5000 Hz tone...")
+        wait_for_tts_completion()
         play_tone(5000, duration=2, p=p)
         time.sleep(1)
         health_score += 20  # High frequency test passed
 
         speak("Playing 10,000 Hz tone...")
+        wait_for_tts_completion()
         play_tone(10000, duration=2, p=p)
         time.sleep(1)
         health_score += 15  # Very high frequency test passed
 
         # Test full frequency range with logarithmic sweep
         speak("Playing frequency sweep from 20 Hz to 20,000 Hz...")
+        wait_for_tts_completion()
         play_sweep(duration=5, p=p)
         time.sleep(1)
         health_score += 15  # Frequency sweep test passed
@@ -173,6 +179,7 @@ def speaker_health_test() -> None:
     # Speaker health assessment and reporting
     speak("\nSpeaker health test complete.")
     speak(f"\nSpeaker Health: {health_score}%")
+    wait_for_tts_completion()
 
     # Qualitative assessment based on score
     if health_score == 100:

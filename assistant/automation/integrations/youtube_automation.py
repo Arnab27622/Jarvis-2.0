@@ -1,3 +1,4 @@
+from assistant.automation.features.window_automation import toggle_fullscreen
 from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
 import os
@@ -437,3 +438,75 @@ def fullscreen_youtube() -> None:
 def exit_fullscreen_youtube() -> None:
     """Exit fullscreen mode for YouTube video."""
     control_youtube_video("turn off fullscreen")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+
+@on_regex(r"(?P<text>.*(?:full\s*screen|fullscreen).*)$")
+def handle_fullscreen_logic(text):
+    if "video" in text:
+        fullscreen_youtube()
+    else:
+        toggle_fullscreen()
+
+@on_regex(r"turn\s+off\s+full\s*screen.*video")
+def handle_video_exit_fullscreen():
+    exit_fullscreen_youtube()
+
+@on_regex(r"\bplay\s+(.*?)\s+(?:on\s+youtube|youtube)$")
+def handle_youtube_play(q):
+    play_on_youtube(q)
+
+@on_fuzzy(["previous video", "last video", "go back video"], score_cutoff=90)
+def handle_yt_prev():
+    previous_video()
+
+@on_fuzzy(["next video", "skip to next video"], score_cutoff=90)
+def handle_yt_next():
+    next_video()
+
+@on_fuzzy(["pause video", "pause the video"], score_cutoff=90)
+def handle_yt_pause():
+    pause_youtube()
+
+@on_fuzzy(["replay video", "replay the video", "play video again"], score_cutoff=90)
+def handle_yt_replay():
+    replay_video()
+
+@on_regex(r"\b(?:resume|play)\s+(?:the\s+)?video")
+def handle_yt_resume():
+    resume_youtube()
+
+@on_regex(r"(?P<action>mute|unmute)\s+(?:the\s+)?video")
+@on_fuzzy(["mute video", "mute the video", "unmute video", "unmute the video"], score_cutoff=90)
+def handle_yt_mute_toggle(text=None, action=None):
+    cmd = (action or text or "").lower()
+    if "unmute" in cmd:
+        unmute_youtube()
+    else:
+        mute_youtube()
+
+@on_regex(r"(?:turn\s+(?P<state>on|off)\s+)?subtitles?\s*(?P<state2>on|off)?")
+def handle_yt_subtitles(text=None, state=None, state2=None):
+    s = (state or state2 or text or "").lower()
+    if any(w in s for w in ["on", "enable", "turn on"]):
+        turn_on_subtitles()
+    else:
+        turn_off_subtitles()
+
+@on_regex(r"\b(?:volume\s+(?:up|down)|(?:increase|decrease)\s+(?:the\s+)?volume).*video", priority=1)
+def handle_yt_volume(text):
+    if any(w in text for w in ["up", "increase"]):
+        control_youtube_video("volume increase")
+    else:
+        control_youtube_video("volume decrease")
+
+@on_fuzzy(["skip backward", "rewind video", "go back in video"], score_cutoff=90)
+def handle_yt_skip_back():
+    skip_backward_video()
+
+@on_fuzzy(["skip video", "skip forward", "fast forward video"], score_cutoff=90)
+def handle_yt_skip_fwd():
+    skip_video()
+

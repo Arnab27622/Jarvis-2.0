@@ -4,7 +4,7 @@ import webbrowser
 import time
 import random
 import difflib
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import notify
 from data.dlg_data.dlg import open_dlg, open_website_maybe, sorry_web, websites
 
 common_apps = {
@@ -49,7 +49,7 @@ def appOpen(text: str) -> bool:
     """
     try:
         clean_name = text.lower().strip()
-        speak(f"{random.choice(open_dlg)} {text}")
+        notify(f"{random.choice(open_dlg)} {text}")
         
         # 1. Direct launch for common apps (instant, no UI macros needed)
         if clean_name in common_apps:
@@ -64,7 +64,7 @@ def appOpen(text: str) -> bool:
         ui.press("enter")  # Launch the application
         return True
     except Exception as e:
-        speak(f"Failed to open application {text}. Error: {str(e)}")
+        notify(f"Failed to open application {text}. Error: {str(e)}")
         return False
 
 
@@ -91,7 +91,7 @@ def webOpen(text: str) -> bool:
 
     # Check for exact match in predefined websites
     if text in websites:
-        speak(f"{random.choice(open_dlg)} {text}")
+        notify(f"{random.choice(open_dlg)} {text}")
         webbrowser.open(websites[text])
         return True
 
@@ -99,12 +99,12 @@ def webOpen(text: str) -> bool:
     matches = difflib.get_close_matches(text, websites.keys(), n=1, cutoff=0.6)
     if matches:
         closest_match = matches[0]
-        speak(f"{random.choice(open_website_maybe)} {closest_match}")
+        notify(f"{random.choice(open_website_maybe)} {closest_match}")
         webbrowser.open(websites[closest_match])
         return True
 
     # No matching website found
-    speak(f"{random.choice(sorry_web)} {text}")
+    notify(f"{random.choice(sorry_web)} {text}")
     return False
 
 
@@ -144,7 +144,7 @@ def open_command(text: str) -> None:
 
     # Validate input
     if clean_text == "":
-        speak("Please specify what you want to open.")
+        notify("Please specify what you want to open.")
         return
 
     # Check if it's a known website (exact match or fuzzy match)
@@ -164,7 +164,7 @@ def open_command(text: str) -> None:
 
             # If both methods fail, provide comprehensive error message
             if not web_success:
-                speak(f"I couldn't find an application or website named {clean_text}.")
+                notify(f"I couldn't find an application or website named {clean_text}.")
 
 
 if __name__ == "__main__":
@@ -175,3 +175,12 @@ if __name__ == "__main__":
     with a sample input to verify the system is working correctly.
     """
     open_command("open abc")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex
+
+@on_regex(r"\b(?:open|launch|start)\s+(?P<target>.*)$")
+def handle_open(target):
+    open_command(target)
+

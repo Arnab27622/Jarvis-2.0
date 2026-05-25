@@ -23,7 +23,7 @@ Dependencies:
 import os
 import random
 import pygame
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import speak, notify
 
 
 # Initialize pygame mixer for audio playback
@@ -81,7 +81,7 @@ class MusicPlayer:
 
         # Check if music directory exists
         if not os.path.exists(self.music_dir):
-            speak("Music directory not found. Please check the path.")
+            notify("Music directory not found. Please check the path.")
             return []
 
         # Scan directory for supported audio files
@@ -111,7 +111,7 @@ class MusicPlayer:
         music_files = self.get_music_files()
 
         if not music_files:
-            speak("No music files found in your Music directory.")
+            notify("No music files found in your Music directory.")
             return
 
         # Create shuffled playlist if empty
@@ -136,10 +136,10 @@ class MusicPlayer:
 
             # Extract track name without extension for voice feedback
             track_name = os.path.splitext(self.current_track)[0]
-            speak(f"Playing {track_name}")
+            notify(f"Playing {track_name}")
 
         except Exception as e:
-            speak("Sorry, I couldn't play the music file.")
+            notify("Sorry, I couldn't play the music file.")
             print(f"Music playback error: {e}")
 
     def play_specific_song(self, song_name: str) -> None:
@@ -159,14 +159,14 @@ class MusicPlayer:
         music_files = self.get_music_files()
 
         if not music_files:
-            speak("No music files found in your Music directory.")
+            notify("No music files found in your Music directory.")
             return
 
         # Find songs matching the search term (case-insensitive partial match)
         matching_songs = [f for f in music_files if song_name.lower() in f.lower()]
 
         if not matching_songs:
-            speak(f"Sorry, I couldn't find any song matching '{song_name}'")
+            notify(f"Sorry, I couldn't find any song matching '{song_name}'")
             return
 
         # Stop current playback before starting new track
@@ -185,10 +185,10 @@ class MusicPlayer:
             self.is_paused = False
 
             track_name = os.path.splitext(self.current_track)[0]
-            speak(f"Playing {track_name}")
+            notify(f"Playing {track_name}")
 
         except Exception as e:
-            speak("Sorry, I couldn't play the music file.")
+            notify("Sorry, I couldn't play the music file.")
             print(f"Music playback error: {e}")
 
     def pause_music(self) -> None:
@@ -206,9 +206,9 @@ class MusicPlayer:
         if self.is_playing and not self.is_paused:
             pygame.mixer.music.pause()
             self.is_paused = True
-            speak("Music paused")
+            notify("Music paused")
         else:
-            speak("No music is currently playing")
+            notify("No music is currently playing")
 
     def resume_music(self) -> None:
         """
@@ -226,9 +226,9 @@ class MusicPlayer:
         if self.is_paused:
             pygame.mixer.music.unpause()
             self.is_paused = False
-            speak("Music resumed")
+            notify("Music resumed")
         else:
-            speak("No music is currently paused")
+            notify("No music is currently paused")
 
     def stop_music(self) -> None:
         """
@@ -249,7 +249,7 @@ class MusicPlayer:
         self.is_playing = False
         self.is_paused = False
         self.current_track = None
-        speak("Music stopped")
+        notify("Music stopped")
 
     def next_track(self) -> None:
         """
@@ -264,7 +264,7 @@ class MusicPlayer:
         - "play next"
         """
         if not self.playlist:
-            speak("No playlist available")
+            notify("No playlist available")
             return
 
         # Circular increment of playlist index
@@ -280,10 +280,10 @@ class MusicPlayer:
             self.is_paused = False
 
             track_name = os.path.splitext(self.current_track)[0]
-            speak(f"Playing next track: {track_name}")
+            notify(f"Playing next track: {track_name}")
 
         except Exception as e:
-            speak("Sorry, I couldn't play the next track.")
+            notify("Sorry, I couldn't play the next track.")
             print(f"Music playback error: {e}")
 
     def previous_track(self) -> None:
@@ -300,7 +300,7 @@ class MusicPlayer:
         - "last song"
         """
         if not self.playlist:
-            speak("No playlist available")
+            notify("No playlist available")
             return
 
         # Circular decrement of playlist index
@@ -316,10 +316,10 @@ class MusicPlayer:
             self.is_paused = False
 
             track_name = os.path.splitext(self.current_track)[0]
-            speak(f"Playing previous track: {track_name}")
+            notify(f"Playing previous track: {track_name}")
 
         except Exception as e:
-            speak("Sorry, I couldn't play the previous track.")
+            notify("Sorry, I couldn't play the previous track.")
             print(f"Music playback error: {e}")
 
     def set_volume(self, level: float) -> None:
@@ -344,10 +344,10 @@ class MusicPlayer:
 
             # Convert to percentage for voice feedback
             volume_percent = int(level * 100)
-            speak(f"Volume set to {volume_percent} percent")
+            notify(f"Volume set to {volume_percent} percent")
 
         except Exception as e:
-            speak("Sorry, I couldn't adjust the volume")
+            notify("Sorry, I couldn't adjust the volume")
             print(f"Volume adjustment error: {e}")
 
     def increase_volume(self) -> None:
@@ -399,3 +399,44 @@ class MusicPlayer:
 
 # Create global music player instance for application-wide use
 music_player = MusicPlayer()
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+
+@on_regex(r"\b(?P<action>play|pause|resume|stop|next|previous|last)\b\s*(?:the\s+)?(?:music|song|track)")
+@on_fuzzy(["play music", "play some music", "start music", "play random music",
+           "pause music", "pause the music", "pause song",
+           "resume music", "resume the music", "continue music", "unpause music",
+           "stop music", "stop the music", "stop song",
+           "next track", "next song", "play next",
+           "previous track", "previous song", "play previous", "last song",
+           "increase music volume", "music volume up", "louder music",
+           "decrease music volume", "music volume down", "softer music"], score_cutoff=90)
+def handle_music_control(text=None, action=None):
+    cmd = (action or text or "").lower()
+    if "pause" in cmd:
+        music_player.pause_music()
+    elif any(w in cmd for w in ["resume", "continue", "unpause"]):
+        music_player.resume_music()
+    elif "stop" in cmd:
+        music_player.stop_music()
+    elif "next" in cmd:
+        music_player.next_track()
+    elif any(w in cmd for w in ["previous", "last"]):
+        music_player.previous_track()
+    elif any(w in cmd for w in ["volume up", "louder", "increase"]):
+        music_player.increase_volume()
+    elif any(w in cmd for w in ["volume down", "softer", "decrease"]):
+        music_player.decrease_volume()
+    elif any(w in cmd for w in ["play", "start"]):
+        music_player.play_random_music()
+
+@on_fuzzy(["what's playing", "current track", "which song is this", "what song is playing"], score_cutoff=90)
+def handle_current_track_query():
+    cur = music_player.get_current_track()
+    if cur:
+        speak(f"Currently playing: {cur}")
+    else:
+        speak("No music is currently playing")
+

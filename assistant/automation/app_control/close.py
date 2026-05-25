@@ -1,7 +1,7 @@
 import pyautogui as ui
 import random
 import psutil
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import notify
 from data.dlg_data.dlg import closedlg
 
 
@@ -34,7 +34,7 @@ def close_command(app_name: Optional[str] = None) -> None:
         - closedlg: For random closing dialogue messages
     """
     if app_name:
-        speak(f"Closing {app_name}")
+        notify(f"Closing {app_name}")
         app_name_lower = app_name.lower()
         killed = False
         for proc in psutil.process_iter(['name']):
@@ -47,7 +47,17 @@ def close_command(app_name: Optional[str] = None) -> None:
                 pass
                 
         if not killed:
-            speak(f"I couldn't find {app_name} running.")
+            notify(f"I couldn't find {app_name} running.")
     else:
-        speak(random.choice(closedlg))
+        notify(random.choice(closedlg))
         ui.hotkey("alt", "f4")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+
+@on_regex(r"\b(?:close|exit|terminate|kill)\s+(?P<app_name>.+)$")
+@on_fuzzy(["close", "exit", "close that", "close app"], score_cutoff=90)
+def handle_close(app_name=None):
+    close_command(app_name)
+

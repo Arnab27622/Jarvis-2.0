@@ -56,7 +56,26 @@ def clean_llm_output(raw_text: str) -> str:
     for pattern in ad_patterns:
         clean = re.sub(pattern, "", clean, flags=re.IGNORECASE)
 
-    # 6. Normalize whitespace
+    # 6. Strip LaTeX commands and symbols that TTS struggles with
+    clean = clean.replace('$', '')
+    clean = re.sub(r'\\text\{([^}]*)\}', r'\1', clean)
+    clean = clean.replace(r'\times', 'times')
+    clean = clean.replace(r'\div', 'divided by')
+    clean = clean.replace(r'\pm', 'plus or minus')
+    clean = clean.replace(r'\approx', 'approximately')
+    clean = clean.replace(r'\neq', 'not equal to')
+    clean = clean.replace(r'\leq', 'less than or equal to')
+    clean = clean.replace(r'\geq', 'greater than or equal to')
+    clean = clean.replace(r'\rightarrow', 'implies')
+    clean = clean.replace(r'\leftarrow', 'is implied by')
+    clean = clean.replace(r'\infty', 'infinity')
+    clean = clean.replace('\\', ' ')
+    clean = clean.replace('*', '')
+    clean = clean.replace('`', '')
+    clean = clean.replace('_', ' ')
+    clean = clean.replace('#', '')
+
+    # 7. Normalize whitespace
     clean = clean.strip()
     clean = re.sub(r"\n{2,}", "\n\n", clean)
     clean = re.sub(r"[ \t]{2,}", " ", clean)

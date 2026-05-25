@@ -995,3 +995,36 @@ def cancel_all_reminders() -> None:
 # Initialize data on module load
 load_alarms()
 load_reminders()
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+import pyautogui as ui
+
+@on_regex(r"(?:set\s+)?(?:an\s+)?alarm\s+(?:for|at|in|after)?\s*(?P<time_text>.*)$")
+@on_fuzzy(["set alarm", "wake me up", "alarm at"], score_cutoff=90)
+def handle_set_alarm(text):
+    set_alarm(text)
+
+@on_regex(r"\b(?:remind\s+me\s+(?:to|about|that)|remember\s+to)\s+(?P<reminder_text>.*)$")
+@on_regex(r"\b(?:set\s+)?(?:a\s+)?reminder\s+(?:for|at|in|after)?\s*(?P<reminder_text>.*)$")
+@on_fuzzy(["set reminder", "remind me to", "remember to"], score_cutoff=90)
+def handle_set_reminder(text):
+    set_reminder(text)
+
+@on_fuzzy(["list alarms", "show alarms", "what alarms", "my alarms", "check alarms"], score_cutoff=90)
+def handle_list_alarms():
+    list_alarms()
+
+@on_fuzzy(["list reminders", "show reminders", "what reminders", "my reminders", "check reminders"], score_cutoff=90)
+def handle_list_reminders():
+    list_reminders()
+
+@on_fuzzy(["cancel all alarms", "cancel alarm", "delete alarms", "remove alarms", "clear alarms"], score_cutoff=90)
+def handle_cancel_alarms():
+    cancel_all_alarms()
+
+@on_fuzzy(["cancel all reminders", "cancel reminder", "delete reminders", "remove reminders", "clear reminders"], score_cutoff=90)
+def handle_cancel_reminders():
+    cancel_all_reminders()
+

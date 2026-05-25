@@ -59,3 +59,16 @@ def tell_date() -> None:
     """
     current_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
     speak(f"Today is {current_date}")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["what time", "what time is it", "current time", "what's the time", "tell me the time"], score_cutoff=90)
+def handle_time_query():
+    tell_time()
+
+@on_fuzzy(["what date", "what's the date", "current date", "tell me the date"], score_cutoff=90)
+def handle_date_query():
+    tell_date()
+

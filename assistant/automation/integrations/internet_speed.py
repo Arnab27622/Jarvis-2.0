@@ -103,3 +103,13 @@ def check_internet_speed() -> None:
         error_msg = f"Unexpected error: {str(e)}"
         print(error_msg)
         speak("An unexpected error occurred during the speed test.")
+
+
+
+import threading
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["check internet speed", "check the internet speed", "run internet speed test", "check internet connection", "internet speed"], score_cutoff=90)
+def handle_speedtest():
+    threading.Thread(target=check_internet_speed, daemon=True).start()
+

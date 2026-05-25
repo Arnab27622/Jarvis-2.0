@@ -507,3 +507,25 @@ if __name__ == "__main__":
 
     # Option 3: Get weather for specific address/location
     # get_weather_by_address("Bangalore")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+import pyautogui as ui
+
+@on_fuzzy(["check temperature", "check the temperature", "what is the temperature"], score_cutoff=90)
+def handle_temp():
+    speak("Checking the temperature. Please wait a moment...")
+    get_current_temperature()
+
+@on_regex(r"(?:check\s+(?:the\s+)?)?weather$")
+@on_fuzzy(["what's the weather today", "check today's weather", "today's weather", "weather today", "check the weather"], score_cutoff=90)
+def handle_weather_today():
+    speak("Checking Today's weather conditions. Please wait a moment...")
+    get_overall_weather()
+
+@on_regex(r"(?:check\s+the\s+)?weather\s+(?:in|for|at|of)\s+(?P<location>.*)$")
+def handle_weather_location(location):
+    speak(f"Checking the weather in {location}. Please wait a moment...")
+    get_weather_by_address(address=location)
+

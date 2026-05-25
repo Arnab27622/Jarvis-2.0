@@ -121,3 +121,16 @@ def check_ip_address() -> bool:
                 )
 
     return False
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["current location", "where am i", "my location", "where am I right now"], score_cutoff=90)
+def handle_location():
+    get_current_location()
+
+@on_fuzzy(["check ip address", "check my ip address", "what is my ip"], score_cutoff=90)
+def handle_ip_check():
+    check_ip_address()
+

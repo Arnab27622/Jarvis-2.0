@@ -1,5 +1,5 @@
 import os
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import notify
 import pyautogui as ui
 import pygetwindow as gw
 import time
@@ -21,7 +21,7 @@ def handle_minimize() -> None:
         This method works across most Windows applications and is more reliable
         than application-specific minimize methods.
     """
-    speak("Minimizing the window...")
+    notify("Minimizing the window...")
     ui.hotkey("alt", "space")
     time.sleep(0.2)
     ui.press("n")
@@ -42,7 +42,7 @@ def handle_maximize() -> None:
     Note:
         Works consistently across different Windows applications and window types.
     """
-    speak("Maximizing the window...")
+    notify("Maximizing the window...")
     ui.hotkey("alt", "space")
     time.sleep(0.2)
     ui.press("x")
@@ -64,7 +64,7 @@ def handle_restore() -> None:
         This command assumes English OS language settings. The restore hotkey
         may differ for non-English Windows installations.
     """
-    speak("Restoring the window...")
+    notify("Restoring the window...")
     # Use Alt+Space then R to restore (works in English OS)
     ui.hotkey("alt", "space")
     time.sleep(0.2)  # Small delay for menu to appear
@@ -88,7 +88,7 @@ def handle_window_switch() -> None:
         The function doesn't complete the window switch - it only opens
         the switcher. User must complete the selection.
     """
-    speak("Switching window")
+    notify("Switching window")
     ui.hotkey("alt", "tab")
     time.sleep(0.5)
 
@@ -133,7 +133,7 @@ def handle_scroll(command_text: str) -> None:
             ui.press("pageup")
         else:
             ui.press("pagedown")
-        speak("Page scrolled")
+        notify("Page scrolled")
         return
 
     # Calculate scroll amount (adjust this value based on your needs)
@@ -144,7 +144,7 @@ def handle_scroll(command_text: str) -> None:
 
     # Provide feedback
     direction_text = "up" if direction == 1 else "down"
-    speak(f"Scrolling {direction_text}")
+    notify(f"Scrolling {direction_text}")
 
 
 def handle_scroll_to_top() -> None:
@@ -155,7 +155,7 @@ def handle_scroll_to_top() -> None:
     including web browsers, document editors, and file explorers.
     """
     ui.hotkey("ctrl", "home")
-    speak("Scrolled to top")
+    notify("Scrolled to top")
 
 
 def handle_scroll_to_bottom() -> None:
@@ -166,7 +166,7 @@ def handle_scroll_to_bottom() -> None:
     including web browsers, document editors, and file explorers.
     """
     ui.hotkey("ctrl", "end")
-    speak("Scrolled to bottom")
+    notify("Scrolled to bottom")
 
 
 def open_incognito_tab() -> None:
@@ -188,7 +188,7 @@ def open_incognito_tab() -> None:
         3. Uses browser-specific private browsing shortcut
         4. Falls back to launching Chrome if no browser found
     """
-    speak("Opening incognito window")
+    notify("Opening incognito window")
 
     if activate_browser():
         time.sleep(0.5)
@@ -223,7 +223,7 @@ def bookmark_page() -> None:
     Compatibility:
         Works with most modern browsers including Chrome, Firefox, Edge, etc.
     """
-    speak("Bookmarking this page")
+    notify("Bookmarking this page")
     ui.hotkey("ctrl", "d")
     time.sleep(0.5)
     ui.hotkey("enter")
@@ -279,7 +279,7 @@ def open_dev_tools() -> None:
     Uses F12 key which is the standard shortcut for developer tools
     in most modern browsers including Chrome, Firefox, and Edge.
     """
-    speak("Opening developer tools")
+    notify("Opening developer tools")
     ui.hotkey("f12")
 
 
@@ -290,7 +290,7 @@ def toggle_fullscreen() -> None:
     Uses F11 key which is the standard shortcut for toggling fullscreen
     mode in most browsers and many other applications.
     """
-    speak("Toggling fullscreen")
+    notify("Toggling fullscreen")
     ui.hotkey("f11")
 
 
@@ -301,7 +301,7 @@ def reload_page() -> None:
     Uses F5 key which is the standard refresh shortcut in web browsers
     and many other applications that display dynamic content.
     """
-    speak("Reloading page")
+    notify("Reloading page")
     ui.hotkey("f5")
 
 
@@ -312,7 +312,7 @@ def go_back() -> None:
     Uses Alt+Left arrow which is the standard back navigation shortcut
     in most web browsers and file explorers.
     """
-    speak("Going back")
+    notify("Going back")
     ui.hotkey("alt", "left")
 
 
@@ -323,7 +323,7 @@ def go_forward() -> None:
     Uses Alt+Right arrow which is the standard forward navigation shortcut
     in most web browsers and file explorers.
     """
-    speak("Going forward")
+    notify("Going forward")
     ui.hotkey("alt", "right")
 
 
@@ -342,7 +342,28 @@ def duplicate_tab() -> None:
         Works with Chrome, Edge, and other Chromium-based browsers.
         Firefox uses Ctrl+L then Alt+Enter for the same functionality.
     """
-    speak("Duplicating tab")
+    notify("Duplicating tab")
     ui.hotkey("alt", "d")
     time.sleep(0.1)
     ui.hotkey("alt", "enter")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["minimize", "minimise", "minimise the window", "minimize the window", "minimize window"], score_cutoff=90)
+def handle_window_minimize():
+    handle_minimize()
+
+@on_fuzzy(["maximize", "maximise", "maximise the window", "maximize the window", "maximize window"], score_cutoff=90)
+def handle_window_maximize():
+    handle_maximize()
+
+@on_fuzzy(["restore", "restore window", "restore the window"], score_cutoff=90)
+def handle_window_restore():
+    handle_restore()
+
+@on_fuzzy(["switch window", "next window", "change window"], score_cutoff=90)
+def handle_window_switch_cmd():
+    handle_window_switch()
+

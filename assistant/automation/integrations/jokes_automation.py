@@ -67,3 +67,12 @@ def tell_joke() -> None:
                 time.sleep(sleep_duration)
                 continue
             speak("Sorry, I couldn't find a joke right now.")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["tell a joke", "tell me a joke", "make me laugh", "a joke"], score_cutoff=90)
+def handle_joke_cmd():
+    tell_joke()
+

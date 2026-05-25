@@ -187,3 +187,12 @@ def tell_news() -> None:
 
 if __name__ == "__main__":
     tell_news()
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_fuzzy
+
+@on_fuzzy(["tell me news", "what's the news", "today's news", "latest news", "news headlines", "top headlines", "current news"], score_cutoff=90)
+def handle_news_cmd():
+    tell_news()
+

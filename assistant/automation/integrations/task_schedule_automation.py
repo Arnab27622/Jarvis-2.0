@@ -121,3 +121,16 @@ def recall_info(query: str = None) -> None:
     except Exception as e:
         print(f"Error accessing Gemini for recall: {e}")
         speak("I had trouble analyzing the memory file, but you do have notes saved.")
+
+
+# --- Command Handlers ---
+from assistant.core.registry import on_regex, on_fuzzy
+
+@on_regex(r"remember\s+that\s+(?P<text>.*)$")
+def handle_remember(text):
+    remember_info(text)
+
+@on_fuzzy(["what did i ask you to remember", "what do you remember", "recall"], score_cutoff=90)
+def handle_recall():
+    recall_info()
+

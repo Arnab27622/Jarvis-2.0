@@ -6,8 +6,6 @@ such as alarms and reminders, starts system monitors, and enters the main
 command listening loop.
 """
 
-import datetime
-import threading
 import random
 
 from assistant.interface.wish import wish
@@ -17,98 +15,23 @@ from assistant.activities.check_status import is_online
 from assistant.core.speak_selector import speak
 from assistant.activities.activity_monitor import stop_activity_monitoring
 from assistant.activities.battery_features import battery_monitor
-from assistant.automation.integrations.alarm_reminder import (
-    load_alarms,
-    load_reminders,
-    active_alarms,
-    active_reminders,
-    alarm_worker,
-    reminder_worker,
-    alarm_threads,
-    reminder_threads,
-    save_alarms,
-    save_reminders,
-)
 
 
-def restore_alarms_and_reminders_on_startup() -> None:
-    """
-    Restore alarms and reminders after system restart.
 
-    Loads the saved alarms and reminders from local storage. If any of them
-    are scheduled for the future, they are restarted in background daemon threads.
-    If their scheduled time has already passed, they are removed.
-    """
-    try:
-        load_alarms()
-        load_reminders()
-        current_time = datetime.datetime.now()
 
-        # Restore alarms
-        for alarm_id, alarm_data in list(active_alarms.items()):
-            try:
-                alarm_time = datetime.datetime.fromisoformat(alarm_data["time"])
-                if alarm_time > current_time:
-                    # Alarm is still in the future, restart it
-                    message = alarm_data.get("message", "")
-                    thread = threading.Thread(
-                        target=alarm_worker, args=(alarm_id, alarm_time, message)
-                    )
-                    thread.daemon = True
-                    thread.start()
-                    alarm_threads[alarm_id] = thread
-                else:
-                    # Alarm time has passed, remove it
-                    del active_alarms[alarm_id]
-            except Exception as e:
-                print(f"Error restoring alarm {alarm_id}: {e}")
-                # Remove corrupted alarm
-                if alarm_id in active_alarms:
-                    del active_alarms[alarm_id]
-
-        # Restore reminders
-        for reminder_id, reminder_data in list(active_reminders.items()):
-            try:
-                reminder_time = datetime.datetime.fromisoformat(reminder_data["time"])
-                if reminder_time > current_time:
-                    # Reminder is still in the future, restart it
-                    message = reminder_data.get("message", "")
-                    thread = threading.Thread(
-                        target=reminder_worker,
-                        args=(reminder_id, reminder_time, message),
-                    )
-                    thread.daemon = True
-                    thread.start()
-                    reminder_threads[reminder_id] = thread
-                else:
-                    # Reminder time has passed, remove it
-                    del active_reminders[reminder_id]
-            except Exception as e:
-                print(f"Error restoring reminder {reminder_id}: {e}")
-                # Remove corrupted reminder
-                if reminder_id in active_reminders:
-                    del active_reminders[reminder_id]
-
-        # Save cleaned up data
-        save_alarms()
-        save_reminders()
-
-        print("Alarms and reminders restored on startup")
-
-    except Exception as e:
-        print(f"Error restoring alarms and reminders: {e}")
 
 
 def jarvis() -> None:
     """
     Initialize and run the core Jarvis loop.
 
-    This function triggers the initial greeting, restores background tasks,
-    starts the battery monitor, and enters the main command execution loop.
+    This function triggers the initial greeting, starts the battery monitor,
+    and enters the main command execution loop.
     """
+    from assistant.core.mouth import wait_for_tts_completion
     wish()
-    restore_alarms_and_reminders_on_startup()
     battery_monitor.start_monitoring()
+    wait_for_tts_completion()
     command()
 
 
@@ -129,3 +52,7 @@ if __name__ == "__main__":
         battery_monitor.stop_monitoring()
         print(f"An error occurred: {e}")
         print("JARVIS shutting down due to error...")
+    finally:
+        from assistant.core.mouth import wait_for_tts_completion, stop_tts_consumer
+        wait_for_tts_completion()
+        stop_tts_consumer()
