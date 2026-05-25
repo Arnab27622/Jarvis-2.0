@@ -1,7 +1,7 @@
 import requests
 
 
-def is_online(url="https://www.google.com", timeout=5):
+def is_online(url: str = "https://www.google.com", timeout: int = 5) -> bool:
     """
     Check internet connectivity by attempting to reach a specified URL.
 

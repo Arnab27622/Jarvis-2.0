@@ -6,7 +6,7 @@ import random
 from data.dlg_data.dlg import search_result
 
 
-def handle_web_search(command_text):
+def handle_web_search(command_text: str) -> None:
     """
     Perform a web search by extracting the search query from voice commands.
     

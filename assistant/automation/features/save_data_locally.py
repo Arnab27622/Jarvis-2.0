@@ -10,7 +10,9 @@ import threading
 qa_lock = threading.Lock()
 
 
-def load_qa_data(file_path):
+from typing import Dict, Union
+
+def load_qa_data(file_path: Union[str, Path]) -> Dict[str, str]:
     """
     Load Question & Answer data from a JSON file with robust error handling.
 
@@ -59,7 +61,7 @@ def load_qa_data(file_path):
     return qa_dict
 
 
-def save_qa_data(file_path, qa_dict):
+def save_qa_data(file_path: Union[str, Path], qa_dict: Dict[str, str]) -> None:
     """
     Save Q&A data to JSON file using atomic writing for data safety.
 

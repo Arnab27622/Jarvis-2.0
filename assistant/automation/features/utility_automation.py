@@ -6,7 +6,7 @@ import screen_brightness_control as sbc
 import datetime
 
 
-def handle_write(text):
+def handle_write(text: str) -> None:
     """
     Handle text writing commands by typing the specified text.
     
@@ -40,7 +40,7 @@ def handle_write(text):
         speak("I didn't hear any text to write")
 
 
-def handle_volume_change(direction):
+def handle_volume_change(direction: str) -> None:
     """
     Adjust system volume with controlled increments.
     
@@ -74,7 +74,7 @@ def handle_volume_change(direction):
         speak("Volume decreased")
 
 
-def handle_brightness(command_text):
+def handle_brightness(command_text: str) -> None:
     """
     Adjust or query screen brightness levels.
     
@@ -116,7 +116,7 @@ def handle_brightness(command_text):
         speak(f"Current brightness is {current_brightness}%")
 
 
-def take_screenshot():
+def take_screenshot() -> None:
     """
     Capture a screenshot and save it with timestamp to a dedicated directory.
     
@@ -157,7 +157,7 @@ def take_screenshot():
     speak(f"Screenshot taken and saved as {filename}")
 
 
-def get_system_info():
+def get_system_info() -> None:
     """
     Provide voice report of key system information.
     
@@ -182,7 +182,9 @@ def get_system_info():
     speak(f"Battery is at {percent} percent. Memory usage is {memory_percent} percent")
 
 
-def get_running_apps_windows():
+from typing import List, Union
+
+def get_running_apps_windows() -> Union[List[str], str]:
     """
     Retrieve a list of currently running applications on Windows.
     
@@ -215,7 +217,7 @@ def get_running_apps_windows():
         return f"Error: {e}"
 
 
-def check_running_app():
+def check_running_app() -> None:
     """
     Display currently running applications in the console.
     

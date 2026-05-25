@@ -32,13 +32,23 @@ SYSTEM_PROMPT = (
 )
 
 class LLMManager:
-    def __init__(self):
+    """
+    Manages connections and failovers for multiple Large Language Models.
+    
+    Provides logic to intelligently route queries to the fastest or most appropriate
+    model based on user intent (e.g., technical vs web search) and handles
+    sequential fallback if the primary model fails.
+    """
+    def __init__(self) -> None:
         self.gemini_key = os.getenv("GEMINI_API_KEY")
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY")
         self.hf_token = os.getenv("HF_TOKEN")
 
     def _call_gemini(self, prompt: str) -> Optional[str]:
-        """Direct REST call to Gemini API (High Reliability, Good Speed)."""
+        """
+        Direct REST call to Gemini API.
+        Known for high reliability and good speed for logic queries.
+        """
         if not self.gemini_key: return None
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
@@ -50,7 +60,10 @@ class LLMManager:
             return None
 
     def _call_openrouter(self, prompt: str, model: str = "openrouter/free") -> Optional[str]:
-        """OpenRouter call (Fastest for Groq/Grok/Gemini Flash)."""
+        """
+        Call OpenRouter API.
+        Used as a reliable fallback or for specific model requests.
+        """
         if not self.openrouter_key: return None
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.openrouter_key}"}
@@ -66,7 +79,10 @@ class LLMManager:
             return None
 
     def _call_huggingface(self, prompt: str) -> Optional[str]:
-        """LLM2 logic - GPT-OSS-20B."""
+        """
+        Call HuggingFace Inference API.
+        Defaults to openai/gpt-oss-20b for open-source model fallback.
+        """
         if not self.hf_token: return None
         from huggingface_hub import InferenceClient
         try:
@@ -81,7 +97,10 @@ class LLMManager:
         except: return None
 
     def _call_g4f(self, prompt: str) -> Optional[str]:
-        """LLM1 logic - GPT-4o-mini with Web Search."""
+        """
+        Call GPT4Free client.
+        Provides access to GPT-4o-mini with integrated web search.
+        """
         from g4f.client import Client
         try:
             client = Client()
@@ -108,7 +127,15 @@ class LLMManager:
     def get_response(self, user_input: str) -> str:
         """
         Intelligent response generator using all available models.
-        Selects best model by intent, then falls back through the entire chain.
+        
+        Selects the best model by intent (Technical, Web, General), then falls
+        back through the entire sequential chain if the primary model fails.
+        
+        Args:
+            user_input (str): The user's query.
+            
+        Returns:
+            str: The generated response, or a fallback error message.
         """
         record_user_activity()
         intent = self._identify_intent(user_input)

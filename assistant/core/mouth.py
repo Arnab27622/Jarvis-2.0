@@ -1,11 +1,184 @@
 """
 Mouth Module - Unified Text-to-Speech (TTS) System
 
-Consolidates online (Edge TTS) and offline (pyttsx3) capabilities into a 
-single module. Features intelligent online/offline fallback and 
-emotion-aware offline speech synthesis.
+Now powered by Kokoro TTS for ultra-low latency streaming.
 """
 
+import sys
+import time
+import threading
+import queue
+import sounddevice as sd
+from kokoro_onnx import Kokoro
+import asyncio
+
+# --- New Kokoro Implementation ---
+
+# Global state
+_tts_lock = threading.Lock()
+tts_queue = queue.Queue()
+_is_tts_running = False
+
+# Initialize Kokoro
+KOKORO_MODEL_PATH = "models/kokoro-v1.0.onnx"
+KOKORO_VOICES_PATH = "models/voices-v1.0.bin"
+VOICE_NAME = "am_michael"
+
+print("Initializing Voice Module (Kokoro)...")
+try:
+    kokoro = Kokoro(KOKORO_MODEL_PATH, KOKORO_VOICES_PATH)
+    kokoro_ready = True
+except Exception as e:
+    print(f"Failed to load Kokoro model: {e}")
+    kokoro_ready = False
+
+
+def print_animated_message(message: str) -> None:
+    """
+    Print a message to the console character by character for a typing effect.
+
+    Args:
+        message (str): The text to print.
+    """
+    for char in message:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(0.065)
+    print()
+
+
+async def _stream_audio_and_text(text: str) -> None:
+    """
+    Generate audio stream using Kokoro TTS and synchronize it with console text printing.
+
+    Args:
+        text (str): The text to synthesize into speech.
+    """
+    if not kokoro_ready:
+        print_animated_message(text)
+        return
+
+    try:
+        # Prepare the text animation thread, but don't start it yet
+        print_thread = threading.Thread(target=print_animated_message, args=(text,))
+
+        # Generate and play audio chunks as they arrive
+        stream = kokoro.create_stream(text, voice=VOICE_NAME, speed=1.1, lang="en-us")
+        
+        first_chunk = True
+        async for item in stream:
+            if isinstance(item, tuple):
+                chunk, _ = item
+            else:
+                chunk = item
+                
+            if first_chunk:
+                # Play the chunk first, which initializes the audio device (can take 0.2-0.5s)
+                sd.play(chunk, samplerate=24000)
+                time.sleep(0.3) # Give audio device time to actually start outputting sound
+                # Now start printing so it matches the sound
+                print_thread.start()
+                first_chunk = False
+                sd.wait()
+            else:
+                # play chunk blocking so they queue up properly
+                sd.play(chunk, samplerate=24000)
+                sd.wait()
+
+        # Fallback if no audio was generated for some reason
+        if first_chunk:
+            print_thread.start()
+
+        print_thread.join()
+    except Exception as e:
+        print(f"Kokoro Streaming Error: {e}")
+        # fallback to just printing if playback fails
+        print_animated_message(text)
+
+
+def speak(text: str) -> None:
+    """
+    Unified entry point for Jarvis's voice.
+    Uses Kokoro TTS for real-time streaming.
+    """
+    with _tts_lock:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # If an event loop is already running, run the coroutine in a new thread and wait for it
+            def run_in_new_loop():
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                new_loop.run_until_complete(_stream_audio_and_text(text))
+                new_loop.close()
+
+            thread = threading.Thread(target=run_in_new_loop)
+            thread.start()
+            thread.join()
+        else:
+            asyncio.run(_stream_audio_and_text(text))
+
+
+def speak_streaming(sentences: list[str]) -> None:
+    """Streams a list of sentences to the TTS consumer."""
+    global _is_tts_running
+    while not tts_queue.empty():
+        try:
+            tts_queue.get_nowait()
+            tts_queue.task_done()
+        except:
+            break
+
+    if not _is_tts_running:
+        _is_tts_running = True
+        threading.Thread(target=_tts_consumer, daemon=True).start()
+
+    for s in sentences:
+        if s.strip():
+            tts_queue.put(s)
+
+
+def _tts_consumer() -> None:
+    """Background worker that continuously consumes from the TTS queue."""
+    global _is_tts_running
+    while _is_tts_running:
+        try:
+            sentence = tts_queue.get(timeout=2.0)
+            speak(sentence)
+            tts_queue.task_done()
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"Streaming error: {e}")
+
+
+def wait_for_tts_completion() -> None:
+    """Block until all sentences in the TTS queue have been spoken."""
+    tts_queue.join()
+
+
+def start_tts_consumer() -> None:
+    """Start the background TTS consumer thread."""
+    global _is_tts_running
+    _is_tts_running = True
+    threading.Thread(target=_tts_consumer, daemon=True).start()
+
+
+def stop_tts_consumer() -> None:
+    """Stop the background TTS consumer thread."""
+    global _is_tts_running
+    _is_tts_running = False
+
+
+
+
+# =====================================================================
+# Old TTS Implementation
+# =====================================================================
+'''
 import asyncio
 import os
 import edge_tts
@@ -177,4 +350,9 @@ def stop_tts_consumer():
 
 if __name__ == "__main__":
     speak("System consolidation complete. I am now using a unified voice module.")
+'''
 
+if __name__ == "__main__":
+    speak(
+        "System consolidation complete. I am now using a unified voice module powered by Kokoro."
+    )

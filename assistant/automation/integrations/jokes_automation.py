@@ -3,7 +3,7 @@ import time
 import pyjokes
 
 
-def tell_joke():
+def tell_joke() -> None:
     """
     Tell a randomly selected joke with robust error handling and retry logic.
 

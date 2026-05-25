@@ -3,7 +3,9 @@ import numpy as np
 import time
 
 
-def test_speaker(device_index=None):
+from typing import Optional
+
+def test_speaker(device_index: Optional[int] = None) -> None:
     """Test speaker functionality"""
     print("🔊 Testing Speaker...")
 

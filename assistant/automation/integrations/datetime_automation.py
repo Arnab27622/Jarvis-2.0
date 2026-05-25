@@ -2,7 +2,7 @@ from assistant.core.speak_selector import speak
 import datetime
 
 
-def tell_time():
+def tell_time() -> None:
     """
     Announce the current system time in a natural, spoken format.
 
@@ -31,7 +31,7 @@ def tell_time():
     speak(f"The current time is {current_time}")
 
 
-def tell_date():
+def tell_date() -> None:
     """
     Announce the current system date in a comprehensive, spoken format.
 

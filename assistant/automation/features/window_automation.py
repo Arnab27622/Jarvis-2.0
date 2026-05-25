@@ -5,7 +5,7 @@ import pygetwindow as gw
 import time
 
 
-def handle_minimize():
+def handle_minimize() -> None:
     """
     Minimize the currently active window using system keyboard shortcuts.
 
@@ -27,7 +27,7 @@ def handle_minimize():
     ui.press("n")
 
 
-def handle_maximize():
+def handle_maximize() -> None:
     """
     Maximize the currently active window to full screen.
 
@@ -48,7 +48,7 @@ def handle_maximize():
     ui.press("x")
 
 
-def handle_restore():
+def handle_restore() -> None:
     """
     Restore a window from minimized or maximized state to normal size.
 
@@ -71,7 +71,7 @@ def handle_restore():
     ui.press("r")
 
 
-def handle_window_switch():
+def handle_window_switch() -> None:
     """
     Switch between open windows using Alt+Tab task switcher.
 
@@ -93,7 +93,7 @@ def handle_window_switch():
     time.sleep(0.5)
 
 
-def handle_scroll(command_text):
+def handle_scroll(command_text: str) -> None:
     """
     Handle scroll commands with intelligent direction and intensity detection.
 
@@ -147,7 +147,7 @@ def handle_scroll(command_text):
     speak(f"Scrolling {direction_text}")
 
 
-def handle_scroll_to_top():
+def handle_scroll_to_top() -> None:
     """
     Scroll to the top of the current document or page.
 
@@ -158,7 +158,7 @@ def handle_scroll_to_top():
     speak("Scrolled to top")
 
 
-def handle_scroll_to_bottom():
+def handle_scroll_to_bottom() -> None:
     """
     Scroll to the bottom of the current document or page.
 
@@ -169,7 +169,7 @@ def handle_scroll_to_bottom():
     speak("Scrolled to bottom")
 
 
-def open_incognito_tab():
+def open_incognito_tab() -> None:
     """
     Open a private browsing window in the active browser.
 
@@ -208,7 +208,7 @@ def open_incognito_tab():
         os.system("start chrome --incognito")
 
 
-def bookmark_page():
+def bookmark_page() -> None:
     """
     Bookmark the current web page using browser keyboard shortcuts.
 
@@ -229,7 +229,7 @@ def bookmark_page():
     ui.hotkey("enter")
 
 
-def activate_browser():
+def activate_browser() -> bool:
     """
     Find and activate an existing browser window if available.
 
@@ -272,7 +272,7 @@ def activate_browser():
         return False
 
 
-def open_dev_tools():
+def open_dev_tools() -> None:
     """
     Open browser developer tools for web development and debugging.
 
@@ -283,7 +283,7 @@ def open_dev_tools():
     ui.hotkey("f12")
 
 
-def toggle_fullscreen():
+def toggle_fullscreen() -> None:
     """
     Toggle fullscreen mode for the current application.
 
@@ -294,7 +294,7 @@ def toggle_fullscreen():
     ui.hotkey("f11")
 
 
-def reload_page():
+def reload_page() -> None:
     """
     Reload or refresh the current web page.
 
@@ -305,7 +305,7 @@ def reload_page():
     ui.hotkey("f5")
 
 
-def go_back():
+def go_back() -> None:
     """
     Navigate back to the previous page in browser history.
 
@@ -316,7 +316,7 @@ def go_back():
     ui.hotkey("alt", "left")
 
 
-def go_forward():
+def go_forward() -> None:
     """
     Navigate forward to the next page in browser history.
 
@@ -327,7 +327,7 @@ def go_forward():
     ui.hotkey("alt", "right")
 
 
-def duplicate_tab():
+def duplicate_tab() -> None:
     """
     Duplicate the current browser tab.
 

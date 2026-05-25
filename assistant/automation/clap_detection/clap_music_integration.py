@@ -30,11 +30,11 @@ class FinalClapMusicSystem:
 
     def __init__(self, music_directory: str):
         """Initialize the FINAL system."""
-        self.music_directory = music_directory
+        self.music_directory: str = music_directory
         self.clap_music = None
-        self.device_index = None
+        self.device_index: int | None = None
 
-    def setup(self):
+    def setup(self) -> bool:
         """Set up the FINAL system."""
         print("🎯 FINAL Clap-to-Music System Setup")
         print("=" * 60)
@@ -81,7 +81,7 @@ class FinalClapMusicSystem:
 
         return True
 
-    def start(self):
+    def start(self) -> None:
         """Start the FINAL system."""
         if not self.clap_music or self.device_index is None:
             print("❌ Error: System not properly set up. Call setup() first.")
@@ -129,14 +129,14 @@ class FinalClapMusicSystem:
         finally:
             self.cleanup()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up system resources."""
         if self.clap_music and self.clap_music.music_player.is_playing:
             self.clap_music.music_player.stop()
         print("🧹 FINAL system cleanup completed")
 
 
-def main():
+def main() -> None:
     """Main function."""
     # Music directory
     default_music_dir = r"C:\Users\ARNAB DEY\Music"

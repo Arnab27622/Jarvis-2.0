@@ -8,7 +8,9 @@ from assistant.core.speak_selector import speak
 load_dotenv()
 
 
-def get_location():
+from typing import Dict, Union, Optional, Any
+
+def get_location() -> Optional[Dict[str, Union[float, str]]]:
     """
     Determine current geographical location using IP address geolocation.
 
@@ -74,7 +76,7 @@ def get_location():
         return None
 
 
-def get_current_temperature(units="metric"):
+def get_current_temperature(units: str = "metric") -> None:
     """
     Get and announce current temperature for the user's location.
 
@@ -161,7 +163,7 @@ def get_current_temperature(units="metric"):
         speak("Sorry, I encountered an unexpected error while checking the weather.")
 
 
-def get_overall_weather(units="metric"):
+def get_overall_weather(units: str = "metric") -> Optional[Dict[str, Any]]:
     """
     Get comprehensive weather report for current location.
 
@@ -332,7 +334,7 @@ def get_overall_weather(units="metric"):
         speak("I encountered a problem while fetching the weather report.")
 
 
-def get_weather_by_address(address: str, units: str = "metric"):
+def get_weather_by_address(address: str, units: str = "metric") -> Optional[Dict[str, Any]]:
     """
     Get comprehensive weather information for a specific location by address.
 

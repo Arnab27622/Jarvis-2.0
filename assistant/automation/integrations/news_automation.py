@@ -12,7 +12,7 @@ load_dotenv()
 newsapi = os.getenv("NEWS_API_KEY")
 
 
-def get_country_by_ip():
+def get_country_by_ip() -> str:
     """
     Dynamically detect the user's country code using their IP address.
     Falls back to 'in' if the lookup fails.
@@ -44,7 +44,7 @@ def get_country_by_ip():
         return "in"  # Default to India if the lookup fails
 
 
-def get_news_everything_endpoint(category="general", limit=3):
+def get_news_everything_endpoint(category: str = "general", limit: int = 3) -> None:
     """
     Fetches news using the /v2/everything endpoint, focused on the user's country.
     """
@@ -142,7 +142,7 @@ def get_news_everything_endpoint(category="general", limit=3):
 
 
 # Update your tell_me_news function to use the new method
-def tell_me_news():
+def tell_me_news() -> None:
     """Direct function for 'tell me news' command - fetches general news for the user's country"""
     speak("Fetching the top news headlines for your location.")
     get_news_everything_endpoint("general", limit=3)
@@ -152,7 +152,7 @@ def tell_me_news():
 # but ensure it calls get_news_everything_endpoint instead of get_indian_news.
 
 
-def tell_news():
+def tell_news() -> None:
     speak(
         "Which category would you like? General, Sports, Technology, Health, Business, Entertainment, or Science?"
     )

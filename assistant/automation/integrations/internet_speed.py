@@ -2,7 +2,7 @@ from assistant.core.speak_selector import speak
 import speedtest
 
 
-def check_internet_speed():
+def check_internet_speed() -> None:
     """
     Perform comprehensive internet speed test and report results via voice.
 

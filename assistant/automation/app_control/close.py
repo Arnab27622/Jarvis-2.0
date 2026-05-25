@@ -5,7 +5,9 @@ from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import closedlg
 
 
-def close_command(app_name=None):
+from typing import Optional
+
+def close_command(app_name: Optional[str] = None) -> None:
     """
     Close the currently active application or window.
 

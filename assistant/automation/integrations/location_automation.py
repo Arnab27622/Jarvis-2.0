@@ -4,7 +4,7 @@ from assistant.core.speak_selector import speak
 import geocoder
 
 
-def get_current_location():
+def get_current_location() -> None:
     """
     Determine and announce the user's current geographic location using IP geolocation.
 
@@ -48,7 +48,7 @@ def get_current_location():
         speak("Sorry, I'm having trouble determining your location")
 
 
-def check_ip_address():
+def check_ip_address() -> bool:
     """
     Retrieve and announce the user's public IP address with robust error handling.
 

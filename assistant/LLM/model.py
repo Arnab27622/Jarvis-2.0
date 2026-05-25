@@ -50,7 +50,9 @@ except LookupError:
     nltk.download("punkt_tab")
 
 
-def load_dataset(file_path):
+from typing import List, Dict, Tuple, Optional, Any
+
+def load_dataset(file_path: str) -> List[Dict[str, str]]:
     """
     Load and parse the Q&A dataset from a JSON file.
 
@@ -81,7 +83,7 @@ def load_dataset(file_path):
     return dataset
 
 
-def preprocess_text(text):
+def preprocess_text(text: str) -> str:
     """
     Comprehensive text preprocessing pipeline for NLP tasks.
 
@@ -121,7 +123,7 @@ def preprocess_text(text):
     return " ".join(tokens)
 
 
-def train_tfidf_vectorizer(dataset):
+def train_tfidf_vectorizer(dataset: List[Dict[str, str]]) -> Tuple[TfidfVectorizer, Any]:
     """
     Train TF-IDF vectorizer on the Q&A dataset.
 
@@ -152,7 +154,7 @@ def train_tfidf_vectorizer(dataset):
     return vectorizer, X
 
 
-def get_answer(question, vectorizer, X, dataset, threshold=0.5):
+def get_answer(question: str, vectorizer: TfidfVectorizer, X: Any, dataset: List[Dict[str, str]], threshold: float = 0.5) -> Tuple[Optional[str], float]:
     """
     Find the best matching answer for a user question using cosine similarity.
 
@@ -208,7 +210,7 @@ _cached_vectorizer = None
 _cached_matrix = None
 _last_mtime = 0
 
-def ensure_model_loaded(dataset_path):
+def ensure_model_loaded(dataset_path: str) -> None:
     """
     Ensure the Q&A model is loaded and up-to-date.
     Uses a caching mechanism to avoid redundant training.
@@ -228,7 +230,7 @@ def ensure_model_loaded(dataset_path):
         _last_mtime = current_mtime
 
 
-def mind(text, threshold=0.7):
+def mind(text: str, threshold: float = 0.7) -> Optional[str]:
     """
     Main interface function for the local Q&A intelligence system.
     Orchestrates query processing using cached TF-IDF models.

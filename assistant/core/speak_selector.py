@@ -2,8 +2,7 @@
 Speak Selector Module - Unified TTS Interface
 
 This module provides a consistent interface for the assistant's voice,
-now powered by a unified mouth module that handles online/offline
-switching internally.
+now powered by the local Kokoro ONNX model for ultra-low latency streaming.
 """
 
 from assistant.core.mouth import (

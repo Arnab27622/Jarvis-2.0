@@ -27,7 +27,7 @@ from assistant.automation.features.save_data_locally import (
 )
 
 
-def brain(text, threshold=0.7):
+def brain(text: str, threshold: float = 0.7) -> None:
     """
     Main processing function that orchestrates query handling and response generation.
 

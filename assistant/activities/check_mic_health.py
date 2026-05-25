@@ -4,7 +4,9 @@ import time
 from assistant.core.speak_selector import speak
 
 
-def list_input_devices():
+from typing import List, Tuple, Dict, Optional
+
+def list_input_devices() -> List[Tuple[int, str]]:
     """
     List all available audio input devices on the system.
 
@@ -30,7 +32,7 @@ def list_input_devices():
     return devices
 
 
-def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
+def get_mic_health(seconds: int = 5, threshold_multiplier: float = 3.0, device_index: Optional[int] = None) -> Optional[Dict[str, float]]:
     """
     Perform comprehensive microphone health analysis.
 
@@ -210,7 +212,7 @@ def get_mic_health(seconds=5, threshold_multiplier=3.0, device_index=None):
     return health_report
 
 
-def mic_health():
+def mic_health() -> None:
     """
     Main microphone health checking routine with user interaction.
 

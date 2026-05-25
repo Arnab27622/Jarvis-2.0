@@ -5,7 +5,9 @@ from scipy import signal
 from assistant.core.speak_selector import speak
 
 
-def play_tone(frequency, duration=2, volume=0.5, sample_rate=44100, p=None):
+from typing import Optional
+
+def play_tone(frequency: float, duration: float = 2, volume: float = 0.5, sample_rate: int = 44100, p: Optional[pyaudio.PyAudio] = None) -> None:
     """
     Generate and play a pure sine wave tone through the speaker system.
 
@@ -57,8 +59,8 @@ def play_tone(frequency, duration=2, volume=0.5, sample_rate=44100, p=None):
 
 
 def play_sweep(
-    duration=5, volume=0.5, sample_rate=44100, start_freq=20, end_freq=20000, p=None
-):
+    duration: float = 5, volume: float = 0.5, sample_rate: int = 44100, start_freq: float = 20, end_freq: float = 20000, p: Optional[pyaudio.PyAudio] = None
+) -> None:
     """
     Generate and play a logarithmic frequency sweep through the speaker system.
 
@@ -109,7 +111,7 @@ def play_sweep(
             p.terminate()
 
 
-def speaker_health_test():
+def speaker_health_test() -> None:
     """
     Perform comprehensive speaker health assessment through audio testing.
 

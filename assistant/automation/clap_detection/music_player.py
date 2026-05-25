@@ -55,7 +55,7 @@ class FinalMusicPlayer:
         
         return music_files
     
-    def play_random_song(self):
+    def play_random_song(self) -> None:
         """Play a random song with maximum anti-interference."""
         if not self.music_files:
             print("No music files available to play")
@@ -85,7 +85,7 @@ class FinalMusicPlayer:
             print(f"Error playing {self.current_song.name}: {e}")
             self.is_playing = False
     
-    def _start_monitoring_thread(self):
+    def _start_monitoring_thread(self) -> None:
         """Start a thread to monitor music playback status."""
         def monitor():
             while self.is_playing:
@@ -97,21 +97,21 @@ class FinalMusicPlayer:
         
         threading.Thread(target=monitor, daemon=True).start()
     
-    def pause(self):
+    def pause(self) -> None:
         """Pause the current song."""
         if self.is_playing and not self.is_paused:
             pygame.mixer.music.pause()
             self.is_paused = True
             print("⏸️ Music paused")
     
-    def resume(self):
+    def resume(self) -> None:
         """Resume the paused song."""
         if self.is_playing and self.is_paused:
             pygame.mixer.music.unpause()
             self.is_paused = False
             print("▶️ Music resumed")
     
-    def stop(self):
+    def stop(self) -> None:
         """Stop the current song."""
         if self.is_playing:
             pygame.mixer.music.stop()
@@ -120,7 +120,7 @@ class FinalMusicPlayer:
             print("⏹️ Music stopped")
             time.sleep(0.3)  # Longer pause
     
-    def toggle_play_pause(self):
+    def toggle_play_pause(self) -> None:
         """Toggle between play/pause states."""
         if self.is_playing:
             if self.is_paused:
@@ -130,7 +130,7 @@ class FinalMusicPlayer:
         else:
             self.play_random_song()
     
-    def set_volume(self, volume: float):
+    def set_volume(self, volume: float) -> None:
         """Set the volume (capped at 20% maximum)."""
         self.volume = max(0.0, min(0.2, volume))  # Cap at 20%
         pygame.mixer.music.set_volume(self.volume)

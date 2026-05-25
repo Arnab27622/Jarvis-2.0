@@ -39,13 +39,13 @@ ALARM_SOUND_FILE = "data/alarm_data/alarm.mp3"  # Alarm sound file path
 REMINDER_SOUND_FILE = "data/reminder_data/reminder.wav"  # Reminder sound file path
 
 
-def ensure_data_directory():
+def ensure_data_directory() -> None:
     """Ensure data directory exists for storing alarm and reminder files"""
     os.makedirs("data/alarm_data", exist_ok=True)
     os.makedirs("data/reminder_data", exist_ok=True)
 
 
-def save_alarms():
+def save_alarms() -> None:
     """Save alarms to JSON file for persistence
 
     Converts datetime objects to strings and handles file I/O exceptions
@@ -58,7 +58,7 @@ def save_alarms():
         print(f"Error saving alarms: {e}")
 
 
-def save_reminders():
+def save_reminders() -> None:
     """Save reminders to JSON file for persistence
 
     Converts datetime objects to strings and handles file I/O exceptions
@@ -71,7 +71,7 @@ def save_reminders():
         print(f"Error saving reminders: {e}")
 
 
-def load_alarms():
+def load_alarms() -> None:
     """Load alarms from JSON file into memory
 
     Restores previously set alarms from persistent storage
@@ -86,7 +86,7 @@ def load_alarms():
         active_alarms = {}
 
 
-def load_reminders():
+def load_reminders() -> None:
     """Load reminders from JSON file into memory
 
     Restores previously set reminders from persistent storage
@@ -666,7 +666,7 @@ except Exception as e:
     print(f"Warning: mixer init failed: {e}")
 
 
-def play_audio_file(file_path: str, repeat_times: int = 1):
+def play_audio_file(file_path: str, repeat_times: int = 1) -> None:
     """Play an audio file using pygame mixer
 
     Args:
@@ -703,17 +703,17 @@ def play_audio_file(file_path: str, repeat_times: int = 1):
             print("🔔 AUDIO ALERT! 🔔")
 
 
-def play_alarm_sound():
+def play_alarm_sound() -> None:
     """Play alarm sound from data/alarm.mp3 with repetition"""
     play_audio_file(ALARM_SOUND_FILE, repeat_times=3)
 
 
-def play_reminder_sound():
+def play_reminder_sound() -> None:
     """Play reminder sound from data/reminder.mp3 with repetition"""
     play_audio_file(REMINDER_SOUND_FILE, repeat_times=3)
 
 
-def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
+def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str) -> None:
     """Worker thread function for alarm execution
 
     Waits until target time, then triggers notification and sound.
@@ -745,7 +745,7 @@ def alarm_worker(alarm_id: str, target_time: datetime.datetime, message: str):
     alarm_threads.pop(alarm_id, None)
 
 
-def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: str):
+def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: str) -> None:
     """Worker thread function for reminder execution
 
     Waits until target time, then triggers notification and sound.
@@ -777,7 +777,7 @@ def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: s
     reminder_threads.pop(reminder_id, None)
 
 
-def set_alarm(command_text: str):
+def set_alarm(command_text: str) -> None:
     """Set an alarm based on natural language command
 
     Parses the command text to determine alarm time and optional message,
@@ -840,7 +840,7 @@ def set_alarm(command_text: str):
         speak("Sorry, I couldn't set the alarm. Please try again.")
 
 
-def set_reminder(command_text: str):
+def set_reminder(command_text: str) -> None:
     """Set a reminder based on natural language command
 
     Parses the command text to determine reminder time and message,
@@ -897,7 +897,7 @@ def set_reminder(command_text: str):
         speak("Sorry, I couldn't set the reminder. Please try again.")
 
 
-def list_alarms():
+def list_alarms() -> None:
     """List all active alarms with their times and messages
 
     Reads from active_alarms global dictionary and announces
@@ -927,7 +927,7 @@ def list_alarms():
             speak(f"Alarm {time_display}")
 
 
-def list_reminders():
+def list_reminders() -> None:
     """List all active reminders with their times and messages
 
     Reads from active_reminders global dictionary and announces
@@ -954,7 +954,7 @@ def list_reminders():
         speak(f"Reminder {time_display}: {message}")
 
 
-def cancel_all_alarms():
+def cancel_all_alarms() -> None:
     """Cancel all active alarms and stop their threads
 
     Clears the active_alarms dictionary, stops all alarm threads,
@@ -973,7 +973,7 @@ def cancel_all_alarms():
         speak("No active alarms to cancel.")
 
 
-def cancel_all_reminders():
+def cancel_all_reminders() -> None:
     """Cancel all active reminders and stop their threads
 
     Clears the active_reminders dictionary, stops all reminder threads,

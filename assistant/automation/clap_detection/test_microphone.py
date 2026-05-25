@@ -5,7 +5,9 @@ import wave
 import os
 
 
-def test_microphone(device_index=None, duration=5, sample_rate=22050):
+from typing import Optional, List, Tuple, Any
+
+def test_microphone(device_index: Optional[int] = None, duration: int = 5, sample_rate: int = 22050) -> bool:
     """Test microphone by recording and analyzing audio"""
 
     print("🎤 Testing Microphone...")
@@ -64,7 +66,7 @@ def test_microphone(device_index=None, duration=5, sample_rate=22050):
         return False
 
 
-def list_audio_devices():
+def list_audio_devices() -> List[Tuple[int, Any]]:
     """List all available audio devices"""
     print("\n🔊 Available Audio Devices:")
     devices = sd.query_devices()
@@ -80,7 +82,7 @@ def list_audio_devices():
     return input_devices
 
 
-def real_time_mic_monitor(device_index=None, duration=10):
+def real_time_mic_monitor(device_index: Optional[int] = None, duration: int = 10) -> None:
     """Real-time microphone level monitoring"""
     print("\n📈 Real-time Microphone Monitoring (10 seconds)...")
     print("Watch the levels as you speak or make noise:")
@@ -115,7 +117,7 @@ def real_time_mic_monitor(device_index=None, duration=10):
         print(f"\nError during monitoring: {e}")
 
 
-def test_clap_detection_hardware(device_index=None):
+def test_clap_detection_hardware(device_index: Optional[int] = None) -> bool:
     """Test if clap detection can work with current hardware"""
     print("\n👏 Testing Clap Detection Hardware Setup...")
 

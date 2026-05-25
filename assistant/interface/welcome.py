@@ -26,12 +26,12 @@ from data.dlg_data.dlg import welcomedlg
 from assistant.core.speak_selector import speak
 
 
-def welcome():
+def welcome() -> None:
     """
     Speak a randomly selected welcome message to the user.
 
     Selects a welcome message from the predefined dialogue dataset
-    and uses the appropriate TTS engine (online/offline) to speak it.
+    and uses the local TTS engine to speak it.
 
     Returns:
         None

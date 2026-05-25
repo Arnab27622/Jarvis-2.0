@@ -59,7 +59,7 @@ class AdvancedSpeechRecognizer:
         # Audio calibration settings
         self.calibration_duration = 2  # Longer calibration for better noise adjustment
 
-    def clear_line(self):
+    def clear_line(self) -> None:
         """
         Clear the current line in terminal output.
 
@@ -67,7 +67,7 @@ class AdvancedSpeechRecognizer:
         """
         print("\033[K", end="", flush=True)
 
-    def print_listening(self):
+    def print_listening(self) -> None:
         """
         Display listening indicator without newline.
 
@@ -78,7 +78,7 @@ class AdvancedSpeechRecognizer:
             print(Fore.LIGHTGREEN_EX + "Listening...", end="\r", flush=True)
             self.is_listening = True
 
-    def stop_listening_message(self):
+    def stop_listening_message(self) -> None:
         """
         Stop and clear the listening indicator.
 
@@ -88,7 +88,7 @@ class AdvancedSpeechRecognizer:
             self.clear_line()
             self.is_listening = False
 
-    def save_audio_debug(self, audio, filename="debug_audio.wav"):
+    def save_audio_debug(self, audio: sr.AudioData, filename: str = "debug_audio.wav") -> None:
         """
         Save audio data to WAV file for debugging purposes.
 
@@ -112,7 +112,7 @@ class AdvancedSpeechRecognizer:
         except Exception as e:
             print(Fore.RED + f"Error saving audio: {e}")
 
-    def calibrate_microphone(self, source):
+    def calibrate_microphone(self, source: sr.Microphone) -> None:
         """
         Perform enhanced microphone calibration with multiple attempts.
 
@@ -146,7 +146,7 @@ class AdvancedSpeechRecognizer:
                     print(Fore.YELLOW + "Using default energy threshold")
                     self.recognizer.energy_threshold = 300
 
-    def recognize_with_google(self, audio):
+    def recognize_with_google(self, audio: sr.AudioData) -> str | None:
         """
         Use Google Web Speech API for speech recognition.
 
@@ -174,7 +174,7 @@ class AdvancedSpeechRecognizer:
 
         return recognized_text
 
-    def listen(self):
+    def listen(self) -> str | None:
         """
         Main listening function that captures and processes speech.
 
@@ -263,7 +263,7 @@ class AdvancedSpeechRecognizer:
 recognizer = AdvancedSpeechRecognizer()
 
 
-def listen():
+def listen() -> str | None:
     """
     Module-level function for easy speech recognition access.
 

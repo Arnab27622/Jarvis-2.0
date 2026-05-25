@@ -81,7 +81,7 @@ def trim_history(history: List[Dict[str, str]], max_messages: int = 10) -> List[
         
     return ([sys_msg] if sys_msg else []) + content_msgs
 
-def save_to_brain(query: str, answer: str):
+def save_to_brain(query: str, answer: str) -> None:
     """Stores successful Q&A pair in the local intelligence database."""
     with qa_lock:
         qa_dict[query] = answer

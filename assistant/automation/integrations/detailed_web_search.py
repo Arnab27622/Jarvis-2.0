@@ -10,7 +10,7 @@ from assistant.core.llm_utils import clean_llm_output, save_to_brain
 load_dotenv()
 
 
-def get_web_info(query, max_results=5, prints=False) -> str:
+def get_web_info(query: str, max_results: int = 5, prints: bool = False) -> str:
     """
     Perform real-time Google search using SerpApi and return structured results.
 
@@ -76,7 +76,7 @@ def get_web_info(query, max_results=5, prints=False) -> str:
     return response_json
 
 
-def generate(user_prompt, system_prompt="Be Short and Concise", prints=False) -> str:
+def generate(user_prompt: str, system_prompt: str = "Be Short and Concise", prints: bool = False) -> str:
     """
     Generate AI-powered responses with real-time web search capabilities.
 

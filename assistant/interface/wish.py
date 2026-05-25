@@ -40,7 +40,7 @@ formatted_date = today.strftime("%d %b %y")  # Format: 01 Jan 24
 nowx = datetime.datetime.now()
 
 
-def wish():
+def wish() -> None:
     """
     Speak an appropriate time-based greeting to the user.
 
@@ -62,6 +62,7 @@ def wish():
         # Randomly selects and speaks: "Good morning! Ready for the day?"
         # or "Morning! How are you feeling today?" etc.
     """
+    nowx = datetime.datetime.now()
     current_hour = nowx.hour
 
     # Determine time period and select appropriate greeting

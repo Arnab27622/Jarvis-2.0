@@ -16,7 +16,7 @@ wiki_cache = {}
 CACHE_EXPIRY_HOURS = 24  # Cache entries expire after 24 hours
 
 
-def is_cache_valid(cache_time):
+def is_cache_valid(cache_time: str) -> bool:
     """
     Validate whether a cached Wikipedia result is still within the expiry period.
 
@@ -42,7 +42,7 @@ def is_cache_valid(cache_time):
         return False
 
 
-def wiki_search(prompt, use_cache=True):
+def wiki_search(prompt: str, use_cache: bool = True) -> None:
     """
     Search Wikipedia for information with intelligent caching and fallback mechanisms.
 

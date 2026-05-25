@@ -28,7 +28,7 @@ class ActivityMonitor:
         decline_phrases (list): Phrases that indicate user declines assistance
     """
 
-    def __init__(self, initial_delay=100, check_interval=120, inactivity_threshold=180):
+    def __init__(self, initial_delay: int = 100, check_interval: int = 120, inactivity_threshold: int = 180) -> None:
         """
         Initialize the activity monitor with timing parameters.
 
@@ -69,17 +69,17 @@ class ActivityMonitor:
         # Start initial delay timer
         threading.Timer(self.initial_delay, self._set_initial_delay_passed).start()
 
-    def _set_initial_delay_passed(self):
+    def _set_initial_delay_passed(self) -> None:
         """Mark that the initial delay has passed and monitoring can begin."""
         self.initial_delay_passed = True
 
-    def record_activity(self):
+    def record_activity(self) -> None:
         """Record user activity and update last activity timestamp."""
         self.last_activity_time = time.time()
         self.is_active = True
         # Don't reset awaiting_confirmation here as it interferes with confirmation handling
 
-    def start_monitoring(self):
+    def start_monitoring(self) -> None:
         """Start the inactivity monitoring thread."""
         if self.monitor_thread is None:
             self.stop_signal = False
@@ -88,14 +88,14 @@ class ActivityMonitor:
             )
             self.monitor_thread.start()
 
-    def stop_monitoring(self):
+    def stop_monitoring(self) -> None:
         """Stop the inactivity monitoring thread."""
         self.stop_signal = True
         if self.monitor_thread:
             self.monitor_thread.join()
             self.monitor_thread = None
 
-    def is_confirmation_response(self, text):
+    def is_confirmation_response(self, text: str) -> bool:
         """
         Check if the given text is a response to the confirmation prompt.
 
@@ -120,7 +120,7 @@ class ActivityMonitor:
 
         return False
 
-    def handle_confirmation_response(self, text):
+    def handle_confirmation_response(self, text: str) -> bool | None:
         """
         Process a user's response to the confirmation prompt.
 
@@ -149,13 +149,13 @@ class ActivityMonitor:
         # If response doesn't match, return None
         return None
 
-    def ask_for_confirmation(self):
+    def ask_for_confirmation(self) -> None:
         """Ask the user if they want assistance after period of inactivity."""
         self.awaiting_confirmation = True
         self.confirmation_start_time = time.time()
         speak("You've been idle for a while. Would you like some advice?")
 
-    def check_confirmation_timeout(self):
+    def check_confirmation_timeout(self) -> bool:
         """
         Check if confirmation timeout has been reached (6 seconds).
 
@@ -170,13 +170,13 @@ class ActivityMonitor:
             return True
         return False
 
-    def reset_confirmation_state(self):
+    def reset_confirmation_state(self) -> None:
         """Reset the confirmation state when returning to normal command listening."""
         self.awaiting_confirmation = False
         self.confirmation_response = None
         self.confirmation_start_time = 0
 
-    def _monitor_loop(self):
+    def _monitor_loop(self) -> None:
         """
         Main monitoring loop that runs in background thread.
 

@@ -8,7 +8,9 @@ from assistant.core.speak_selector import speak
 load_dotenv()
 
 
-def generate_image_from_text(prompt_text):
+from typing import Optional
+
+def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     """
     Generate high-quality images from text prompts using Stability AI's Stable Diffusion XL API.
 

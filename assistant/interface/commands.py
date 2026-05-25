@@ -61,7 +61,7 @@ from rapidfuzz import process, fuzz
 FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run"]
 DEBUG_REGISTRY = True
 
-def normalize_command(text):
+def normalize_command(text: str) -> str:
     """
     Normalizes the command text by:
     1. Converting to lowercase
@@ -122,7 +122,7 @@ class CommandRegistry:
         self._fuzzy_handlers.append((phrases, handler, score_cutoff, priority))
         self._fuzzy_handlers.sort(key=lambda x: x[3], reverse=True)
 
-    def execute(self, text):
+    def execute(self, text: str) -> bool:
         """
         Find and execute the first matching command handler across tiers.
         """
@@ -219,7 +219,7 @@ def on_condition(condition_func, priority=0):
 
 
 
-def wait_for_wakeword():
+def wait_for_wakeword() -> bool:
     """
     Wait for the hotword/wake word to be spoken.
 
@@ -271,7 +271,7 @@ def wait_for_wakeword():
             return False
 
 
-def command():
+def command() -> None:
     """
     Main command loop managing wake word state and command mode.
 
@@ -736,7 +736,7 @@ def handle_restart_cmd():
     os.system("shutdown /r /t 10")
 
 
-def process_command(normalized_text):
+def process_command(normalized_text: str) -> None:
     """
     Process and execute voice commands using a modular registry system.
     """

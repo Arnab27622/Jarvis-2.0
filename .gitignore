@@ -11,3 +11,5 @@ noise2
 Clap_Detect_Model.pth
 screenshots
 .planning
+models
+commands_list.txt

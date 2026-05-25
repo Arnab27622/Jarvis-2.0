@@ -20,7 +20,7 @@ youtube_player_state = {
 }
 
 
-def activate_youtube_window(timeout=5):
+def activate_youtube_window(timeout: int = 5) -> bool:
     """
     Activate a YouTube browser window by searching for windows with 'youtube' in the title.
 
@@ -59,7 +59,7 @@ def activate_youtube_window(timeout=5):
         return False
 
 
-def play_on_youtube(search_query):
+def play_on_youtube(search_query: str) -> None:
     """
     Play videos on YouTube using the official YouTube Data API with fallback to direct search.
 
@@ -160,7 +160,7 @@ def play_on_youtube(search_query):
         speak(f"Showing results for {search_query} on YouTube")
 
 
-def search_on_youtube(search_query):
+def search_on_youtube(search_query: str) -> None:
     """
     Search for videos on YouTube without automatic playback.
 
@@ -198,7 +198,7 @@ def search_on_youtube(search_query):
     speak(f"Showing results for {search_query} on YouTube")
 
 
-def control_youtube_video(action):
+def control_youtube_video(action: str) -> None:
     """
     Control YouTube video playback using keyboard shortcuts and global state tracking.
 
@@ -330,7 +330,7 @@ def control_youtube_video(action):
         speak("Sorry, I couldn't control the video")
 
 
-def set_volume(volume_level):
+def set_volume(volume_level: int) -> None:
     """
     Set YouTube volume to a specific level using incremental adjustments.
 
@@ -374,66 +374,66 @@ def set_volume(volume_level):
 # Convenience functions for common YouTube control actions
 
 
-def mute_youtube():
+def mute_youtube() -> None:
     """Mute YouTube video audio."""
     control_youtube_video("mute")
 
 
-def unmute_youtube():
+def unmute_youtube() -> None:
     """Unmute YouTube video audio."""
     control_youtube_video("unmute")
 
 
-def pause_youtube():
+def pause_youtube() -> None:
     """Pause YouTube video playback."""
     control_youtube_video("pause")
 
 
-def resume_youtube():
+def resume_youtube() -> None:
     """Resume YouTube video playback."""
     control_youtube_video("play")
 
 
-def skip_video():
+def skip_video() -> None:
     """Skip forward in YouTube video by 10 seconds."""
     control_youtube_video("skip")
 
 
-def skip_backward_video():
+def skip_backward_video() -> None:
     """Skip backward in YouTube video by 10 seconds."""
     control_youtube_video("skip backward")
 
 
-def next_video():
+def next_video() -> None:
     """Skip to next video in YouTube playlist or queue."""
     control_youtube_video("next video")
 
 
-def previous_video():
+def previous_video() -> None:
     """Go to previous video in YouTube playlist or queue."""
     control_youtube_video("previous video")
 
 
-def replay_video():
+def replay_video() -> None:
     """Restart current YouTube video from the beginning."""
     control_youtube_video("replay")
 
 
-def turn_on_subtitles():
+def turn_on_subtitles() -> None:
     """Enable closed captions/subtitles for YouTube video."""
     control_youtube_video("subtitles on")
 
 
-def turn_off_subtitles():
+def turn_off_subtitles() -> None:
     """Disable closed captions/subtitles for YouTube video."""
     control_youtube_video("subtitles off")
 
 
-def fullscreen_youtube():
+def fullscreen_youtube() -> None:
     """Enter fullscreen mode for YouTube video."""
     control_youtube_video("turn on fullscreen")
 
 
-def exit_fullscreen_youtube():
+def exit_fullscreen_youtube() -> None:
     """Exit fullscreen mode for YouTube video."""
     control_youtube_video("turn off fullscreen")

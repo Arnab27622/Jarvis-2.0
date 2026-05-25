@@ -30,6 +30,8 @@ from assistant.core.speak_selector import speak
 pygame.mixer.init()
 
 
+from typing import List, Optional
+
 class MusicPlayer:
     """
     A comprehensive music player class for handling local music playback.
@@ -47,7 +49,7 @@ class MusicPlayer:
         volume (float): Current volume level (0.0 to 1.0)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the MusicPlayer with default settings.
 
@@ -62,7 +64,7 @@ class MusicPlayer:
         self.current_index = 0
         self.volume = 0.7  # Default volume (0.0 to 1.0)
 
-    def get_music_files(self):
+    def get_music_files(self) -> List[str]:
         """
         Scan the music directory and retrieve all supported audio files.
 
@@ -89,7 +91,7 @@ class MusicPlayer:
 
         return music_files
 
-    def play_random_music(self):
+    def play_random_music(self) -> None:
         """
         Play a random song from the music directory with shuffle functionality.
 
@@ -140,7 +142,7 @@ class MusicPlayer:
             speak("Sorry, I couldn't play the music file.")
             print(f"Music playback error: {e}")
 
-    def play_specific_song(self, song_name):
+    def play_specific_song(self, song_name: str) -> None:
         """
         Play a specific song by searching for matching filenames.
 
@@ -189,7 +191,7 @@ class MusicPlayer:
             speak("Sorry, I couldn't play the music file.")
             print(f"Music playback error: {e}")
 
-    def pause_music(self):
+    def pause_music(self) -> None:
         """
         Pause the currently playing music.
 
@@ -208,7 +210,7 @@ class MusicPlayer:
         else:
             speak("No music is currently playing")
 
-    def resume_music(self):
+    def resume_music(self) -> None:
         """
         Resume playback of paused music.
 
@@ -228,7 +230,7 @@ class MusicPlayer:
         else:
             speak("No music is currently paused")
 
-    def stop_music(self):
+    def stop_music(self) -> None:
         """
         Stop music playback completely and reset player state.
 
@@ -249,7 +251,7 @@ class MusicPlayer:
         self.current_track = None
         speak("Music stopped")
 
-    def next_track(self):
+    def next_track(self) -> None:
         """
         Play the next track in the current playlist.
 
@@ -284,7 +286,7 @@ class MusicPlayer:
             speak("Sorry, I couldn't play the next track.")
             print(f"Music playback error: {e}")
 
-    def previous_track(self):
+    def previous_track(self) -> None:
         """
         Play the previous track in the current playlist.
 
@@ -320,7 +322,7 @@ class MusicPlayer:
             speak("Sorry, I couldn't play the previous track.")
             print(f"Music playback error: {e}")
 
-    def set_volume(self, level):
+    def set_volume(self, level: float) -> None:
         """
         Set the music playback volume to a specific level.
 
@@ -348,7 +350,7 @@ class MusicPlayer:
             speak("Sorry, I couldn't adjust the volume")
             print(f"Volume adjustment error: {e}")
 
-    def increase_volume(self):
+    def increase_volume(self) -> None:
         """
         Increase music volume by 10%.
 
@@ -362,7 +364,7 @@ class MusicPlayer:
         new_volume = min(1.0, self.volume + 0.1)
         self.set_volume(new_volume)
 
-    def decrease_volume(self):
+    def decrease_volume(self) -> None:
         """
         Decrease music volume by 10%.
 
@@ -376,7 +378,7 @@ class MusicPlayer:
         new_volume = max(0.0, self.volume - 0.1)
         self.set_volume(new_volume)
 
-    def get_current_track(self):
+    def get_current_track(self) -> Optional[str]:
         """
         Get the name of the currently playing track.
 

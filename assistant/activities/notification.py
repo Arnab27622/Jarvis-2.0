@@ -5,7 +5,7 @@ from winotify import Notification
 icon_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\logo.ico"
 
 
-def notification(title, message):
+def notification(title: str, message: str) -> None:
     """
     Display a Windows toast notification with custom title and message.
     

@@ -177,7 +177,7 @@ class AudioModelHandler:
             return 0, 0.0, [0.5, 0.5]  # Default to noise on error
 
 
-def main(audio_path_index) -> None:
+def main(audio_path_index: str) -> None:
     """
     Main function to run the audio classification prediction.
     """

@@ -376,7 +376,7 @@ def final_detect_claps(
     audio_processor.record_and_detect()
 
 
-def main():
+def main() -> None:
     """Main function."""
     try:
         list_devices()

@@ -1,12 +1,18 @@
+"""
+Main entry point for the Jarvis 2.0 Assistant.
+
+This module initializes the core systems, restores any active background tasks
+such as alarms and reminders, starts system monitors, and enters the main
+command listening loop.
+"""
+
 import datetime
 import threading
-from assistant.interface.wish import wish
 import random
+
+from assistant.interface.wish import wish
 from assistant.interface.commands import command
-from data.dlg_data.dlg import (
-    offline_dlg,
-    online_dlg,
-)
+from data.dlg_data.dlg import offline_dlg, online_dlg
 from assistant.activities.check_status import is_online
 from assistant.core.speak_selector import speak
 from assistant.activities.activity_monitor import stop_activity_monitoring
@@ -25,8 +31,14 @@ from assistant.automation.integrations.alarm_reminder import (
 )
 
 
-def restore_alarms_and_reminders_on_startup():
-    """Restore alarms and reminders after system restart"""
+def restore_alarms_and_reminders_on_startup() -> None:
+    """
+    Restore alarms and reminders after system restart.
+
+    Loads the saved alarms and reminders from local storage. If any of them
+    are scheduled for the future, they are restarted in background daemon threads.
+    If their scheduled time has already passed, they are removed.
+    """
     try:
         load_alarms()
         load_reminders()
@@ -87,7 +99,13 @@ def restore_alarms_and_reminders_on_startup():
         print(f"Error restoring alarms and reminders: {e}")
 
 
-def jarvis():
+def jarvis() -> None:
+    """
+    Initialize and run the core Jarvis loop.
+
+    This function triggers the initial greeting, restores background tasks,
+    starts the battery monitor, and enters the main command execution loop.
+    """
     wish()
     restore_alarms_and_reminders_on_startup()
     battery_monitor.start_monitoring()
