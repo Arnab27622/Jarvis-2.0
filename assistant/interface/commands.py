@@ -15,7 +15,7 @@ from assistant.activities.battery_features import battery_monitor
 from assistant.automation.features.window_automation import *
 from assistant.automation.features.utility_automation import *
 from assistant.automation.features.music_player import music_player
-from assistant.automation.text_to_image.text_to_image import generate_image_from_text
+from assistant.automation.text_to_image.image_manager import generate_image
 from assistant.automation.integrations.detailed_web_search import generate
 from assistant.automation.integrations.wiki_search import wiki_search
 from assistant.automation.integrations.news_automation import tell_news
@@ -692,10 +692,13 @@ def handle_ip_check():
 def handle_running_apps():
     check_running_app()
 
-@on_regex(r"(?:please\s+)?(?:create|generate)(?:\s+an)?\s+image\s+of\s+(?P<prompt>.*)$")
-def handle_image_gen(prompt):
-    speak(f"Generating image of {prompt}. Please wait a moment...")
-    generate_image_from_text(prompt)
+@on_regex(r"(?:please\s+)?(?:create|generate)(?:\s+an)?\s+image\s+of\s+(?P<prompt>.*?)(?:\s+using\s+(?P<engine>cloudflare|stability|pollination.*))?$")
+def handle_image_gen(prompt, engine=None):
+    if engine:
+        speak(f"Generating image of {prompt} using {engine}. Please wait a moment...")
+    else:
+        speak(f"Generating image of {prompt}. Please wait a moment...")
+    generate_image(prompt, engine)
 
 @on_fuzzy(["check temperature", "check the temperature", "what is the temperature"], score_cutoff=90)
 def handle_temp():

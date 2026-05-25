@@ -50,7 +50,7 @@ class LLMManager:
         Known for high reliability and good speed for logic queries.
         """
         if not self.gemini_key: return None
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={self.gemini_key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         try:
             response = requests.post(url, json=payload, timeout=10)
@@ -143,27 +143,27 @@ class LLMManager:
 
         # --- 1. INTENT-BASED PRIMARY ATTEMPT (Based on Latency Tests) ---
         if intent == "technical":
-            # Gemini is fastest for logic (1.78s)
+            # Gemini is fastest for logic (1.03s)
             print(f"[LLM] Technical query. Using Gemini (Primary)...")
             res = self._call_gemini(user_input)
         elif intent == "web":
-            # GPT4Free is fastest for web (1.76s)
+            # GPT4Free is needed for web search, despite higher latency (3.83s)
             print(f"[LLM] Web query. Using GPT4Free (Primary)...")
             res = self._call_g4f(user_input)
         else:
-            # GPT4Free is fastest overall (1.76s)
-            print(f"[LLM] General query. Using GPT4Free (Primary)...")
-            res = self._call_g4f(user_input)
+            # Gemini is fastest overall (1.03s)
+            print(f"[LLM] General query. Using Gemini (Primary)...")
+            res = self._call_gemini(user_input)
 
         # --- 2. SEQUENTIAL FALLBACK CHAIN (Sorted by Speed) ---
         if not res:
             print("[LLM] Primary failed. Starting sequential fallback...")
-            # Hierarchy: GPT4Free (1.76s) -> Gemini (1.78s) -> HF (2.39s) -> OpenRouter (2.91s)
+            # Hierarchy: Gemini (1.03s) -> HF (1.32s) -> OpenRouter (3.42s) -> GPT4Free (3.83s)
             fallbacks = [
-                lambda: self._call_g4f(user_input),
                 lambda: self._call_gemini(user_input),
                 lambda: self._call_huggingface(user_input),
-                lambda: self._call_openrouter(user_input, model="openai/gpt-oss-120b:free")
+                lambda: self._call_openrouter(user_input, model="openai/gpt-oss-120b:free"),
+                lambda: self._call_g4f(user_input)
             ]
             for attempt in fallbacks:
                 res = attempt()
