@@ -164,6 +164,7 @@ class AdvancedSpeechRecognizer:
         # Try Google Web Speech API
         try:
             recognized_text = self.recognizer.recognize_google(audio, language="en-US")
+            self.last_recognition_time = time.time()
             print(Fore.GREEN + "Google Web Speech recognition successful")
             return recognized_text
         except sr.UnknownValueError:

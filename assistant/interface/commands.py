@@ -55,6 +55,7 @@ import re
 import pyautogui as ui
 import os
 import inspect
+import time
 from rapidfuzz import process, fuzz
 
 FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run"]
@@ -739,6 +740,7 @@ def process_command(normalized_text):
     """
     Process and execute voice commands using a modular registry system.
     """
+    start_time = time.time()
     try:
         if not normalized_text:
             welcome()
@@ -751,6 +753,13 @@ def process_command(normalized_text):
     except Exception as e:
         print(f"Error in process_command: {e}")
         speak("I had trouble understanding or executing that command.")
+    finally:
+        from assistant.core.ear import recognizer
+        actual_start = getattr(recognizer, 'last_recognition_time', start_time)
+        execution_time = time.time() - actual_start
+        print(f"[Timer] Command executed in {execution_time:.2f} seconds.")
+        # Reset to avoid reusing the same timestamp for subsequent immediate calls
+        recognizer.last_recognition_time = time.time()
 
 
 if __name__ == "__main__":
