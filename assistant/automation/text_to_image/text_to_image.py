@@ -10,6 +10,7 @@ load_dotenv()
 
 from typing import Optional
 
+
 def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     """
     Generate high-quality images from text prompts using Stability AI's Stable Diffusion XL API.
@@ -69,7 +70,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
         "text_prompts": [
             {"text": prompt_text, "weight": 1},  # Main positive prompt
             {
-                "text": "blurry, bad",
+                "text": "blurry, bad, low quality, blurry, pixelated, bad anatomy, deformed face, extra fingers, mutated hands, poorly drawn eyes, text, watermark, logo, cropped, duplicate objects, oversaturated, ugly, distorted proportions, artifacting, low detail, out of frame",
                 "weight": -1,
             },  # Negative prompt to avoid poor quality
         ],
@@ -95,11 +96,15 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
             try:
                 error_data = response.json()
                 if error_data.get("name") == "content_moderation":
-                    speak("I'm sorry, but your prompt was flagged by the content moderation system. I cannot generate that image.")
+                    speak(
+                        "I'm sorry, but your prompt was flagged by the content moderation system. I cannot generate that image."
+                    )
                     return False
             except:
                 pass
-            raise Exception(f"API Error (Status {response.status_code}): {response.text}")
+            raise Exception(
+                f"API Error (Status {response.status_code}): {response.text}"
+            )
     except Exception as e:
         print(f"Image generation failed: {e}")
         speak("I encountered an error while trying to generate that image.")

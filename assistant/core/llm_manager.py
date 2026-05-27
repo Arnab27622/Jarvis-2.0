@@ -172,6 +172,13 @@ def llm_response(text: str) -> str:
     return manager.get_response_sync(text)
 
 def llm_response_streaming(text: str) -> List[str]:
-    """Returns split sentences for streaming TTS."""
+    """Returns split sentences for streaming TTS and speaks them."""
     response = manager.get_response_sync(text)
-    return split_sentences(response)
+    sentences = split_sentences(response)
+    
+    from assistant.core.speak_selector import speak_streaming
+    from assistant.core.event_bus import bus, EventType
+    import time
+    
+    speak_streaming(sentences)
+    return sentences

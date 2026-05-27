@@ -12,6 +12,7 @@ from assistant.activities.activity_monitor import *
 from assistant.core.ear import listen
 from assistant.core.brain import brain
 from data.dlg_data.dlg import *
+from assistant.core.event_bus import text_command_queue
 from assistant.core.registry import cmd_registry
 import random
 import re
@@ -126,11 +127,31 @@ def command() -> None:
     """
     start_activity_monitoring()
     from assistant.core.speak_selector import speak
-
     command_mode = False
 
+    # Start text command worker thread
+    def text_command_worker():
+        while True:
+            try:
+                text = text_command_queue.get()
+                print(f"[Debug] text_command_worker got text: {text}")
+                if text:
+                    record_user_activity()
+                    normalized_text = normalize_command(text)
+                    print(f"[Debug] normalized: {normalized_text}")
+                    if any(keyword.strip() == normalized_text for keyword in stopcmd):
+                        speak(random.choice(stopdlg))
+                    else:
+                        print(f"[Debug] calling process_command")
+                        process_command(normalized_text)
+                text_command_queue.task_done()
+            except Exception as e:
+                print(f"Error in text worker: {e}")
+
+    threading.Thread(target=text_command_worker, daemon=True).start()
+
     while True:
-        text = listen()
+        text = listen(emit_to_ui=command_mode)
         if text is None:
             print("Sorry, I couldn't understand. Please try again.")
             continue

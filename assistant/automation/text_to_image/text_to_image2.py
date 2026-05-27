@@ -89,7 +89,7 @@ def generate(
     # API request payload with generation parameters
     payload = {
         "prompt": prompt,
-        "negative_prompt": "blurry, distorted, ugly",
+        "negative_prompt": "blurry, distorted, low quality, pixelated, bad anatomy, deformed face, extra fingers, mutated hands, poorly drawn eyes, text, watermark, logo, cropped, duplicate objects, oversaturated, ugly, distorted proportions, artifacting, low detail, out of frame",
         "width": width,
         "height": height,
         "num_steps": steps,

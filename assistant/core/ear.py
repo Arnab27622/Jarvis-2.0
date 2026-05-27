@@ -20,6 +20,7 @@ import time
 import wave
 from collections import deque
 from assistant.activities.activity_monitor import record_user_activity
+from assistant.core.event_bus import bus, EventType
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
@@ -77,6 +78,7 @@ class AdvancedSpeechRecognizer:
         if not self.is_listening:
             print(Fore.LIGHTGREEN_EX + "Listening...", end="\r", flush=True)
             self.is_listening = True
+            bus.emit(EventType.LISTENING, True)
 
     def stop_listening_message(self) -> None:
         """
@@ -87,6 +89,7 @@ class AdvancedSpeechRecognizer:
         if self.is_listening:
             self.clear_line()
             self.is_listening = False
+            bus.emit(EventType.LISTENING, False)
 
     def save_audio_debug(self, audio: sr.AudioData, filename: str = "debug_audio.wav") -> None:
         """
@@ -174,7 +177,7 @@ class AdvancedSpeechRecognizer:
 
         return recognized_text
 
-    def listen(self) -> str | None:
+    def listen(self, emit_to_ui: bool = True) -> str | None:
         """
         Main listening function that captures and processes speech.
 
@@ -221,6 +224,8 @@ class AdvancedSpeechRecognizer:
                         self.recognition_history.append(recognized_txt)
 
                         print(Fore.BLUE + "You said: " + Fore.CYAN + recognized_txt)
+                        if emit_to_ui:
+                            bus.emit(EventType.USER_VOICE, {"text": recognized_txt})
                         return recognized_txt.lower()
                     else:
                         print(Fore.RED + "Couldn't understand the audio")
@@ -263,7 +268,7 @@ class AdvancedSpeechRecognizer:
 recognizer = AdvancedSpeechRecognizer()
 
 
-def listen() -> str | None:
+def listen(emit_to_ui: bool = True) -> str | None:
     """
     Module-level function for easy speech recognition access.
 
@@ -273,7 +278,7 @@ def listen() -> str | None:
     Returns:
         str: Recognized text in lowercase, or None if recognition failed
     """
-    result = recognizer.listen()
+    result = recognizer.listen(emit_to_ui=emit_to_ui)
     if result:
         record_user_activity()  # Log successful user interaction
         return result

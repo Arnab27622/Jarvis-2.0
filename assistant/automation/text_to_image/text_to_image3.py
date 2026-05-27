@@ -70,8 +70,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     
     # Negative prompt for quality control
     negative_prompt = (
-        "blurry, low quality, bad anatomy, extra fingers, "
-        "deformed face, text, watermark, logo, cropped, duplicate, low resolution"
+        "blurry, distorted, low quality, pixelated, bad anatomy, deformed face, extra fingers, mutated hands, poorly drawn eyes, text, watermark, logo, cropped, duplicate objects, oversaturated, ugly, distorted proportions, artifacting, low detail, out of frame"
     )
 
     # Base URL for Pollinations AI image generation

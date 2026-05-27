@@ -1,6 +1,8 @@
 import time
 import threading
+import threading
 from assistant.core.speak_selector import speak
+from assistant.core.event_bus import bus, EventType
 
 
 class ActivityMonitor:
@@ -43,7 +45,7 @@ class ActivityMonitor:
         self.last_activity_time = time.time()
         self.is_active = False
         self.monitor_thread = None
-        self.stop_signal = False
+        self.stop_event = threading.Event()
         self.initial_delay_passed = False
         self.awaiting_confirmation = False
         self.confirmation_response = None
@@ -82,7 +84,7 @@ class ActivityMonitor:
     def start_monitoring(self) -> None:
         """Start the inactivity monitoring thread."""
         if self.monitor_thread is None:
-            self.stop_signal = False
+            self.stop_event.clear()
             self.monitor_thread = threading.Thread(
                 target=self._monitor_loop, daemon=True
             )
@@ -90,9 +92,9 @@ class ActivityMonitor:
 
     def stop_monitoring(self) -> None:
         """Stop the inactivity monitoring thread."""
-        self.stop_signal = True
+        self.stop_event.set()
         if self.monitor_thread:
-            self.monitor_thread.join()
+            self.monitor_thread.join(timeout=1.0)
             self.monitor_thread = None
 
     def is_confirmation_response(self, text: str) -> bool:
@@ -153,7 +155,9 @@ class ActivityMonitor:
         """Ask the user if they want assistance after period of inactivity."""
         self.awaiting_confirmation = True
         self.confirmation_start_time = time.time()
-        speak("You've been idle for a while. Would you like some advice?")
+        msg = "You've been idle for a while. Would you like some advice?"
+        speak(msg)
+        bus.emit(EventType.NOTIFY, {"text": msg, "timestamp": time.time()})
 
     def check_confirmation_timeout(self) -> bool:
         """
@@ -182,8 +186,10 @@ class ActivityMonitor:
 
         Continuously checks for user inactivity and manages the confirmation process.
         """
-        while not self.stop_signal:
-            time.sleep(self.check_interval)
+        while not self.stop_event.is_set():
+            # Wait for the check_interval, but wake up instantly if stop_event is set
+            if self.stop_event.wait(self.check_interval):
+                break
 
             # Don't check until initial delay has passed
             if not self.initial_delay_passed:

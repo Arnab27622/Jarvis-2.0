@@ -1,0 +1,314 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root {
+  --primary-glow: #00f0ff;
+  --secondary-glow: #0077ff;
+  --bg-color: #050810;
+  --panel-bg: rgba(5, 12, 25, 0.7);
+  --border-color: rgba(0, 240, 255, 0.3);
+  --text-primary: #e0ffff;
+  --text-secondary: #00a2ff;
+  --alert-glow: #ff2a00;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(0, 50, 100, 0.1) 0%, transparent 60%),
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 30px 30px, 30px 30px;
+}
+
+/* CRT Scanline effect */
+body::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+.hud-container {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 60px 1fr 80px;
+  grid-template-areas: 
+    "header header"
+    "main sidebar"
+    "footer footer";
+  gap: 20px;
+  padding: 20px;
+  z-index: 10;
+}
+
+.hud-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 240, 255, 0.05);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Decorative corners */
+.hud-panel::before, .hud-panel::after {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--primary-glow);
+  transition: all 0.3s ease;
+}
+
+.hud-panel::before {
+  top: -1px; left: -1px;
+  border-right: none; border-bottom: none;
+}
+.hud-panel::after {
+  bottom: -1px; right: -1px;
+  border-left: none; border-top: none;
+}
+
+.hud-header {
+  grid-area: header;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.hud-header h1 {
+  font-size: 24px;
+  text-shadow: 0 0 10px var(--primary-glow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-header .status-indicators {
+  display: flex;
+  gap: 20px;
+  color: var(--text-secondary);
+}
+
+.hud-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.chat-log {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-glow) transparent;
+}
+
+.chat-log::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-log::-webkit-scrollbar-thumb {
+  background: var(--primary-glow);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.log-entry {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  animation: slideIn 0.3s ease-out;
+}
+
+.log-entry.user {
+  color: #a0d8ef;
+}
+
+.log-entry.jarvis {
+  color: var(--primary-glow);
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+}
+
+.log-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.log-content {
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hud-sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.widget {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-footer {
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.input-container {
+  display: flex;
+  width: 100%;
+  gap: 15px;
+  align-items: center;
+}
+
+.hud-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 18px;
+  padding: 10px 5px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.hud-input:focus {
+  border-bottom-color: var(--primary-glow);
+  box-shadow: 0 5px 15px -5px rgba(0, 240, 255, 0.4);
+}
+
+.hud-btn {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid var(--primary-glow);
+  color: var(--primary-glow);
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.hud-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+}
+
+.hud-btn:active {
+  transform: scale(0.98);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 5px var(--primary-glow); }
+  50% { box-shadow: 0 0 20px var(--primary-glow); }
+  100% { box-shadow: 0 0 5px var(--primary-glow); }
+}
+
+/* Toasts */
+.toast-container {
+  position: absolute;
+  top: 80px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+.toast {
+  background: rgba(0, 20, 40, 0.9);
+  border-left: 4px solid var(--primary-glow);
+  padding: 15px 20px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.toast.alert {
+  border-left-color: var(--alert-glow);
+}
+
+/* SVG Tech rings */
+.tech-ring {
+  transform-origin: center;
+}
+.tech-ring.spin-slow {
+  animation: spin 20s linear infinite;
+}
+.tech-ring.spin-reverse {
+  animation: spin 15s linear infinite reverse;
+}
+.tech-ring.pulse {
+  animation: pulseOpacity 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+@keyframes pulseOpacity {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Battery indicator */
+.battery-widget {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.battery-text {
+  font-size: 32px;
+  font-weight: bold;
+  text-shadow: 0 0 10px var(--primary-glow);
+  position: absolute;
+}

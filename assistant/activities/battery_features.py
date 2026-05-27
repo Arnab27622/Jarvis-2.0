@@ -5,6 +5,7 @@ import threading
 from typing import Optional
 from assistant.core.speak_selector import speak
 from data.dlg_data.dlg import last_low, low_b, full_battery, plug_in, plug_out
+from assistant.core.event_bus import bus, EventType
 
 
 class BatteryMonitor:
@@ -30,7 +31,7 @@ class BatteryMonitor:
     def __init__(self):
         """Initialize the battery monitor with default state."""
         self.previous_plugged_state = None
-        self.monitoring = False
+        self.stop_event = threading.Event()
         self.alert_thread = None
         self.plugin_thread = None
 
@@ -74,16 +75,18 @@ class BatteryMonitor:
         Args:
             check_interval (int): Seconds between battery checks (default: 300/5 minutes)
         """
-        self.monitoring = True
+        self.stop_event.clear()
         notified_full = False  # Track if full battery notification was given
 
-        while self.monitoring:
+        while not self.stop_event.is_set():
             battery_info = self.get_battery_info()
             if battery_info is None:
-                time.sleep(60)  # Wait longer if battery info unavailable
+                if self.stop_event.wait(60):  # Wait longer if battery info unavailable
+                    break
                 continue
 
             percent, plugged = battery_info
+            bus.emit(EventType.BATTERY_UPDATE, {"percent": percent, "plugged": plugged})
 
             # Tiered alert system based on battery level
             if percent < 10:
@@ -97,7 +100,8 @@ class BatteryMonitor:
                 # Reset full notification when battery drops below 95%
                 notified_full = False
 
-            time.sleep(check_interval)
+            if self.stop_event.wait(check_interval):
+                break
 
     def check_plugin_status(self, check_interval: int = 5) -> None:
         """
@@ -109,20 +113,22 @@ class BatteryMonitor:
         Args:
             check_interval (int): Seconds between plug status checks (default: 5)
         """
-        self.monitoring = True
+        self.stop_event.clear()
 
         # Get initial state to detect changes
         battery_info = self.get_battery_info()
         if battery_info:
             self.previous_plugged_state = battery_info[1]
 
-        while self.monitoring:
+        while not self.stop_event.is_set():
             battery_info = self.get_battery_info()
             if battery_info is None:
-                time.sleep(check_interval)
+                if self.stop_event.wait(check_interval):
+                    break
                 continue
 
             percent, plugged = battery_info
+            bus.emit(EventType.BATTERY_UPDATE, {"percent": percent, "plugged": plugged})
 
             # Only speak if plug state has changed
             if plugged != self.previous_plugged_state:
@@ -132,7 +138,8 @@ class BatteryMonitor:
                     speak(random.choice(plug_out))  # Device unplugged
                 self.previous_plugged_state = plugged
 
-            time.sleep(check_interval)
+            if self.stop_event.wait(check_interval):
+                break
 
     def battery_percentage(self) -> None:
         """
@@ -166,7 +173,7 @@ class BatteryMonitor:
         """
         self.stop_monitoring()  # Stop any existing monitoring
 
-        self.monitoring = True
+        self.stop_event.clear()
         self.alert_thread = threading.Thread(target=self.battery_alert, daemon=True)
         self.plugin_thread = threading.Thread(
             target=self.check_plugin_status, daemon=True
@@ -183,7 +190,7 @@ class BatteryMonitor:
         Safely stops both monitoring threads with timeout protection
         to prevent thread hanging during shutdown.
         """
-        self.monitoring = False
+        self.stop_event.set()
         if self.alert_thread and self.alert_thread.is_alive():
             self.alert_thread.join(timeout=2)
         if self.plugin_thread and self.plugin_thread.is_alive():

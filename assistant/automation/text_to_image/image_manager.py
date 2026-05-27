@@ -99,9 +99,6 @@ from assistant.core.registry import on_regex
 
 @on_regex(r"(?:please\s+)?(?:create|generate)(?:\s+an)?\s+image\s+of\s+(?P<prompt>.*?)(?:\s+using\s+(?P<engine>cloudflare|stability|pollination.*))?$")
 def handle_image_gen(prompt, engine=None):
-    if engine:
-        speak(f"Generating image of {prompt} using {engine}. Please wait a moment...")
-    else:
-        speak(f"Generating image of {prompt}. Please wait a moment...")
+    speak("Generating the image. Please wait a moment...")
     generate_image(prompt, engine)
 
