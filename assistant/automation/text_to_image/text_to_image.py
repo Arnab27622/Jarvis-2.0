@@ -11,7 +11,7 @@ load_dotenv()
 from typing import Optional
 
 
-def generate_image_from_text(prompt_text: str) -> Optional[bool]:
+def generate_image_from_text(prompt_text: str) -> Optional[str]:
     """
     Generate high-quality images from text prompts using Stability AI's Stable Diffusion XL API.
 
@@ -99,7 +99,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
                     speak(
                         "I'm sorry, but your prompt was flagged by the content moderation system. I cannot generate that image."
                     )
-                    return False
+                    return None
             except:
                 pass
             raise Exception(
@@ -108,7 +108,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     except Exception as e:
         print(f"Image generation failed: {e}")
         speak("I encountered an error while trying to generate that image.")
-        return False
+        return None
 
     # Parse JSON response containing generated image data
     data = response.json()
@@ -117,6 +117,8 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     folder_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
     os.makedirs(folder_path, exist_ok=True)  # Create directory if it doesn't exist
 
+    last_filename = None
+
     # Process and save each generated image from the response
     for i, image in enumerate(data["artifacts"]):
         # Create filename using the generation seed for unique identification
@@ -124,7 +126,10 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
         with open(filename, "wb") as f:
             # Decode base64 image data and save as PNG file
             f.write(base64.b64decode(image["base64"]))
+        last_filename = filename
         speak(f"Image saved in Images folder.")
+    
+    return last_filename
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file for API key security
 load_dotenv()
 
-def generate_image_from_text(prompt_text: str) -> Optional[bool]:
+def generate_image_from_text(prompt_text: str) -> Optional[str]:
     """
     Generate high-quality images from text prompts using Pollinations AI.
 
@@ -44,7 +44,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
         - Random seed-based reproducibility
 
     Returns:
-        Optional[bool]: False if generation failed, None otherwise.
+        Optional[str]: Path to the generated image if successful, None otherwise.
 
     Example:
         >>> generate_image_from_text("A cyberpunk cityscape at night with neon lights")
@@ -55,7 +55,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     api_key = os.getenv("POLLINATION_API_KEY")
     if not api_key:
         speak("I encountered an error while trying to generate that image.")
-        return False
+        return None
 
     # Image Settings
     model = "flux"
@@ -112,7 +112,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     except Exception as e:
         print(f"Image generation failed: {e}")
         speak("I encountered an error while trying to generate that image.")
-        return False
+        return None
 
     # Define storage directory for generated images
     folder_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
@@ -125,7 +125,8 @@ def generate_image_from_text(prompt_text: str) -> Optional[bool]:
     with open(filename, "wb") as f:
         f.write(response.content)
 
-    speak("Image saved in Images folder.")
+    # Remove speak from here, it will be handled by the manager
+    return filename
 
 
 if __name__ == "__main__":

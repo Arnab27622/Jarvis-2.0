@@ -161,7 +161,9 @@ def take_screenshot() -> None:
 
     screenshot = ui.screenshot()
     screenshot.save(full_path)
-    notify(f"Screenshot taken and saved as {filename}")
+    
+    from assistant.core.mouth import speak
+    speak(f"Screenshot taken.", image=f"/screenshots/{filename}")
 
 
 def get_system_info() -> None:

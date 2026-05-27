@@ -10,12 +10,24 @@ export type LogEntry = {
   text: string;
   timestamp: number;
   duration?: number;
+  image?: string;
 };
 
 export type ToastAlert = {
   id: string;
   text: string;
   timestamp: number;
+};
+
+const Clock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <span>{time.toLocaleTimeString()}</span>;
 };
 
 function App() {
@@ -46,7 +58,8 @@ function App() {
             sender: 'jarvis',
             text: payload.text,
             timestamp: payload.timestamp || Date.now(),
-            duration: payload.duration
+            duration: payload.duration,
+            image: payload.image
           }]);
           break;
         case 'user_voice':
@@ -107,7 +120,7 @@ function App() {
         <div className="status-indicators">
           <span>SYS.ONLINE</span>
           <span>SEC.M5</span>
-          <span>{new Date().toLocaleTimeString()}</span>
+          <Clock />
         </div>
       </header>
       

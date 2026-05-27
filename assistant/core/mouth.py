@@ -48,12 +48,12 @@ def print_animated_message(message: str) -> None:
         time.sleep(0.065)
     print()
 
-async def _stream_audio_and_text(text: str) -> None:
+async def _stream_audio_and_text(text: str, image: str = None) -> None:
     """
     Generate audio stream using Kokoro TTS and synchronize it with console text printing.
     """
     if not kokoro_ready:
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065})
+        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image})
         await asyncio.to_thread(print_animated_message, text)
         return
 
@@ -70,7 +70,7 @@ async def _stream_audio_and_text(text: str) -> None:
         if delay < 0.01: delay = 0.01
         
         # Emit to UI with exact duration for synced typing animation
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": audio_duration})
+        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": audio_duration, "image": image})
         
         # Play the audio
         sd.play(audio, samplerate=24000)
@@ -102,9 +102,16 @@ async def _tts_worker() -> None:
     while _is_tts_running:
         try:
             # Non-blocking get inside the async loop
-            sentence = await asyncio.to_thread(tts_queue.get, True, 1.0)
+            item = await asyncio.to_thread(tts_queue.get, True, 1.0)
             _is_voice_busy = True
-            await _stream_audio_and_text(sentence)
+            
+            if isinstance(item, tuple):
+                text, image = item
+            else:
+                text = item
+                image = None
+                
+            await _stream_audio_and_text(text, image)
             _is_voice_busy = False
             tts_queue.task_done()
         except queue.Empty:
@@ -134,7 +141,7 @@ def stop_tts_consumer() -> None:
     global _is_tts_running
     _is_tts_running = False
 
-def speak(text: str) -> None:
+def speak(text: str, image: str = None) -> None:
     """
     Unified entry point for Jarvis's voice.
     Always queues text to TTS. Use for conversational content
@@ -142,7 +149,7 @@ def speak(text: str) -> None:
     """
     if not _is_tts_running:
         start_tts_consumer()
-    tts_queue.put(text)
+    tts_queue.put((text, image))
 
 def notify(text: str) -> None:
     """

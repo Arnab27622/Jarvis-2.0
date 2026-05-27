@@ -59,6 +59,13 @@ const DataStream: React.FC<DataStreamProps> = ({ logs }) => {
               ) : (
                 log.text
               )}
+              {log.image && (
+                <div style={{ marginTop: '10px' }}>
+                  <a href={log.image} target="_blank" rel="noopener noreferrer">
+                    <img src={log.image} alt="Generated" style={{ maxWidth: '250px', borderRadius: '8px', cursor: 'pointer', border: '1px solid var(--primary-glow)' }} />
+                  </a>
+                </div>
+              )}
             </div>
           </motion.div>
         ))}

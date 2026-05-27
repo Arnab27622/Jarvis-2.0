@@ -124,8 +124,7 @@ def generate(
         with open(image_path, "wb") as image_file:
             image_file.write(image_bytes)
 
-        speak(f"Image has been successfully generated and saved in the images folder.")
-
+        # Remove speak, image_manager will handle it
         return True, image_path
 
     except requests.exceptions.Timeout:

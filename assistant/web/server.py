@@ -14,14 +14,22 @@ connected_clients: List[WebSocket] = []
 
 # Path to the built React UI
 UI_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "jarvis-ui", "dist")
+IMAGES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "images")
+SCREENSHOTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "screenshots")
 
 if os.path.exists(UI_DIR):
     app.mount("/assets", StaticFiles(directory=os.path.join(UI_DIR, "assets")), name="assets")
 
-    @app.get("/")
-    async def serve_index():
-        with open(os.path.join(UI_DIR, "index.html"), "r") as f:
-            return HTMLResponse(content=f.read())
+if os.path.exists(IMAGES_DIR):
+    app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
+    
+if os.path.exists(SCREENSHOTS_DIR):
+    app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
+
+@app.get("/")
+async def serve_index():
+    with open(os.path.join(UI_DIR, "index.html"), "r") as f:
+        return HTMLResponse(content=f.read())
 
 class ConnectionManager:
     def __init__(self):
