@@ -212,6 +212,10 @@ def process_command(normalized_text: str) -> None:
             welcome()
             return
 
+        # Emit PROCESSING event
+        from assistant.core.event_bus import bus, EventType
+        bus.emit(EventType.PROCESSING, {"state": True})
+
         # Attempt to execute command from registry
         if not cmd_registry.execute(normalized_text):
             # Fallback to AI brain for unrecognized commands
@@ -227,6 +231,8 @@ def process_command(normalized_text: str) -> None:
         print(f"[Timer] Command executed in {execution_time:.2f} seconds.")
         # Reset to avoid reusing the same timestamp for subsequent immediate calls
         recognizer.last_recognition_time = time.time()
+        
+        bus.emit(EventType.COMMAND_EXECUTED, {})
 
 if __name__ == "__main__":
     pass

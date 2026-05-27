@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import DataStream from './components/DataStream';
 import StatusPanel from './components/StatusPanel';
+import TelemetryPanel from './components/TelemetryPanel';
 import AlertManager from './components/AlertManager';
-import { Terminal } from 'lucide-react';
+import { Terminal, Loader } from 'lucide-react';
 
 export type LogEntry = {
   id: string;
@@ -36,7 +37,28 @@ function App() {
   const [input, setInput] = useState('');
   const [battery, setBattery] = useState({ percent: 100, plugged: true });
   const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [glitch, setGlitch] = useState(false);
   const ws = useRef<WebSocket | null>(null);
+
+  const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
+    try {
+      const CustomWindow = window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext };
+      const audioCtx = new (CustomWindow.AudioContext || CustomWindow.webkitAudioContext!)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = type;
+      oscillator.frequency.value = freq;
+      gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + duration);
+    } catch {
+      // Ignore audio errors if blocked by browser policy
+    }
+  };
   
   useEffect(() => {
     // Connect to WebSocket using the appropriate port
@@ -53,6 +75,8 @@ function App() {
       
       switch (data.type) {
         case 'speak':
+          setIsProcessing(false);
+          playBeep(600, 'triangle', 0.2);
           setLogs(prev => [...prev, {
             id: Math.random().toString(36).substr(2, 9),
             sender: 'jarvis',
@@ -72,6 +96,8 @@ function App() {
           }]);
           break;
         case 'notify':
+          setIsProcessing(false);
+          playBeep(400, 'sine', 0.3);
           setAlerts(prev => [...prev, {
             id: Math.random().toString(36).substr(2, 9),
             text: payload.text,
@@ -86,6 +112,22 @@ function App() {
           break;
         case 'listening':
           setIsListening(payload.listening);
+          break;
+        case 'processing':
+          setIsProcessing(payload.state);
+          break;
+        case 'error':
+          setIsProcessing(false);
+          setGlitch(true);
+          playBeep(150, 'sawtooth', 0.5);
+          setTimeout(() => setGlitch(false), 800);
+          break;
+        case 'cmd_done':
+          setIsProcessing(false);
+          playBeep(1200, 'sine', 0.1);
+          break;
+        case 'sys_metrics':
+          window.dispatchEvent(new CustomEvent('sys_metrics', { detail: payload }));
           break;
       }
     };
@@ -114,7 +156,7 @@ function App() {
   };
 
   return (
-    <div className="hud-container">
+    <div className={`hud-container ${glitch ? 'glitch-effect' : ''}`}>
       <header className="hud-header hud-panel">
         <h1><Terminal size={28} /> JARVIS 2.0_</h1>
         <div className="status-indicators">
@@ -130,6 +172,7 @@ function App() {
       
       <aside className="hud-sidebar">
         <StatusPanel battery={battery} isListening={isListening} />
+        <TelemetryPanel />
       </aside>
       
       <footer className="hud-footer hud-panel">
@@ -138,13 +181,18 @@ function App() {
           <input 
             type="text" 
             className="hud-input" 
-            placeholder="AWAITING MANUAL OVERRIDE..." 
+            placeholder={isProcessing ? "PROCESSING..." : "AWAITING MANUAL OVERRIDE..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isProcessing}
             autoFocus
           />
-          <button type="submit" className="hud-btn">EXECUTE</button>
+          {isProcessing ? (
+            <Loader className="spin-slow" size={24} color="var(--primary-glow)" />
+          ) : (
+            <button type="submit" className="hud-btn">EXECUTE</button>
+          )}
         </form>
       </footer>
       

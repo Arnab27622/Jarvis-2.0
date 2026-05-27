@@ -74,8 +74,12 @@ def setup_event_bridge():
     bus.subscribe(EventType.SPEAK, lambda data: broadcast_event(EventType.SPEAK, data))
     bus.subscribe(EventType.NOTIFY, lambda data: broadcast_event(EventType.NOTIFY, data))
     bus.subscribe(EventType.USER_VOICE, lambda data: broadcast_event(EventType.USER_VOICE, data))
-    bus.subscribe(EventType.LISTENING, lambda data: broadcast_event(EventType.LISTENING, {"listening": data}))
+    bus.subscribe(EventType.USER_TEXT, lambda data: broadcast_event(EventType.USER_TEXT, data))
     bus.subscribe(EventType.BATTERY_UPDATE, lambda data: broadcast_event(EventType.BATTERY_UPDATE, data))
+    bus.subscribe(EventType.SYS_METRICS, lambda data: broadcast_event(EventType.SYS_METRICS, data))
+    bus.subscribe(EventType.LISTENING, lambda data: broadcast_event(EventType.LISTENING, {"listening": data if isinstance(data, bool) else data.get("state", False)}))
+    bus.subscribe(EventType.PROCESSING, lambda data: broadcast_event(EventType.PROCESSING, {"state": data.get("state", False)}))
+    bus.subscribe(EventType.COMMAND_EXECUTED, lambda data: broadcast_event(EventType.COMMAND_EXECUTED, data))
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

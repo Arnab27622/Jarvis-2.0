@@ -178,10 +178,14 @@ class BatteryMonitor:
         self.plugin_thread = threading.Thread(
             target=self.check_plugin_status, daemon=True
         )
+        self.telemetry_thread = threading.Thread(
+            target=self.emit_telemetry, daemon=True
+        )
 
         self.alert_thread.start()
         self.plugin_thread.start()
-        print("Battery monitoring started")
+        self.telemetry_thread.start()
+        print("Battery & Telemetry monitoring started")
 
     def stop_monitoring(self) -> None:
         """
@@ -195,10 +199,28 @@ class BatteryMonitor:
             self.alert_thread.join(timeout=2)
         if self.plugin_thread and self.plugin_thread.is_alive():
             self.plugin_thread.join(timeout=2)
-        print("Battery monitoring stopped")
+        if hasattr(self, 'telemetry_thread') and self.telemetry_thread and self.telemetry_thread.is_alive():
+            self.telemetry_thread.join(timeout=2)
+        print("Battery & Telemetry monitoring stopped")
 
 
 # Create a global instance for easy access across the application
+    def emit_telemetry(self) -> None:
+        """Continuously emits CPU and RAM metrics to the EventBus."""
+        self.stop_event.clear()
+        
+        while not self.stop_event.is_set():
+            cpu = psutil.cpu_percent(interval=None)
+            ram = psutil.virtual_memory().percent
+            
+            bus.emit(EventType.SYS_METRICS, {
+                "cpu": cpu,
+                "ram": ram
+            })
+            
+            if self.stop_event.wait(2.0):
+                break
+
 battery_monitor = BatteryMonitor()
 
 if __name__ == "__main__":

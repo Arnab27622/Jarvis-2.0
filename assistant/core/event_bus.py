@@ -20,6 +20,7 @@ class EventType(Enum):
     
     # System info
     BATTERY_UPDATE = "battery"   # Battery status changed
+    SYS_METRICS = "sys_metrics"  # CPU/RAM status changed
     COMMAND_EXECUTED = "cmd_done" # Command finished executing
     ERROR = "error"              # Something went wrong
 

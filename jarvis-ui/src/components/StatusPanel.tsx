@@ -7,6 +7,12 @@ interface StatusPanelProps {
   isListening: boolean;
 }
 
+const visualizerBars = [...Array(12)].map(() => ({
+  height: `${Math.random() * 15 + 5}px`,
+  duration: 0.5 + Math.random() * 0.5,
+  delay: Math.random() * 0.2
+}));
+
 const StatusPanel: React.FC<StatusPanelProps> = ({ battery, isListening }) => {
   return (
     <>
@@ -56,6 +62,31 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ battery, isListening }) => {
         </div>
         <div style={{ marginTop: '15px', color: isListening ? 'var(--primary-glow)' : 'var(--text-secondary)' }}>
           {isListening ? 'AWAITING INPUT...' : 'STANDBY MODE'}
+        </div>
+        
+        {/* Audio Visualizer */}
+        <div style={{ display: 'flex', gap: '3px', marginTop: '15px', height: '20px', alignItems: 'flex-end' }}>
+          {visualizerBars.map((bar, i) => (
+            <motion.div
+              key={i}
+              style={{
+                width: '4px',
+                background: isListening ? 'var(--primary-glow)' : 'var(--border-color)',
+                borderRadius: '2px',
+                height: isListening ? '10px' : '4px'
+              }}
+              animate={isListening ? {
+                height: ['4px', bar.height, '4px'],
+              } : { height: '4px' }}
+              transition={isListening ? {
+                duration: bar.duration,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: "easeInOut",
+                delay: bar.delay
+              } : {}}
+            />
+          ))}
         </div>
       </div>
     </>

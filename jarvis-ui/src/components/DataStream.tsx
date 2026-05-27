@@ -2,6 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import type { LogEntry } from '../App';
 import { User, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface DataStreamProps {
   logs: LogEntry[];
@@ -27,7 +30,33 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
     return () => clearInterval(interval);
   }, [text, duration]);
 
-  return <>{displayedText}</>;
+  return (
+    <ReactMarkdown
+      components={{
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        code({ inline, className, children, ref: _ref, ...props }: React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & { inline?: boolean }) {
+          const match = /language-(\w+)/.exec(className || '');
+          return !inline && match ? (
+            <SyntaxHighlighter
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              style={vscDarkPlus as any}
+              language={match[1]}
+              PreTag="div"
+              {...props}
+            >
+              {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+          ) : (
+            <code className={className} style={{background: 'rgba(0, 240, 255, 0.1)', padding: '2px 4px', borderRadius: '4px'}} {...props}>
+              {children}
+            </code>
+          );
+        }
+      }}
+    >
+      {displayedText}
+    </ReactMarkdown>
+  );
 };
 
 const DataStream: React.FC<DataStreamProps> = ({ logs }) => {

@@ -120,6 +120,8 @@ body::after {
   display: flex;
   flex-direction: column;
   padding: 20px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .chat-log {
@@ -128,16 +130,13 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary-glow) transparent;
+  scrollbar-width: none; /* Firefox */
+  min-height: 0;
 }
 
-.chat-log::-webkit-scrollbar {
-  width: 4px;
-}
-.chat-log::-webkit-scrollbar-thumb {
-  background: var(--primary-glow);
-  box-shadow: 0 0 10px var(--primary-glow);
+.chat-log::-webkit-scrollbar,
+.hud-sidebar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .log-entry {
@@ -168,11 +167,62 @@ body::after {
   word-break: break-word;
 }
 
+.log-content p {
+  margin-bottom: 10px;
+}
+.log-content p:last-child {
+  margin-bottom: 0;
+}
+.log-content ul, .log-content ol {
+  margin-left: 20px;
+  margin-bottom: 10px;
+}
+.log-content h1, .log-content h2, .log-content h3 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  color: var(--primary-glow);
+}
+
 .hud-sidebar {
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.hud-sidebar .hud-panel {
+  flex-shrink: 0;
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0)
+  }
+  20% {
+    transform: translate(-5px, 5px)
+  }
+  40% {
+    transform: translate(-5px, -5px)
+  }
+  60% {
+    transform: translate(5px, 5px)
+  }
+  80% {
+    transform: translate(5px, -5px)
+  }
+  100% {
+    transform: translate(0)
+  }
+}
+
+.glitch-effect {
+  animation: glitch 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+  color: var(--alert-glow);
+  text-shadow: 2px 0 var(--alert-glow), -2px 0 blue;
 }
 
 .widget {
