@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 import time
 import re
-from assistant.core.speak_selector import speak
+from assistant.core.speak_selector import speak, wait_for_tts_completion
 from assistant.core.ear import listen
 
 load_dotenv()
@@ -156,6 +156,7 @@ def tell_news() -> None:
     speak(
         "Which category would you like? General, Sports, Technology, Health, Business, Entertainment, or Science?"
     )
+    wait_for_tts_completion()
     category = listen()
 
     if category is None:

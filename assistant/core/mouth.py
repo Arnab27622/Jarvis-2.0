@@ -38,6 +38,7 @@ _is_tts_running = False
 _is_voice_busy = False
 tts_thread = None
 tts_loop = None
+_current_message_id = None
 
 def print_animated_message(message: str) -> None:
     """
@@ -126,12 +127,18 @@ async def _tts_worker() -> None:
                 image = None
                 message_id = None
                 
+            global _current_message_id
+            _current_message_id = message_id
+                
             await _stream_audio_and_text(text, image, message_id)
+            
+            _current_message_id = None
             _is_voice_busy = False
             tts_queue.task_done()
         except queue.Empty:
             continue
         except Exception as e:
+            _current_message_id = None
             _is_voice_busy = False
             print(f"Streaming error: {e}")
 
@@ -201,6 +208,41 @@ def wait_for_tts_completion() -> None:
     tts_queue.join()
     while _is_voice_busy:
         time.sleep(0.1)
+
+def stop_llm_speech() -> None:
+    """
+    Stop only the streaming speech (LLM responses) without affecting other notifications.
+    Clears items with a message_id from the queue and stops audio if currently playing one.
+    """
+    global _current_message_id
+    
+    # 1. Filter the queue: keep items without message_id, discard items with message_id
+    temp_queue = []
+    while not tts_queue.empty():
+        try:
+            item = tts_queue.get_nowait()
+            if isinstance(item, tuple) and len(item) == 3:
+                msg_id = item[2]
+                if msg_id is None:
+                    temp_queue.append(item)
+            else:
+                temp_queue.append(item)
+            tts_queue.task_done()
+        except queue.Empty:
+            break
+            
+    # Put kept items back
+    for item in temp_queue:
+        tts_queue.put(item)
+        
+    # 2. If currently playing an LLM response (has message_id), stop audio
+    if _current_message_id is not None:
+        try:
+            sd.stop()
+        except Exception as e:
+            print(f"Error stopping audio: {e}")
+            
+    print("[Mouth] Stopped LLM streaming speech.")
 
 if __name__ == "__main__":
     speak("System consolidation complete. I am now using a unified voice module powered by Kokoro.")

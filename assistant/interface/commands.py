@@ -141,6 +141,10 @@ def command() -> None:
                     print(f"[Debug] normalized: {normalized_text}")
                     if any(keyword.strip() in normalized_text for keyword in stopcmd):
                         speak(random.choice(stopdlg))
+                    elif any(keyword.strip() in normalized_text for keyword in cancel_cmd):
+                        from assistant.core.mouth import stop_llm_speech
+                        stop_llm_speech()
+                        speak("Cancelled response.")
                     else:
                         print(f"[Debug] calling process_command")
                         process_command(normalized_text)
@@ -189,6 +193,12 @@ def command() -> None:
         if any(keyword.strip() in normalized_text for keyword in stopcmd):
             speak(random.choice(stopdlg))
             command_mode = False
+            continue
+
+        if any(keyword.strip() in normalized_text for keyword in cancel_cmd):
+            from assistant.core.mouth import stop_llm_speech
+            stop_llm_speech()
+            speak("Cancelled response.")
             continue
 
         try:

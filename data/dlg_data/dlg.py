@@ -249,9 +249,17 @@ stopcmd = [
     "stand down",
     "mute yourself",
     "rest",
+    "pause listening",
+]
+
+cancel_cmd = [
+    "stop talking",
+    "cancel",
     "shut up",
     "quiet",
-    "pause listening",
+    "stop speaking",
+    "that's enough",
+    "abort",
     "suspend audio",
 ]
 

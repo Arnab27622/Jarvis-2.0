@@ -41,10 +41,19 @@ class LLMManager:
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY")
         self.hf_token = os.getenv("HF_TOKEN")
 
-    async def _call_gemini(self, prompt: str) -> Optional[str]:
+    async def _call_gemini(self, messages: List[Dict[str, str]]) -> Optional[str]:
         if not self.gemini_key: return None
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={self.gemini_key}"
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        
+        contents = []
+        for msg in messages:
+            role = "model" if msg.get("role") == "assistant" else "user"
+            contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
+            
+        payload = {
+            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "contents": contents
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload, timeout=60) as response:
@@ -54,7 +63,7 @@ class LLMManager:
             print(f"[LLM] Gemini error: {e}")
             return None
 
-    async def _call_huggingface(self, prompt: str) -> Optional[str]:
+    async def _call_huggingface(self, messages: List[Dict[str, str]]) -> Optional[str]:
         if not self.hf_token: return None
         def run_hf():
             from huggingface_hub import InferenceClient
@@ -62,7 +71,7 @@ class LLMManager:
                 client = InferenceClient(token=self.hf_token)
                 res = client.chat.completions.create(
                     model="openai/gpt-oss-20b",
-                    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
                     max_tokens=800
                 )
                 return res.choices[0].message.content
@@ -71,13 +80,13 @@ class LLMManager:
                 return None
         return await asyncio.to_thread(run_hf)
 
-    async def _call_openrouter(self, prompt: str, model: str = "openrouter/free") -> Optional[str]:
+    async def _call_openrouter(self, messages: List[Dict[str, str]], model: str = "openrouter/free") -> Optional[str]:
         if not self.openrouter_key: return None
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {self.openrouter_key}"}
         payload = {
             "model": model,
-            "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + messages,
             "temperature": 0.7
         }
         try:
@@ -89,7 +98,7 @@ class LLMManager:
             print(f"[LLM] OpenRouter error: {e}")
             return None
 
-    async def _call_g4f(self, prompt: str) -> Optional[str]:
+    async def _call_g4f(self, messages: List[Dict[str, str]]) -> Optional[str]:
         # g4f is generally synchronous, running in a thread to prevent blocking
         def run_g4f():
             from g4f.client import Client
@@ -97,10 +106,7 @@ class LLMManager:
                 client = Client()
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt}
-                    ],
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
                     web_search=True
                 )
                 return response.choices[0].message.content
@@ -119,36 +125,51 @@ class LLMManager:
         record_user_activity()
         intent = self._identify_intent(user_input)
         res = None
+        
+        global CHAT_HISTORY
+        with HISTORY_LOCK:
+            CHAT_HISTORY.append({"role": "user", "content": user_input})
+            CHAT_HISTORY = trim_history(CHAT_HISTORY, max_messages=10)
+            messages_to_send = list(CHAT_HISTORY)
 
         if intent == "technical":
             print(f"[LLM] Technical query. Using HuggingFace (Primary)...")
-            res = await self._call_huggingface(user_input)
+            res = await self._call_huggingface(messages_to_send)
         elif intent == "web":
             print(f"[LLM] Web query. Using GPT4Free (Primary)...")
-            res = await self._call_g4f(user_input)
+            res = await self._call_g4f(messages_to_send)
         else:
             print(f"[LLM] General query. Using Gemini (Primary)...")
-            res = await self._call_gemini(user_input)
+            res = await self._call_gemini(messages_to_send)
 
         if not res:
             print("[LLM] Primary failed. Starting sequential fallback...")
             fallbacks = [
                 self._call_gemini,
                 self._call_huggingface,
-                lambda p: self._call_openrouter(p, model="openai/gpt-oss-120b:free"),
+                lambda msgs: self._call_openrouter(msgs, model="openai/gpt-oss-120b:free"),
                 self._call_g4f
             ]
             for attempt in fallbacks:
-                res = await attempt(user_input)
+                res = await attempt(messages_to_send)
                 if res: break
 
         if not res:
             error_msg = "I am unable to reach any of my thinking modules at the moment. Please check your internet connection."
             from assistant.core.speak_selector import speak
             speak(error_msg)
+            # Remove the failed user input from history
+            with HISTORY_LOCK:
+                if CHAT_HISTORY and CHAT_HISTORY[-1].get("role") == "user":
+                    CHAT_HISTORY.pop()
             return error_msg
 
         clean_text = clean_llm_output(res)
+        
+        # Save assistant response to history
+        with HISTORY_LOCK:
+            CHAT_HISTORY.append({"role": "assistant", "content": clean_text})
+            
         await asyncio.to_thread(save_to_brain, user_input, clean_text)
         
         return clean_text
