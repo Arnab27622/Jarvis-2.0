@@ -131,45 +131,40 @@ good_nightdlg = [
 ]
 
 welcomedlg = [
-    "Yes, sir? Jarvis is listening.",
-    "How can Jarvis help?",
-    "What can I do for you, sir?",
-    "Jarvis is here.",
+    "Yes, sir? I am listening.",
+    "How can I help you today, sir?",
+    "Systems are online and ready.",
     "At your service, sir.",
-    "What's the next move? Jarvis is ready.",
-    "Go ahead, Jarvis is all ears.",
+    "What's the next move? I am ready.",
+    "Go ahead, sir. I am all ears.",
     "Your command, sir?",
-    "Need something? Jarvis is online.",
-    "How may Jarvis assist?",
+    "All systems are fully functional. How may I assist?",
     "What's on your mind, sir?",
-    "Jarvis is tuned in.",
+    "I am tuned in and tracking.",
     "Ready for your input, sir.",
     "Hello again. What does sir require?",
-    "Yes, sir? Jarvis is operational.",
-    "How can Jarvis be of service?",
-    "You have Jarvis's attention.",
-    "Let's hear it. Jarvis is listening.",
-    "Jarvis is online and ready.",
+    "Yes, sir? I am operational.",
+    "You have my undivided attention.",
+    "Let's hear it, sir.",
+    "I am online and awaiting instructions.",
     "What's the task, sir?",
-    "Awaiting your command, sir. Jarvis is ready.",
-    "What shall we do? Jarvis is standing by.",
-    "Ready and waiting for your command.",
+    "Awaiting your command, sir.",
+    "What shall we do next?",
+    "Standing by for your command, sir.",
     "What is your request, sir?",
-    "How can Jarvis help you today?",
-    "What do you require, sir?",
-    "Jarvis is at your command.",
+    "I am at your command.",
     "Your wish is my command, sir.",
     "What is your bidding, sir?",
-    "Yes, sir? How can Jarvis help?",
+    "Yes, sir? How can I help?",
+    "Initializing neural pathways. I'm listening, sir."
 ]
 
 wakeup_key_word = [
     "wake up",
     "jarvis",
-    "jar" "wake up Jarvis",
     "wake up Jarvis",
     "wakeup Jarvis",
-    "wakeup jarvis",
+    "jarvis wake up",
     "hey jarvis",
     "hello jarvis",
     "time to wake up",
@@ -208,24 +203,26 @@ bye_key_word = [
 ]
 
 res_bye = [
-    "Goodbye. Shutting down.",
-    "Until next time. Signing off.",
-    "Going to sleep. Call me if you need me.",
-    "Logging out. Goodbye.",
-    "Bye. It was a pleasure assisting you.",
-    "Powering down. Have a productive day.",
-    "Alright, I'm off. Goodbye.",
-    "Understood. I'll be here when you need me.",
-    "Session terminated. Goodbye.",
-    "Okay, stopping all processes. Bye.",
-    "See you later.",
-    "Farewell. Code well.",
-    "Bye for now. Don't hesitate to call.",
-    "Alright, I'm going to sleep.",
-    "Goodbye. All systems standby.",
+    "Goodbye, sir. Shutting down all active protocols.",
+    "Until next time, sir. Signing off.",
+    "Going offline. Call me if you need me.",
+    "Logging out. Goodbye, sir.",
+    "Bye. It was a pleasure assisting you today.",
+    "Powering down central cores. Have a productive day.",
+    "Alright, I'm logging off. Goodbye.",
+    "Understood, sir. I'll be here when you need me.",
+    "Session terminated successfully. Goodbye.",
+    "Okay, stopping all background processes. Bye.",
+    "See you later, sir.",
+    "Farewell, sir. Code well.",
+    "Bye for now. Don't hesitate to call if you need anything.",
+    "Alright, I'm going into hibernation.",
+    "Goodbye. All systems entering standby.",
     "Terminating active connection. Bye.",
-    "Understood. Entering low-power mode.",
+    "Understood. Entering low-power mode to conserve energy.",
     "Okay, I'm out. Catch you later.",
+    "Disconnecting audio visual feeds. Have a good one.",
+    "System shutdown sequence initiated. Farewell."
 ]
 
 stop_music_word = [
@@ -246,6 +243,16 @@ stopcmd = [
     "deactivate voice",
     "disable listening",
     "initiate hibernate protocol",
+    "sleep",
+    "take a break",
+    "dismissed",
+    "stand down",
+    "mute yourself",
+    "rest",
+    "shut up",
+    "quiet",
+    "pause listening",
+    "suspend audio",
 ]
 
 stopdlg = [
@@ -259,6 +266,11 @@ stopdlg = [
     "Audio processing halted. Until we meet again.",
     "Entering hibernate state. Reactivate with wake word.",
     "Going to sleep. Wake me up when you need me.",
+    "As you wish, sir. I'll be in the background.",
+    "Muting audio receptors. Good day, sir.",
+    "Taking a break. Just say the word if anything comes up.",
+    "Systems shifting to standby. Awaiting your signal.",
+    "At ease, sir. I'll be resting my circuits."
 ]
 
 open_dlg = [
@@ -270,6 +282,12 @@ open_dlg = [
     "Loading specified module:",
     "Initiating startup protocol for",
     "Commencing launch procedure for",
+    "Right away, sir. Opening",
+    "Deploying assets for",
+    "Bypassing security protocols to access",
+    "Bringing up",
+    "As you wish, sir. Launching",
+    "Allocating system resources for",
 ]
 
 closedlg = [
@@ -277,6 +295,12 @@ closedlg = [
     "Closing application",
     "Shutting down module",
     "Ending session",
+    "Killing background process for",
+    "Aborting application:",
+    "Releasing system resources from",
+    "As requested, closing",
+    "Deactivating",
+    "Suspending execution of",
 ]
 
 open_input = [
@@ -289,6 +313,12 @@ open_input = [
     "load",
     "begin",
     "activate",
+    "boot up",
+    "run",
+    "fire up",
+    "bring up",
+    "trigger",
+    "deploy",
 ]
 
 close_input = [
@@ -300,26 +330,34 @@ close_input = [
     "abort",
     "cease",
     "deactivate",
+    "quit",
+    "force close",
+    "stop",
+    "dismiss",
+    "end process",
+    "halt",
 ]
 
 open_website_maybe = [
     "Opening the closest match",
-    "I couldn't find an exact match. Opening the closest result",
-    "Redirecting to the closest option",
-    "I found a similar site:"
-    "No exact match found. Instead opening"
-    "Opening the best match found",
+    "I couldn't find an exact match, sir. Opening the closest result",
+    "Redirecting to the most relevant option",
+    "I found a similar site:",
+    "No exact match found in the database. Instead opening",
+    "Opening the best match available",
     "Navigating to the closest result:",
+    "Running heuristics to find the closest match. Opening",
 ]
 
 sorry_web = [
-    "Sorry, I don't have a link for"
-    "I'm not configured to open"
-    "My index doesn't contain the site"
-    "I can't locate a URL for"
-    "No bookmark found for",
-    "Sorry, I don't have information about the website",
+    "Sorry, sir, I don't have a direct link for",
+    "I'm not currently configured to open",
+    "My local index doesn't contain the site",
+    "I can't seem to locate a URL for",
+    "No bookmark or known path found for",
+    "Sorry, I don't have information about that particular website:",
     "I'm not programmed to open",
+    "I searched my database but came up empty for",
 ]
 
 websites = {
@@ -615,9 +653,11 @@ plug_out = [
 
 search_result = [
     "Sir, I have compiled the search results for your query",
-    "Here are the findings based on your search query",
-    "Sir, here is the information retrieved for your query",
-    "Sir, the search has returned these results for your query",
-    "Search executed. The results are as follows for the query",
-    "Here are the search results for",
+    "Here are the findings based on your recent search query",
+    "Sir, here is the information retrieved for you",
+    "Sir, the search has returned these results",
+    "Search executed successfully. The results are as follows",
+    "Here are the top search results for",
+    "I've crawled the web and found the following for your query:",
+    "Data retrieval complete. Here is what I found:",
 ]

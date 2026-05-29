@@ -149,12 +149,12 @@ class AdvancedSpeechRecognizer:
                     print(Fore.YELLOW + "Using default energy threshold")
                     self.recognizer.energy_threshold = 300
 
-    def recognize_with_google(self, audio: sr.AudioData) -> str | None:
+    def recognize_audio(self, audio: sr.AudioData) -> str | None:
         """
-        Use Google Web Speech API for speech recognition.
+        Use Google Web Speech API for speech recognition with an offline fallback.
 
-        Primary recognition method that sends audio to Google's service
-        for conversion to text.
+        Primary recognition method that sends audio to Google's service.
+        If the device is offline, it falls back to PocketSphinx.
 
         Args:
             audio: AudioData object containing recorded speech
@@ -172,10 +172,24 @@ class AdvancedSpeechRecognizer:
             return recognized_text
         except sr.UnknownValueError:
             print(Fore.YELLOW + "Google Web Speech could not understand audio")
+            return None
         except sr.RequestError as e:
-            print(Fore.YELLOW + f"Google Web Speech request error: {e}")
-
-        return recognized_text
+            print(Fore.YELLOW + f"Google Web Speech offline or request error. Attempting offline fallback...")
+            try:
+                # Fallback to offline Sphinx recognition
+                recognized_text = self.recognizer.recognize_sphinx(audio)
+                self.last_recognition_time = time.time()
+                print(Fore.GREEN + "Offline Sphinx recognition successful")
+                return recognized_text
+            except sr.UnknownValueError:
+                print(Fore.YELLOW + "Offline Sphinx could not understand audio")
+                return None
+            except sr.RequestError as se:
+                print(Fore.RED + f"Offline Sphinx error: {se}")
+                return None
+            except Exception as ex:
+                print(Fore.RED + f"Unexpected offline Sphinx error: {ex}")
+                return None
 
     def listen(self, emit_to_ui: bool = True) -> str | None:
         """
@@ -215,8 +229,8 @@ class AdvancedSpeechRecognizer:
                     self.stop_listening_message()
                     print(Fore.LIGHTYELLOW_EX + "Processing...", end="\r", flush=True)
 
-                    # Use Google Web Speech API for recognition
-                    recognized_txt = self.recognize_with_google(audio)
+                    # Use Google Web Speech API with offline fallback
+                    recognized_txt = self.recognize_audio(audio)
 
                     self.clear_line()
                     if recognized_txt:

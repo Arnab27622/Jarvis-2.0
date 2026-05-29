@@ -40,6 +40,7 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [glitch, setGlitch] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const ws = useRef<WebSocket | null>(null);
 
   const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
@@ -61,6 +62,19 @@ function App() {
     }
   };
   
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     // Connect to WebSocket using the appropriate port
     // During dev (Vite on 5173), we connect to backend on 1410
@@ -176,7 +190,9 @@ function App() {
       <header className="hud-header hud-panel">
         <h1><Terminal size={28} /> JARVIS 2.0_</h1>
         <div className="status-indicators">
-          <span>SYS.ONLINE</span>
+          <span style={{ color: isOnline ? 'inherit' : 'var(--alert-glow)' }}>
+            SYS.{isOnline ? 'ONLINE' : 'OFFLINE'}
+          </span>
           <span>SEC.M5</span>
           <Clock />
         </div>
