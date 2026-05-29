@@ -479,10 +479,21 @@ def extract_reminder_message_simple(command_text: str, duration: int) -> str:
     for phrase in reminder_phrases:
         temp_text = temp_text.replace(phrase, "")
 
-    # Remove connecting words
+    # Clean up whitespace
+    temp_text = re.sub(r"\s+", " ", temp_text).strip()
+
+    # Remove leading connecting words only
     connecting_words = ["to", "that", "about"]
-    for word in connecting_words:
-        temp_text = re.sub(rf"\b{word}\b", "", temp_text)
+    changed = True
+    while changed:
+        changed = False
+        for word in connecting_words:
+            if temp_text.startswith(word + " "):
+                temp_text = temp_text[len(word)+1:].strip()
+                changed = True
+            elif temp_text == word:
+                temp_text = ""
+                changed = True
 
     # Clean up
     message = re.sub(r"\s+", " ", temp_text).strip()
@@ -555,10 +566,21 @@ def extract_reminder_message_absolute(
     for phrase in reminder_phrases:
         temp_text = temp_text.replace(phrase, "")
 
-    # Remove connecting words that often come before messages
+    # Clean up whitespace
+    temp_text = re.sub(r"\s+", " ", temp_text).strip()
+
+    # Remove leading connecting words only
     connecting_words = ["that", "about", "to", "for", "at", "in", "on"]
-    for word in connecting_words:
-        temp_text = re.sub(rf"\b{word}\b", "", temp_text)
+    changed = True
+    while changed:
+        changed = False
+        for word in connecting_words:
+            if temp_text.startswith(word + " "):
+                temp_text = temp_text[len(word)+1:].strip()
+                changed = True
+            elif temp_text == word:
+                temp_text = ""
+                changed = True
 
     # Clean up
     message = re.sub(r"\s+", " ", temp_text).strip()
@@ -631,8 +653,13 @@ def extract_alarm_message_absolute(
     for phrase in alarm_phrases:
         temp_text = temp_text.replace(phrase, "")
 
-    # Remove connecting words that often come before messages
+    # Clean up whitespace
+    temp_text = re.sub(r"\s+", " ", temp_text).strip()
+
+    # Remove leading connecting words only
     connecting_words = [
+        "with message",
+        "saying",
         "because",
         "that",
         "about",
@@ -641,11 +668,17 @@ def extract_alarm_message_absolute(
         "at",
         "in",
         "on",
-        "with message",
-        "saying",
     ]
-    for word in connecting_words:
-        temp_text = re.sub(rf"\b{word}\b", "", temp_text)
+    changed = True
+    while changed:
+        changed = False
+        for word in connecting_words:
+            if temp_text.startswith(word + " "):
+                temp_text = temp_text[len(word)+1:].strip()
+                changed = True
+            elif temp_text == word:
+                temp_text = ""
+                changed = True
 
     # Clean up
     message = re.sub(r"\s+", " ", temp_text).strip()

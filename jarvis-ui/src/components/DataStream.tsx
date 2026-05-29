@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { LogEntry } from '../App';
-import { User, Cpu } from 'lucide-react';
+import { User, Cpu, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -10,22 +10,57 @@ interface DataStreamProps {
   logs: LogEntry[];
 }
 
+const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      style={{
+        position: 'absolute', top: '8px', right: '8px',
+        background: 'rgba(0, 0, 0, 0.5)', border: '1px solid var(--primary-glow)',
+        color: 'var(--primary-glow)', borderRadius: '4px', padding: '4px 8px',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+        fontSize: '12px', zIndex: 10
+      }}
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+};
+
 const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, duration }) => {
   const [displayedText, setDisplayedText] = React.useState(duration ? '' : text);
+  const indexRef = useRef(0);
+  const startTickRef = useRef(0);
+  const startIndexRef = useRef(0);
 
   React.useEffect(() => {
-    if (!duration) return;
+    if (!duration) {
+      return;
+    }
 
-    // Characters per millisecond
     const delayPerChar = (duration * 1000) / Math.max(text.length, 1);
-    let i = 0;
-
+    startTickRef.current = Date.now();
+    startIndexRef.current = indexRef.current;
 
     const interval = setInterval(() => {
-      setDisplayedText(text.slice(0, i + 1));
-      i++;
-      if (i >= text.length) clearInterval(interval);
-    }, delayPerChar);
+      const elapsed = Date.now() - startTickRef.current;
+      const expectedNewChars = Math.floor(elapsed / delayPerChar);
+
+      if (indexRef.current < text.length) {
+        const nextIndex = Math.min(startIndexRef.current + expectedNewChars, text.length);
+        if (nextIndex > indexRef.current) {
+          indexRef.current = nextIndex;
+          setDisplayedText(text.slice(0, indexRef.current));
+        }
+      } else {
+        clearInterval(interval);
+      }
+    }, 20); // 20ms polling is smooth and accurate since it uses elapsed time
 
     return () => clearInterval(interval);
   }, [text, duration]);
@@ -37,24 +72,28 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
         code({ inline, className, children, ref: _ref, ...props }: React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & { inline?: boolean }) {
           const match = /language-(\w+)/.exec(className || '');
           return !inline && match ? (
-            <SyntaxHighlighter
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              style={vscDarkPlus as any}
-              language={match[1]}
-              PreTag="div"
-              {...props}
-            >
-              {String(children).replace(/\n$/, '')}
-            </SyntaxHighlighter>
+            <div style={{ position: 'relative' }}>
+              <CopyButton textToCopy={String(children).replace(/\n$/, '')} />
+              <SyntaxHighlighter
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                style={vscDarkPlus as any}
+                language={match[1]}
+                PreTag="div"
+                customStyle={{ width: '100%', overflowX: 'auto', boxSizing: 'border-box', maxWidth: '100%', paddingTop: '30px' }}
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            </div>
           ) : (
-            <code className={className} style={{background: 'rgba(0, 240, 255, 0.1)', padding: '2px 4px', borderRadius: '4px'}} {...props}>
+            <code className={className} style={{background: 'rgba(0, 240, 255, 0.1)', padding: '2px 4px', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-word'}} {...props}>
               {children}
             </code>
           );
         }
       }}
     >
-      {displayedText}
+      {!duration ? text : displayedText}
     </ReactMarkdown>
   );
 };

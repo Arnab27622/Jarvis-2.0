@@ -14,6 +14,7 @@ import sys
 import time
 import queue
 import threading
+import uuid
 import sounddevice as sd
 from kokoro_onnx import Kokoro
 import asyncio
@@ -48,19 +49,28 @@ def print_animated_message(message: str) -> None:
         time.sleep(0.065)
     print()
 
-async def _stream_audio_and_text(text: str, image: str = None) -> None:
+async def _stream_audio_and_text(text: str, image: str = None, message_id: str = None) -> None:
     """
     Generate audio stream using Kokoro TTS and synchronize it with console text printing.
     """
     if not kokoro_ready:
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image})
+        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image, "message_id": message_id})
         await asyncio.to_thread(print_animated_message, text)
         return
 
     try:
+        from assistant.core.llm_utils import clean_for_speech
+        tts_text = clean_for_speech(text)
+        
+        if not tts_text.strip():
+            # If text is entirely formatting (like ```python), don't speak, just emit
+            bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image, "message_id": message_id})
+            await asyncio.to_thread(print_animated_message, text)
+            return
+
         # Generate the full audio for the sentence at once
         # (Since text is usually a single sentence, this is fast enough)
-        audio, _ = await asyncio.to_thread(kokoro.create, text, voice=VOICE_NAME, speed=1.1, lang="en-us")
+        audio, _ = await asyncio.to_thread(kokoro.create, tts_text, voice=VOICE_NAME, speed=1.08, lang="en-us")
         
         # Calculate exact audio duration
         audio_duration = len(audio) / 24000.0
@@ -70,7 +80,7 @@ async def _stream_audio_and_text(text: str, image: str = None) -> None:
         if delay < 0.01: delay = 0.01
         
         # Emit to UI with exact duration for synced typing animation
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": audio_duration, "image": image})
+        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": audio_duration, "image": image, "message_id": message_id})
         
         # Play the audio
         sd.play(audio, samplerate=24000)
@@ -106,12 +116,17 @@ async def _tts_worker() -> None:
             _is_voice_busy = True
             
             if isinstance(item, tuple):
-                text, image = item
+                if len(item) == 3:
+                    text, image, message_id = item
+                else:
+                    text, image = item
+                    message_id = None
             else:
                 text = item
                 image = None
+                message_id = None
                 
-            await _stream_audio_and_text(text, image)
+            await _stream_audio_and_text(text, image, message_id)
             _is_voice_busy = False
             tts_queue.task_done()
         except queue.Empty:
@@ -141,7 +156,7 @@ def stop_tts_consumer() -> None:
     global _is_tts_running
     _is_tts_running = False
 
-def speak(text: str, image: str = None) -> None:
+def speak(text: str, image: str = None, message_id: str = None) -> None:
     """
     Unified entry point for Jarvis's voice.
     Always queues text to TTS. Use for conversational content
@@ -149,7 +164,7 @@ def speak(text: str, image: str = None) -> None:
     """
     if not _is_tts_running:
         start_tts_consumer()
-    tts_queue.put((text, image))
+    tts_queue.put((text, image, message_id))
 
 def notify(text: str) -> None:
     """
@@ -176,9 +191,10 @@ def speak_streaming(sentences: list[str]) -> None:
         except queue.Empty:
             break
 
+    message_id = str(uuid.uuid4())
     for s in sentences:
         if s.strip():
-            tts_queue.put(s)
+            tts_queue.put((s, None, message_id))
 
 def wait_for_tts_completion() -> None:
     """Blocks until all queued TTS messages have finished playing."""

@@ -47,7 +47,7 @@ class LLMManager:
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, timeout=10) as response:
+                async with session.post(url, json=payload, timeout=60) as response:
                     data = await response.json()
                     return data['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
@@ -82,7 +82,7 @@ class LLMManager:
         }
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(url, headers=headers, json=payload, timeout=10) as response:
+                async with session.post(url, headers=headers, json=payload, timeout=60) as response:
                     data = await response.json()
                     return data['choices'][0]['message']['content']
         except Exception as e:

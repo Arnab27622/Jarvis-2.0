@@ -265,12 +265,12 @@ if __name__ == "__main__":
 # --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
 
-@on_fuzzy(["new tab", "open new tab", "open a new tab"], score_cutoff=90)
+@on_regex(r"\b(?:open\s+)?(?:a\s+)?new tab\b", priority=5)
 def handle_new_tab():
     ui.hotkey("ctrl", "t")
     notify("New tab opened")
 
-@on_fuzzy(["incognito", "private tab", "secret mode", "incognito mode"], score_cutoff=90)
+@on_regex(r"\b(?:open\s+)?(?:incognito|private tab|secret mode|incognito mode)\b", priority=5)
 def handle_incognito():
     open_incognito_tab()
 
@@ -302,7 +302,7 @@ def handle_duplicate():
 def handle_brightness_cmd(text):
     handle_brightness(text)
 
-@on_regex(r"\b(?:please\s+)?\b(?:write|right|type)\s+(?P<content>.*)$")
+@on_regex(r"\b(?:please\s+)?\b(?:type out|type this)\s+(?P<content>.*)$")
 def handle_writing(content):
     handle_write(content)
 

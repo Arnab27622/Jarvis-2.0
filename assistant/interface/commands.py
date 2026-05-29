@@ -21,7 +21,7 @@ import time
 import importlib
 import pkgutil
 
-FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run"]
+FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run", "ok", "okay", "alright"]
 
 def normalize_command(text: str) -> str:
     """
@@ -139,7 +139,7 @@ def command() -> None:
                     record_user_activity()
                     normalized_text = normalize_command(text)
                     print(f"[Debug] normalized: {normalized_text}")
-                    if any(keyword.strip() == normalized_text for keyword in stopcmd):
+                    if any(keyword.strip() in normalized_text for keyword in stopcmd):
                         speak(random.choice(stopdlg))
                     else:
                         print(f"[Debug] calling process_command")
@@ -186,7 +186,7 @@ def command() -> None:
         record_user_activity()
         normalized_text = normalize_command(text_lower)
 
-        if any(keyword.strip() == normalized_text for keyword in stopcmd):
+        if any(keyword.strip() in normalized_text for keyword in stopcmd):
             speak(random.choice(stopdlg))
             command_mode = False
             continue
@@ -207,6 +207,7 @@ def process_command(normalized_text: str) -> None:
     import threading
     
     try:
+        background_task_started = False
         if not normalized_text:
             from assistant.interface.welcome import welcome
             welcome()
@@ -220,6 +221,7 @@ def process_command(normalized_text: str) -> None:
         if not cmd_registry.execute(normalized_text):
             # Fallback to AI brain for unrecognized commands
             # Run in a background thread to prevent blocking the main listening loop
+            background_task_started = True
             threading.Thread(target=brain, args=(normalized_text,), daemon=True).start()
     except Exception as e:
         print(f"Error in process_command: {e}")
@@ -232,7 +234,8 @@ def process_command(normalized_text: str) -> None:
         # Reset to avoid reusing the same timestamp for subsequent immediate calls
         recognizer.last_recognition_time = time.time()
         
-        bus.emit(EventType.COMMAND_EXECUTED, {})
+        if not background_task_started:
+            bus.emit(EventType.COMMAND_EXECUTED, {})
 
 if __name__ == "__main__":
     pass

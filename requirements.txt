@@ -132,3 +132,4 @@ winotify
 WMI
 yarl
 apscheduler
+num2words

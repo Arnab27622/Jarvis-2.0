@@ -404,7 +404,12 @@ music_player = MusicPlayer()
 # --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
 
-@on_regex(r"\b(?P<action>play|pause|resume|stop|next|previous|last)\b\s*(?:the\s+)?(?:music|song|track)")
+@on_regex(r"\bplay\s+(?:the\s+)?song\s+(?P<song_name>.*)$", priority=5)
+def handle_play_specific_song(song_name=None):
+    if song_name:
+        music_player.play_specific_song(song_name)
+
+@on_regex(r"\b(?P<action>play|pause|resume|stop|next|previous|last)\b\s*(?:the\s+|some\s+|a\s+)?(?:random\s+)?(?:music|song|track)", priority=2)
 @on_fuzzy(["play music", "play some music", "start music", "play random music",
            "pause music", "pause the music", "pause song",
            "resume music", "resume the music", "continue music", "unpause music",

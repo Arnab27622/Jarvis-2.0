@@ -12,6 +12,7 @@ export type LogEntry = {
   timestamp: number;
   duration?: number;
   image?: string;
+  message_id?: string;
 };
 
 export type ToastAlert = {
@@ -77,14 +78,29 @@ function App() {
         case 'speak':
           setIsProcessing(false);
           playBeep(600, 'triangle', 0.2);
-          setLogs(prev => [...prev, {
-            id: Math.random().toString(36).substr(2, 9),
-            sender: 'jarvis',
-            text: payload.text,
-            timestamp: payload.timestamp || Date.now(),
-            duration: payload.duration,
-            image: payload.image
-          }]);
+          setLogs(prev => {
+            const lastLog = prev[prev.length - 1];
+            if (payload.message_id && lastLog && lastLog.message_id === payload.message_id) {
+              return [
+                ...prev.slice(0, -1),
+                {
+                  ...lastLog,
+                  text: lastLog.text + payload.text,
+                  duration: (lastLog.duration || 0) + (payload.duration || 0)
+                }
+              ];
+            } else {
+              return [...prev, {
+                id: Math.random().toString(36).substr(2, 9),
+                sender: 'jarvis',
+                text: payload.text,
+                timestamp: payload.timestamp || Date.now(),
+                duration: payload.duration,
+                image: payload.image,
+                message_id: payload.message_id
+              }];
+            }
+          });
           break;
         case 'user_voice':
         case 'user_text':

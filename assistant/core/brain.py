@@ -27,7 +27,7 @@ from assistant.automation.features.save_data_locally import (
 )
 
 
-def brain(text: str, threshold: float = 0.7) -> None:
+def brain(text: str, threshold: float = 0.85) -> None:
     """
     Main processing function that orchestrates query handling and response generation.
 
@@ -59,7 +59,9 @@ def brain(text: str, threshold: float = 0.7) -> None:
         # Check if query exists in local Q&A database for instant response
         if text in qa_dict:
             response = qa_dict[text]
-            speak(response)
+            from assistant.core.speak_selector import speak_streaming
+            from assistant.core.llm_utils import split_sentences
+            speak_streaming(split_sentences(response))
             return
 
         # Use local dataset and model for primary response generation
@@ -76,7 +78,9 @@ def brain(text: str, threshold: float = 0.7) -> None:
             return
 
         # Speak the validated response to user
-        speak(response)
+        from assistant.core.speak_selector import speak_streaming
+        from assistant.core.llm_utils import split_sentences
+        speak_streaming(split_sentences(response))
 
         # Store the new Q&A pair in local database for future use
         with qa_lock:  # Ensure thread-safe database operations
@@ -88,6 +92,9 @@ def brain(text: str, threshold: float = 0.7) -> None:
         error_msg = f"Error in brain function: {e}"
         print(error_msg)
         llm_response_streaming(text)
+    finally:
+        from assistant.core.event_bus import bus, EventType
+        bus.emit(EventType.COMMAND_EXECUTED, {})
 
 
 if __name__ == "__main__":

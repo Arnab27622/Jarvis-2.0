@@ -209,7 +209,7 @@ class AdvancedSpeechRecognizer:
                     audio = self.recognizer.listen(
                         source,
                         timeout=5,  # Wait 5 seconds for speech to start
-                        phrase_time_limit=7,  # Increased time limit for longer commands
+                        phrase_time_limit=30,  # Increased time limit for longer commands
                     )
 
                     self.stop_listening_message()
