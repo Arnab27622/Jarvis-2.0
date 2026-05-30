@@ -4,16 +4,13 @@ Module for fetching and narrating localized news headlines using the NewsAPI.
 
 import html
 import requests
-from dotenv import load_dotenv
-import os
 import time
 import re
+from assistant.core.config import config
 from assistant.core.speak_selector import speak, wait_for_tts_completion
 from assistant.core.ear import listen
 
-load_dotenv()
-
-newsapi = os.getenv("NEWS_API_KEY")
+newsapi = config.news_api_key
 
 
 def get_country_by_ip() -> str:

@@ -14,12 +14,15 @@ from assistant.core.brain import brain
 from data.dlg_data.dlg import *
 from assistant.core.event_bus import text_command_queue
 from assistant.core.registry import cmd_registry
+from assistant.core.logger import get_logger
 import random
 import re
 import os
 import time
 import importlib
 import pkgutil
+
+logger = get_logger("Commands")
 
 FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "ok", "okay", "alright"]
 
@@ -64,8 +67,9 @@ def load_plugins():
     import assistant.automation
     import assistant.activities
     
-    print("[Registry] Loading plugins...")
+    logger.info("Loading plugins...")
     packages = [assistant.automation, assistant.activities]
+    failed_plugins = []
     for package in packages:
         # Handle packages that don't have __path__
         if not hasattr(package, '__path__'):
@@ -74,9 +78,12 @@ def load_plugins():
             try:
                 importlib.import_module(module_name)
             except Exception as e:
-                pass
-                # print(f"Failed to load plugin {module_name}: {e}")
-    print("[Registry] Plugins loaded successfully.")
+                failed_plugins.append((module_name, str(e)))
+                logger.warning("Failed to load plugin %s: %s", module_name, e)
+    if failed_plugins:
+        logger.warning("%d plugins failed to load", len(failed_plugins))
+    else:
+        logger.info("All plugins loaded successfully.")
 
 # Load plugins at module level
 load_plugins()

@@ -25,13 +25,17 @@ import sounddevice as sd
 from kokoro_onnx import Kokoro
 import asyncio
 from assistant.core.event_bus import bus, EventType
+from assistant.core.config import config
+from assistant.core.logger import get_logger
+
+logger = get_logger("Mouth")
 
 # --- Global State ---
-KOKORO_MODEL_PATH = "models/kokoro-v1.0.onnx"
-KOKORO_VOICES_PATH = "models/voices-v1.0.bin"
-VOICE_NAME = "am_michael"
+KOKORO_MODEL_PATH = str(config.kokoro_model_path)
+KOKORO_VOICES_PATH = str(config.kokoro_voices_path)
+VOICE_NAME = config.tts_voice
 
-print("Initializing Voice Module (Kokoro)...")
+logger.info("Initializing Voice Module (Kokoro)...")
 try:
     import torch
     import onnxruntime as ort
@@ -48,13 +52,13 @@ try:
     )
     kokoro = Kokoro.from_session(session, KOKORO_VOICES_PATH)
     kokoro_ready = True
-    print(f"[Mouth] Kokoro ready. Providers: {session.get_providers()}")
+    logger.info("Kokoro ready. Providers: %s", session.get_providers())
 except Exception as e:
-    print(f"Failed to load Kokoro model: {e}")
+    logger.error("Failed to load Kokoro model: %s", e)
     kokoro_ready = False
 
 # --- Acknowledgment Chirp ---
-ACK_SOUND_PATH = "data/sounds/ack_chirp.wav"
+ACK_SOUND_PATH = str(config.ack_sound_path)
 _ack_audio = None
 _ack_sample_rate = 24000
 
@@ -67,9 +71,9 @@ def _load_ack_sound():
                 _ack_sample_rate = wf.getframerate()
                 frames = wf.readframes(wf.getnframes())
                 _ack_audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32767.0
-            print("[Mouth] Acknowledgment sound loaded.")
+            logger.info("Acknowledgment sound loaded.")
     except Exception as e:
-        print(f"[Mouth] Could not load ack sound: {e}")
+        logger.warning("Could not load ack sound: %s", e)
 
 _load_ack_sound()
 
@@ -114,10 +118,10 @@ def _generate_audio(text: str):
         tts_text = clean_for_speech(text)
         if not tts_text.strip():
             return None
-        audio, _ = kokoro.create(tts_text, voice=VOICE_NAME, speed=1.08, lang="en-us")
+        audio, _ = kokoro.create(tts_text, voice=VOICE_NAME, speed=config.tts_speed, lang=config.tts_language)
         return audio
     except Exception as e:
-        print(f"[Mouth] Kokoro generation error: {e}")
+        logger.error("Kokoro generation error: %s", e)
         return None
 
 async def _tts_generator_worker() -> None:
@@ -155,7 +159,7 @@ async def _tts_generator_worker() -> None:
         except queue.Empty:
             continue
         except Exception as e:
-            print(f"[Mouth] Generator error: {e}")
+            logger.error("Generator error: %s", e)
             try:
                 tts_queue.task_done()
             except ValueError:
@@ -213,7 +217,7 @@ def _play_audio_item(text, audio, image, message_id):
             })
             print_animated_message(text)
     except Exception as e:
-        print(f"[Mouth] Playback error: {e}")
+        logger.error("Playback error: %s", e)
         # Fallback to just printing
         try:
             print_animated_message(text)
@@ -242,7 +246,7 @@ def _audio_playback_worker() -> None:
         except queue.Empty:
             continue
         except Exception as e:
-            print(f"[Mouth] Player error: {e}")
+            logger.error("Player error: %s", e)
 
 def _start_generator_loop():
     """Runs the dedicated TTS generator event loop in a background thread."""
@@ -377,7 +381,7 @@ def stop_llm_speech() -> None:
         except Exception as e:
             print(f"Error stopping audio: {e}")
             
-    print("[Mouth] Stopped LLM streaming speech.")
+    logger.info("Stopped LLM streaming speech.")
 
 if __name__ == "__main__":
     speak("System consolidation complete. I am now using a unified voice module powered by Kokoro.")

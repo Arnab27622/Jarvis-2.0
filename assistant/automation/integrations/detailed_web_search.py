@@ -7,7 +7,7 @@ import os
 import json
 from groq import Groq
 from serpapi import GoogleSearch
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
 from assistant.core.llm_utils import clean_llm_output, save_to_brain
 from assistant.automation.integrations.youtube_automation import search_on_youtube
@@ -15,14 +15,12 @@ from assistant.automation.integrations import wiki_search
 from assistant.automation.integrations.google_search_automation import handle_web_search
 from assistant.core.registry import on_regex
 
-load_dotenv()
-
 
 def get_web_info(query: str, max_results: int = 5, prints: bool = False) -> str:
     """
     Executes a Google search via SerpApi and returns structured results.
     """
-    api_key = os.getenv("SERPAPI_API_KEY")
+    api_key = config.serpapi_api_key
     if not api_key:
         raise EnvironmentError("SERPAPI_API_KEY not set in environment variables.")
 
@@ -94,7 +92,7 @@ def generate(user_prompt: str, system_prompt: str = "Be Short and Concise", prin
         {"role": "user", "content": user_prompt},
     ]
 
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = config.groq_api_key
     if not api_key:
         raise EnvironmentError("GROQ_API_KEY not set in environment variables.")
 

@@ -4,11 +4,9 @@ import requests
 import os
 import random
 from urllib.parse import quote
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
 from typing import Optional
-
-load_dotenv()
 
 def generate_image_from_text(prompt_text: str) -> Optional[str]:
     """
@@ -20,7 +18,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
     Returns:
         The file path of the saved image if successful, otherwise None.
     """
-    api_key = os.getenv("POLLINATION_API_KEY")
+    api_key = config.pollination_api_key
     if not api_key:
         speak("I encountered an error while trying to generate that image.")
         return None
@@ -77,7 +75,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
         speak("I encountered an error while trying to generate that image.")
         return None
 
-    folder_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
+    folder_path = str(config.images_dir)
     os.makedirs(folder_path, exist_ok=True)
 
     filename = os.path.join(folder_path, f"txt2img_{seed}.{image_format}")

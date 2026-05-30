@@ -4,18 +4,49 @@ Provides functionality for location detection, temperature checks, and detailed 
 """
 
 import requests
-import os
 import geocoder
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
 from typing import Dict, Union, Optional, Any
 
-load_dotenv()
+def get_windows_location() -> Optional[Dict[str, float]]:
+    """Gets the extremely accurate GPS/Wi-Fi location from Windows OS itself."""
+    try:
+        import asyncio
+        from winrt.windows.devices.geolocation import Geolocator
+
+        async def fetch_loc():
+            geolocator = Geolocator()
+            access_status = await Geolocator.request_access_async()
+            if access_status == 1:
+                position = await geolocator.get_geoposition_async()
+                return {
+                    "latitude": position.coordinate.latitude,
+                    "longitude": position.coordinate.longitude
+                }
+            return None
+            
+        return asyncio.run(fetch_loc())
+    except Exception as e:
+        print(f"Windows native location failed: {e}")
+        return None
 
 def get_location() -> Optional[Dict[str, Union[float, str]]]:
     """
-    Detects the user's current geographical location via IP geolocation services.
+    Detects the user's current geographical location.
+    Prioritizes highly accurate native OS location, then falls back to IP geolocation.
     """
+    # 1. Try Windows Native Location (Most accurate & completely free)
+    win_loc = get_windows_location()
+    if win_loc:
+        return {
+            "latitude": win_loc["latitude"],
+            "longitude": win_loc["longitude"],
+            "city": "",
+            "country": ""
+        }
+
+    # 2. Fallback to IP geolocation
     try:
         location_response = requests.get("https://ipapi.co/json/", timeout=5)
         if location_response.status_code == 200:
@@ -69,7 +100,7 @@ def _fetch_weather_data(lat: Optional[float] = None, lon: Optional[float] = None
     """
     Internal helper to query the OpenWeatherMap API for weather data.
     """
-    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+    WEATHER_API_KEY = config.weather_api_key
     if not WEATHER_API_KEY:
         print("OpenWeatherMap API key is required. Please set the WEATHER_API_KEY environment variable.")
         return None
@@ -190,9 +221,12 @@ def get_current_temperature(units: str = "metric") -> None:
         max_temp = main_data["temp_max"]
 
         unit_symbol = "°C" if units == "metric" else "°F" if units == "imperial" else "K"
+        
+        city_name = location_info.get("city") or weather_data.get("name", "Unknown Location")
+        country_name = location_info.get("country") or weather_data.get("sys", {}).get("country", "")
 
         speak(
-            f"Current temperature in {location_info['city']}, {location_info['country']} is {temp}{unit_symbol}. "
+            f"Current temperature in {city_name}, {country_name} is {temp}{unit_symbol}. "
             f"Low: {min_temp}{unit_symbol} and High: {max_temp}{unit_symbol}."
         )
 
@@ -218,11 +252,14 @@ def get_overall_weather(units: str = "metric") -> Optional[Dict[str, Any]]:
         if not weather_data:
             speak("Sorry, I couldn't get the weather information right now. Please try again after some time")
             return None
+            
+        city_name = location_info.get("city") or weather_data.get("name", "Unknown Location")
+        country_name = location_info.get("country") or weather_data.get("sys", {}).get("country", "")
 
-        report_str = _format_weather_report(weather_data, units, location_info["city"], location_info["country"])
+        report_str = _format_weather_report(weather_data, units, city_name, country_name)
         speak(report_str)
 
-        return _extract_comprehensive_data(weather_data, units, location_info["city"], location_info["country"])
+        return _extract_comprehensive_data(weather_data, units, city_name, country_name)
 
     except requests.exceptions.RequestException as e:
         print(f"Network error: {str(e)}")

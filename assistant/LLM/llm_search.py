@@ -9,7 +9,6 @@ from assistant.core.speak_selector import speak_streaming, wait_for_tts_completi
 def llm_response_streaming(user_input: str):
     """Get streaming response from the consolidated LLM Manager."""
     sentences = manager_streaming(user_input)
-    speak_streaming(sentences)
     wait_for_tts_completion()
     return " ".join(sentences)
 

@@ -21,9 +21,13 @@ import wave
 from collections import deque
 from assistant.activities.activity_monitor import record_user_activity
 from assistant.core.event_bus import bus, EventType
+from assistant.core.config import config
+from assistant.core.logger import get_logger
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
+
+logger = get_logger("Ear")
 
 
 class AdvancedSpeechRecognizer:
@@ -46,19 +50,19 @@ class AdvancedSpeechRecognizer:
         """Initialize the speech recognizer with optimized settings."""
         self.is_listening = False
         self.recognizer = sr.Recognizer()
-        self.energy_threshold = 35100  # Initial energy threshold for speech detection
+        self.energy_threshold = config.stt_energy_threshold
         self.ambient_noise_adjusted = False
         self.recognition_history = deque(maxlen=5)  # Keep history for context analysis
 
         # Configure recognizer with optimized parameters
         self.recognizer.dynamic_energy_threshold = True  # Auto-adjust to ambient noise
-        self.recognizer.pause_threshold = 1.2  # Longer pause for natural speech patterns
-        self.recognizer.non_speaking_duration = 0.8  # Shorter non-speaking duration
+        self.recognizer.pause_threshold = config.stt_pause_threshold
+        self.recognizer.non_speaking_duration = config.stt_non_speaking_duration
         self.recognizer.operation_timeout = None  # No operation timeout
-        self.recognizer.phrase_threshold = 0.3  # Sensitivity to speech detection
+        self.recognizer.phrase_threshold = config.stt_phrase_threshold
 
         # Audio calibration settings
-        self.calibration_duration = 2  # Longer calibration for better noise adjustment
+        self.calibration_duration = config.stt_calibration_duration
 
     def clear_line(self) -> None:
         """
@@ -222,8 +226,8 @@ class AdvancedSpeechRecognizer:
                     # Capture audio with optimized settings
                     audio = self.recognizer.listen(
                         source,
-                        timeout=5,  # Wait 5 seconds for speech to start
-                        phrase_time_limit=30,  # Increased time limit for longer commands
+                        timeout=config.stt_listen_timeout,
+                        phrase_time_limit=config.stt_phrase_time_limit,
                     )
 
                     self.stop_listening_message()

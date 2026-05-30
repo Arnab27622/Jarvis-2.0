@@ -1,18 +1,15 @@
 """Module for automating YouTube interactions, including playback control and search."""
 
-import os
 import webbrowser
 import time
 import re
 from urllib.parse import quote
 import pyautogui as ui
 import pygetwindow as gw
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.automation.features.window_automation import toggle_fullscreen
 from assistant.core.speak_selector import speak
 from assistant.core.registry import on_regex, on_fuzzy
-
-load_dotenv()
 
 youtube_player_state = {
     "is_playing": False,
@@ -51,7 +48,7 @@ def play_on_youtube(search_query: str) -> None:
             speak("What would you like me to play on YouTube?")
             return
 
-        YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+        YOUTUBE_API_KEY = config.youtube_api_key
 
         if not YOUTUBE_API_KEY:
             encoded_query = quote(search_query)

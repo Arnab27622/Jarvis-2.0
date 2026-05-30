@@ -24,6 +24,7 @@ import os
 import random
 import pygame
 from assistant.core.speak_selector import speak, notify
+from assistant.core.config import config
 
 
 # Initialize pygame mixer for audio playback
@@ -56,7 +57,7 @@ class MusicPlayer:
         Sets up the music directory path and initializes player state variables.
         The default music directory is set to the user's Music folder.
         """
-        self.music_dir = r"C:\Users\ARNAB DEY\Music"
+        self.music_dir = config.music_dir
         self.current_track = None
         self.is_playing = False
         self.is_paused = False

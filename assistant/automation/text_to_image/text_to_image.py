@@ -1,11 +1,8 @@
 import base64
 import requests
 import os
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
-
-# Load environment variables from .env file for API key security
-load_dotenv()
 
 
 from typing import Optional
@@ -80,7 +77,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {os.getenv('STABILITY_API_KEY')}",
+        "Authorization": f"Bearer {config.stability_api_key}",
     }
 
     # Send POST request to Stability AI API
@@ -114,7 +111,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
     data = response.json()
 
     # Define storage directory for generated images
-    folder_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
+    folder_path = str(config.images_dir)
     os.makedirs(folder_path, exist_ok=True)  # Create directory if it doesn't exist
 
     last_filename = None

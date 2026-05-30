@@ -6,7 +6,9 @@ using keyword, regex, and fuzzy matching strategies.
 import re
 import inspect
 from rapidfuzz import process, fuzz
+from assistant.core.logger import get_logger
 
+logger = get_logger("Registry")
 DEBUG_REGISTRY = True
 
 class CommandRegistry:
@@ -45,7 +47,7 @@ class CommandRegistry:
         for keywords, handler, _ in self._keyword_handlers:
             if any(kw in text for kw in keywords):
                 if DEBUG_REGISTRY:
-                    print(f"[Registry] Exact Match: '{text}' -> {handler.__name__}")
+                    logger.debug("Exact Match: '%s' -> %s", text, handler.__name__)
                 return self._run_handler(handler, text)
 
         # Tier 2: Regex Match (for parameters)
@@ -53,7 +55,7 @@ class CommandRegistry:
             match = pattern.search(text)
             if match:
                 if DEBUG_REGISTRY:
-                    print(f"[Registry] Regex Match: '{pattern.pattern}' -> {handler.__name__}")
+                    logger.debug("Regex Match: '%s' -> %s", pattern.pattern, handler.__name__)
                 return self._run_handler(handler, text, match)
 
         # Tier 3: Fuzzy Match (for variations)
@@ -66,7 +68,7 @@ class CommandRegistry:
         
         if best_overall_match:
             if DEBUG_REGISTRY:
-                print(f"[Registry] Fuzzy Match: '{text}' (Score: {best_overall_match[1]:.1f}) -> {best_overall_match[0].__name__}")
+                logger.debug("Fuzzy Match: '%s' (Score: %.1f) -> %s", text, best_overall_match[1], best_overall_match[0].__name__)
             return self._run_handler(best_overall_match[0], text)
 
         return False

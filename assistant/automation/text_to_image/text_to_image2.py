@@ -14,14 +14,11 @@ import requests
 import base64
 from typing import Tuple, Optional
 import os
-from dotenv import load_dotenv
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
 
-# Load environment variables for API key access
-load_dotenv()
-
 # Default storage path for generated images
-file_path = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\images"
+file_path = str(config.images_dir)
 
 
 def validate_token() -> bool:
@@ -31,8 +28,8 @@ def validate_token() -> bool:
     Returns:
         bool: True if tokens pass basic validation checks, False otherwise
     """
-    token = os.getenv("CLOUDFLARE_API_TOKEN")
-    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACOUNT_ID")
+    token = config.cloudflare_api_token
+    account_id = config.cloudflare_account_id
     
     if not token or not account_id:
         print("❌ CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID environment variable not set")
@@ -77,8 +74,8 @@ def generate(
     # Ensure storage directory exists
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
 
-    token = os.getenv("CLOUDFLARE_API_TOKEN")
-    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACOUNT_ID")
+    token = config.cloudflare_api_token
+    account_id = config.cloudflare_account_id
 
     url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/black-forest-labs/flux-1-schnell"
     headers = {

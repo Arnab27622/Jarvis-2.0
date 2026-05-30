@@ -38,7 +38,12 @@ def load_qa_data(file_path: Union[str, Path]) -> Dict[str, str]:
                     qa_dict = data
         print(f"Loaded {len(qa_dict)} Q&A pairs from {file_path}")
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Could not load QA data: {e}, starting with empty dataset")
+        print(f"Could not load QA data: {e}, starting with default dataset")
+        qa_dict = {"who are you?": "I am Jarvis, an AI assistant created to help you."}
+        try:
+            save_qa_data(file_path, qa_dict)
+        except Exception as save_err:
+            print(f"Error auto-creating QA data: {save_err}")
     except Exception as e:
         print(f"Unexpected error loading QA data: {e}")
 
@@ -80,8 +85,8 @@ def save_qa_data(file_path: Union[str, Path], qa_dict: Dict[str, str]) -> None:
             except:
                 pass
 
-qa_file_path = (
-    r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\brain_data\qna_data.json"
-)
+from assistant.core.config import config
+
+qa_file_path = str(config.qna_data_path)
 
 qa_dict = load_qa_data(qa_file_path)

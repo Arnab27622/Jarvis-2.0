@@ -134,3 +134,5 @@ yarl
 apscheduler
 num2words
 pocketsphinx
+winrt-windows-devices-geolocation
+winrt-windows-foundation

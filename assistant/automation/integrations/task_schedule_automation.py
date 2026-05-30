@@ -6,10 +6,11 @@ retrieve, and summarize information using local JSON storage and LLM processing.
 import datetime
 import json
 import os
+from assistant.core.config import config
 from assistant.core.speak_selector import speak
 
 # Path to the JSON file where remembered information is stored
-JSON_FILE = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\remembered_info.json"
+JSON_FILE = str(config.remembered_info_path)
 
 def _load_remembered_info() -> dict:
     """Reads and parses the persistent memory JSON file."""
@@ -55,7 +56,7 @@ def recall_info(query: str = None) -> None:
         speak("I don't have any information stored to recall")
         return
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = config.gemini_api_key
     if not api_key:
         speak("I cannot access my thinking modules to analyze the memory.")
         return

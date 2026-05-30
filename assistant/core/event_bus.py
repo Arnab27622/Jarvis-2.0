@@ -4,6 +4,8 @@ It provides an event bus for publishing and subscribing to events,
 and a queue for handling typed text commands from the UI.
 """
 
+from assistant.core.logger import get_logger
+
 from enum import Enum
 import threading
 from typing import Callable, Any
@@ -63,6 +65,21 @@ class EventBus:
             if event_type not in self._subscribers:
                 self._subscribers[event_type] = []
             self._subscribers[event_type].append(callback)
+
+    def unsubscribe(self, event_type: EventType, callback: Callable) -> None:
+        """
+        Removes a callback from a specific event type.
+        
+        Args:
+        event_type (EventType): The type of event to unsubscribe from.
+        callback (Callable): The function to remove.
+        """
+        with self._lock:
+            if event_type in self._subscribers:
+                try:
+                    self._subscribers[event_type].remove(callback)
+                except ValueError:
+                    pass
     
     def emit(self, event_type: EventType, data: Any = None) -> None:
         """
@@ -78,7 +95,12 @@ class EventBus:
             try:
                 cb(data)
             except Exception as e:
-                print(f"[EventBus] Error in {event_type.value} handler: {e}")
+                _logger = get_logger("EventBus")
+                _logger.error("Error in %s handler: %s", event_type.value, e)
+                # Emit an ERROR event so the UI can display the failure
+                # (avoid infinite recursion by not re-emitting if we ARE the error handler)
+                if event_type != EventType.ERROR:
+                    self.emit(EventType.ERROR, {"message": str(e), "source": event_type.value})
 
 # Singleton
 bus = EventBus()
