@@ -61,7 +61,7 @@ class CommandRegistry:
         # Tier 3: Fuzzy Match (for variations)
         best_overall_match = None
         for phrases, handler, cutoff, _ in self._fuzzy_handlers:
-            match = process.extractOne(text, phrases, scorer=fuzz.WRatio)
+            match = process.extractOne(text, phrases, scorer=fuzz.token_set_ratio)
             if match and match[1] >= cutoff:
                 if best_overall_match is None or match[1] > best_overall_match[1]:
                     best_overall_match = (handler, match[1])

@@ -88,10 +88,12 @@ def brain(text: str, threshold: float = 0.85) -> None:
         from assistant.core.llm_manager import add_to_history
         add_to_history(text, response)
 
-        # Store the new Q&A pair in local database for future use
-        with qa_lock:  # Ensure thread-safe database operations
-            qa_dict[text] = response
-            save_qa_data(qa_file_path, qa_dict)
+        # Store the new Q&A pair in local database for future use (e.g., from RAG)
+        from assistant.core.llm_utils import should_cache_offline
+        if should_cache_offline(text, response):
+            with qa_lock:  # Ensure thread-safe database operations
+                qa_dict[text] = response
+                save_qa_data(qa_file_path, qa_dict)
 
     except Exception as e:
         # Handle any processing errors gracefully

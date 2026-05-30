@@ -19,6 +19,11 @@ import json
 
 logger = get_logger("LLM")
 
+# --- Persistent Event Loop for Connection Pooling ---
+_llm_loop = asyncio.new_event_loop()
+_llm_thread = threading.Thread(target=_llm_loop.run_forever, daemon=True)
+_llm_thread.start()
+
 HISTORY_FILE_PATH = str(config.chat_history_path)
 
 # Global conversation history
@@ -328,18 +333,15 @@ class LLMManager:
             CHAT_HISTORY.append({"role": "assistant", "content": clean_text})
             save_history()
             
+        from assistant.core.llm_utils import save_to_brain
         await asyncio.to_thread(save_to_brain, user_input, clean_text)
         
         return clean_text
 
     def get_response_sync(self, user_input: str) -> str:
-        """Synchronous wrapper for async get_response."""
-        try:
-            loop = asyncio.get_running_loop()
-            with threading.ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(lambda: asyncio.run(self.get_response_async(user_input))).result()
-        except RuntimeError:
-            return asyncio.run(self.get_response_async(user_input))
+        """Synchronous wrapper for async get_response using a persistent background loop."""
+        future = asyncio.run_coroutine_threadsafe(self.get_response_async(user_input), _llm_loop)
+        return future.result()
 
 # Singleton instance
 manager = LLMManager()

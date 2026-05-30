@@ -35,6 +35,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import json
 import os
 import chromadb
+import joblib
 
 # Ensure required NLTK data packages are available
 # Download necessary NLTK datasets if not already present
@@ -146,7 +147,19 @@ def get_answer(question: str, vectorizer: TfidfVectorizer, X: Any, dataset: List
     best_similarity = similarities[0][best_match_index]
 
     if best_similarity > threshold:
-        return dataset[best_match_index]["answer"], best_similarity
+        matched_q = dataset[best_match_index]['question']
+        len_q = len(processed_question.split())
+        len_m = len(preprocess_text(matched_q).split())
+        
+        # Protect against OOV collapse (where unknown words are stripped, leaving a 100% match on a single word)
+        if len_q > 0 and len_m > 0:
+            ratio = min(len_q, len_m) / max(len_q, len_m)
+            if ratio >= 0.5:
+                return dataset[best_match_index]["answer"], best_similarity
+                
+        # If ratio is too low, reject the false positive
+        print(f"Rejected false positive due to length mismatch: '{matched_q}' (Ratio: {ratio:.2f})")
+        return None, best_similarity
     else:
         return None, best_similarity
 
@@ -170,9 +183,25 @@ def ensure_model_loaded(dataset_path: str) -> None:
         current_mtime = 0
 
     if _cached_dataset is None or current_mtime > _last_mtime:
-        print(f"Training intelligence model... (Source: {os.path.basename(dataset_path)})")
         _cached_dataset = load_dataset(dataset_path)
-        _cached_vectorizer, _cached_matrix = train_tfidf_vectorizer(_cached_dataset)
+        
+        cache_path = os.path.join(os.path.dirname(dataset_path), "tfidf_cache.joblib")
+        try:
+            cache_mtime = os.path.getmtime(cache_path)
+        except OSError:
+            cache_mtime = 0
+
+        if cache_mtime >= current_mtime:
+            print(f"Loading intelligence model from cache... (Source: {os.path.basename(cache_path)})")
+            _cached_vectorizer, _cached_matrix = joblib.load(cache_path)
+        else:
+            print(f"Training intelligence model... (Source: {os.path.basename(dataset_path)})")
+            _cached_vectorizer, _cached_matrix = train_tfidf_vectorizer(_cached_dataset)
+            try:
+                joblib.dump((_cached_vectorizer, _cached_matrix), cache_path)
+            except Exception as e:
+                print(f"Failed to save TF-IDF cache: {e}")
+
         _last_mtime = current_mtime
         
         # Differential Sync with ChromaDB to eliminate inference delay
@@ -288,10 +317,11 @@ def mind(text: str, threshold: float = 0.7) -> Optional[str]:
 
     ensure_model_loaded(dataset_path)
 
-    # Fast exact-match fallback using TF-IDF
     answer, similarity = get_answer(text, _cached_vectorizer, _cached_matrix, _cached_dataset, threshold)
+    print(f"TF-IDF Answer: {answer}, Similarity: {similarity}, Threshold: {threshold}")
     if answer and similarity > 0.85:
         # High confidence exact match from TF-IDF
+        print("Returning TF-IDF exact match.")
         return answer
         
     # ChromaDB Semantic Similarity / RAG Fallback

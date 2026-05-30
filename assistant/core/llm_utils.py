@@ -452,8 +452,27 @@ def trim_history(history: List[Dict[str, str]], max_messages: int = 10) -> List[
         
     return ([sys_msg] if sys_msg else []) + content_msgs
 
+def should_cache_offline(query: str, response: str) -> bool:
+    """Determines if a Q&A pair is factual and should be permanently cached."""
+    query = query.lower().strip()
+    
+    # Exclude creative/conversational keywords
+    creative_kws = ["story", "joke", "poem", "funny", "random", "tell me", "write", "create", "generate", "how to", "code"]
+    if any(kw in query for kw in creative_kws):
+        return False
+        
+    # Include factual/definitional keywords
+    factual_kws = ["what is", "what are", "who is", "who are", "where is", "define", "explain"]
+    if any(query.startswith(kw) or kw in query for kw in factual_kws):
+        return True
+        
+    return False
+
 def save_to_brain(query: str, answer: str) -> None:
-    """Stores successful Q&A pair in the local intelligence database."""
+    """Stores successful Q&A pair in the local intelligence database if it is factual."""
+    if not should_cache_offline(query, answer):
+        return
+        
     with qa_lock:
         qa_dict[query] = answer
         save_qa_data(qa_file_path, qa_dict)

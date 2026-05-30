@@ -34,27 +34,39 @@ logger = get_logger("Mouth")
 KOKORO_MODEL_PATH = str(config.kokoro_model_path)
 KOKORO_VOICES_PATH = str(config.kokoro_voices_path)
 
-logger.info("Initializing Voice Module (Kokoro)...")
-try:
-    import torch
-    import onnxruntime as ort
-    
-    # Workaround for Windows ONNXRuntime CUDA DLL issue
-    torch.cuda.init()
-    
-    session = ort.InferenceSession(
-        KOKORO_MODEL_PATH,
-        providers=[
-            "CUDAExecutionProvider",
-            "CPUExecutionProvider"
-        ]
-    )
-    kokoro = Kokoro.from_session(session, KOKORO_VOICES_PATH)
-    kokoro_ready = True
-    logger.info("Kokoro ready. Providers: %s", session.get_providers())
-except Exception as e:
-    logger.error("Failed to load Kokoro model: %s", e)
-    kokoro_ready = False
+logger.info("Scheduling Voice Module (Kokoro) for background initialization...")
+
+kokoro = None
+kokoro_ready = False
+_kokoro_load_event = threading.Event()
+
+def _load_kokoro():
+    global kokoro, kokoro_ready
+    try:
+        import torch
+        import onnxruntime as ort
+        
+        # Workaround for Windows ONNXRuntime CUDA DLL issue
+        torch.cuda.init()
+        
+        session = ort.InferenceSession(
+            KOKORO_MODEL_PATH,
+            providers=[
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider"
+            ]
+        )
+        kokoro = Kokoro.from_session(session, KOKORO_VOICES_PATH)
+        kokoro_ready = True
+        logger.info("Kokoro ready. Providers: %s", session.get_providers())
+    except Exception as e:
+        logger.error("Failed to load Kokoro model: %s", e)
+        kokoro_ready = False
+    finally:
+        _kokoro_load_event.set()
+
+# Start loading in background immediately
+threading.Thread(target=_load_kokoro, daemon=True).start()
 
 # --- Acknowledgment Chirp ---
 ACK_SOUND_PATH = str(config.ack_sound_path)
@@ -110,7 +122,8 @@ def print_animated_message(message: str) -> None:
 
 def _generate_audio(text: str):
     """Synchronously generate audio from text using Kokoro. Returns (audio_array, sample_rate) or None."""
-    if not kokoro_ready:
+    # Wait for Kokoro to load if this is called early
+    if not _kokoro_load_event.wait(timeout=15.0) or not kokoro_ready:
         return None
     try:
         from assistant.core.llm_utils import clean_for_speech
@@ -205,6 +218,11 @@ def _play_audio_item(text, audio, image, message_id):
             # Wait for audio to finish
             sd.wait()
             print_thread.join()
+            
+            # Phase 7.3 Memory Management: Explicit cleanup of numpy arrays
+            del audio
+            import gc
+            gc.collect()
         else:
             # Fallback: no audio generated (Kokoro failed or text was empty formatting)
             bus.emit(EventType.SPEAK, {

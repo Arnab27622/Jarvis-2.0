@@ -20,6 +20,7 @@ tools/
 chat_history.json
 data/logs
 data/brain_data/chroma_db/
+*.joblib
 data/credentials/
 GMAIL_SETUP_GUIDE.md
 GOOGLE_CALENDAR_SETUP_GUIDE.md
