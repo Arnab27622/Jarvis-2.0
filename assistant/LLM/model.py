@@ -4,11 +4,13 @@ Model Module - Local Q&A Intelligence System with TF-IDF and Cosine Similarity
 This module implements a local, offline question-answering system using natural language
 processing techniques. It provides fast, privacy-preserving responses by matching user
 queries against a pre-existing Q&A dataset using TF-IDF vectorization and cosine similarity.
+It also uses ChromaDB as a vector store for semantic similarity and RAG capabilities.
 
 Key Features:
 - Local offline Q&A without external API dependencies
 - TF-IDF vectorization for semantic understanding
 - Cosine similarity for intelligent question matching
+- ChromaDB for semantic similarity and RAG (ingesting user documents)
 - NLTK-based text preprocessing with stemming and stopword removal
 - Configurable similarity threshold for response quality control
 - Efficient in-memory model training and query processing
@@ -21,6 +23,7 @@ Dependencies:
 - nltk: Natural Language Toolkit for text processing
 - sklearn: Machine learning for TF-IDF and similarity calculations
 - json: Dataset loading and management
+- chromadb: Vector database for semantic search and RAG
 """
 
 import nltk
@@ -31,6 +34,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 import os
+import chromadb
 
 # Ensure required NLTK data packages are available
 # Download necessary NLTK datasets if not already present
@@ -52,151 +56,95 @@ except LookupError:
 
 from typing import List, Dict, Tuple, Optional, Any
 
+from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+
+# Global ChromaDB client
+_chroma_client = None
+_qna_collection = None
+_docs_collection = None
+
+def init_chroma(db_path: str):
+    global _chroma_client, _qna_collection, _docs_collection
+    if _chroma_client is None:
+        _chroma_client = chromadb.PersistentClient(path=db_path)
+        
+        # Explicitly omit TensorrtExecutionProvider to suppress ugly ONNX warnings
+        emb_fn = ONNXMiniLM_L6_V2(preferred_providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        
+        try:
+            _qna_collection = _chroma_client.get_or_create_collection(
+                name="jarvis_qna",
+                embedding_function=emb_fn
+            )
+        except ValueError:
+            # If there's an embedding function conflict with an old version, recreate it
+            _chroma_client.delete_collection("jarvis_qna")
+            _qna_collection = _chroma_client.get_or_create_collection(
+                name="jarvis_qna",
+                embedding_function=emb_fn
+            )
+            
+        try:
+            _docs_collection = _chroma_client.get_or_create_collection(
+                name="jarvis_docs",
+                embedding_function=emb_fn
+            )
+        except ValueError:
+            _chroma_client.delete_collection("jarvis_docs")
+            _docs_collection = _chroma_client.get_or_create_collection(
+                name="jarvis_docs",
+                embedding_function=emb_fn
+            )
+
 def load_dataset(file_path: str) -> List[Dict[str, str]]:
     """
     Load and parse the Q&A dataset from a JSON file.
-
-    Reads a JSON file containing question-answer pairs and converts it into
-    a structured dataset format for processing. The JSON file should contain
-    key-value pairs where keys are questions and values are answers.
-
-    Args:
-        file_path (str): Path to the JSON file containing Q&A data
-
-    Returns:
-        list: List of dictionaries with 'question' and 'answer' keys
-
-    Raises:
-        FileNotFoundError: If the specified file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
-
-    Example:
-        Input JSON: {"What is Python?": "A programming language", ...}
-        Output: [{"question": "What is Python?", "answer": "A programming language"}, ...]
     """
     with open(file_path, "r", encoding="utf-8") as file:
-        # Load Q&A pairs from JSON file (removed duplicate file opening)
         qa_dict = json.load(file)
-
-    # Convert dictionary to list of question-answer pairs
     dataset = [{"question": q, "answer": a} for q, a in qa_dict.items()]
     return dataset
 
 
+# Cache NLP tools globally to avoid massive I/O overhead during dataset retraining
+_stop_words = set(stopwords.words("english"))
+_stemmer = PorterStemmer()
+
 def preprocess_text(text: str) -> str:
     """
     Comprehensive text preprocessing pipeline for NLP tasks.
-
-    Processes raw text through multiple normalization stages:
-    1. Convert to lowercase for case insensitivity
-    2. Tokenize into individual words
-    3. Remove stopwords (common words with little semantic value)
-    4. Apply Porter stemming to reduce words to their root forms
-    5. Remove non-alphanumeric characters
-
-    Args:
-        text (str): Raw input text to preprocess
-
-    Returns:
-        str: Preprocessed and normalized text string
-
-    Example:
-        Input: "What is Python programming?"
-        Output: "python program"
     """
-    # Initialize NLP components
-    stop_words = set(stopwords.words("english"))
-    ps = PorterStemmer()
-
-    # Convert to lowercase and tokenize into words
     tokens = word_tokenize(text.lower())
-
-    # Filter and process tokens
     tokens = [
-        ps.stem(token)  # Reduce to word stem
+        _stemmer.stem(token)
         for token in tokens
         if token.isalnum()
-        and token not in stop_words  # Keep only alphanumeric, non-stopwords
+        and token not in _stop_words
     ]
-
-    # Rejoin tokens into processed text string
     return " ".join(tokens)
 
 
 def train_tfidf_vectorizer(dataset: List[Dict[str, str]]) -> Tuple[TfidfVectorizer, Any]:
     """
     Train TF-IDF vectorizer on the Q&A dataset.
-
-    Creates and trains a Term Frequency-Inverse Document Frequency (TF-IDF)
-    vectorizer on the preprocessed question corpus. This converts text questions
-    into numerical vectors that capture their semantic importance.
-
-    Args:
-        dataset (list): List of Q&A dictionaries with 'question' keys
-
-    Returns:
-        tuple: (TfidfVectorizer, sparse matrix)
-            - TfidfVectorizer: Fitted vectorizer for transforming new text
-            - sparse matrix: TF-IDF matrix of the training questions
-
-    Workflow:
-        1. Extract and preprocess all questions from dataset
-        2. Fit TF-IDF vectorizer on the processed corpus
-        3. Transform questions into TF-IDF vectors
     """
-    # Preprocess all questions in the dataset
     corpus = [preprocess_text(qa["question"]) for qa in dataset]
-
-    # Initialize and train TF-IDF vectorizer
     vectorizer = TfidfVectorizer()
-    X = vectorizer.fit_transform(corpus)  # Transform corpus to TF-IDF matrix
-
+    X = vectorizer.fit_transform(corpus)
     return vectorizer, X
 
 
 def get_answer(question: str, vectorizer: TfidfVectorizer, X: Any, dataset: List[Dict[str, str]], threshold: float = 0.5) -> Tuple[Optional[str], float]:
     """
     Find the best matching answer for a user question using cosine similarity.
-
-    Processes the user's question and compares it against all questions in the
-    dataset using cosine similarity of TF-IDF vectors. Returns the best matching
-    answer if similarity exceeds the threshold.
-
-    Args:
-        question (str): User's input question
-        vectorizer (TfidfVectorizer): Pre-trained TF-IDF vectorizer
-        X (sparse matrix): TF-IDF matrix of training questions
-        dataset (list): Original Q&A dataset
-        threshold (float): Minimum similarity score to return an answer (0.0-1.0)
-
-    Returns:
-        tuple: (answer, similarity_score)
-            - answer (str or None): Best matching answer or None if below threshold
-            - similarity_score (float): Cosine similarity of the best match
-
-    Process:
-        1. Preprocess user question
-        2. Transform to TF-IDF vector
-        3. Calculate cosine similarity with all dataset questions
-        4. Find best match and check against threshold
     """
-    # Preprocess the user question
     processed_question = preprocess_text(question)
-
-    # Transform to TF-IDF vector
     question_vec = vectorizer.transform([processed_question])
-
-    # Calculate cosine similarity with all dataset questions
     similarities = cosine_similarity(question_vec, X)
-
-    # Find the best matching question index and similarity score
+    
     best_match_index = similarities.argmax()
     best_similarity = similarities[0][best_match_index]
 
-    # Debug output for similarity scoring
-    print(f"Best similarity score: {best_similarity}")
-
-    # Return answer if similarity exceeds threshold
     if best_similarity > threshold:
         return dataset[best_match_index]["answer"], best_similarity
     else:
@@ -204,7 +152,6 @@ def get_answer(question: str, vectorizer: TfidfVectorizer, X: Any, dataset: List
 
 
 # --- Caching Mechanism ---
-# These variables store the trained model in memory to avoid redundant processing
 _cached_dataset = None
 _cached_vectorizer = None
 _cached_matrix = None
@@ -222,44 +169,183 @@ def ensure_model_loaded(dataset_path: str) -> None:
     except OSError:
         current_mtime = 0
 
-    # Re-train only if model is not loaded OR dataset file has changed
     if _cached_dataset is None or current_mtime > _last_mtime:
         print(f"Training intelligence model... (Source: {os.path.basename(dataset_path)})")
         _cached_dataset = load_dataset(dataset_path)
         _cached_vectorizer, _cached_matrix = train_tfidf_vectorizer(_cached_dataset)
         _last_mtime = current_mtime
+        
+        # Differential Sync with ChromaDB to eliminate inference delay
+        db_path = os.path.join(os.path.dirname(dataset_path), "chroma_db")
+        init_chroma(db_path)
+        
+        import hashlib
+        
+        existing = _qna_collection.get(include=['metadatas'])
+        existing_map = {}
+        if existing and existing['ids']:
+            for idx, _id in enumerate(existing['ids']):
+                existing_map[_id] = existing['metadatas'][idx]['answer']
+        
+        valid_ids = set()
+        docs_to_upsert = []
+        metas_to_upsert = []
+        ids_to_upsert = []
+        
+        for qa in _cached_dataset:
+            q_text = qa["question"]
+            a_text = qa["answer"]
+            q_id = hashlib.md5(q_text.encode('utf-8')).hexdigest()
+            valid_ids.add(q_id)
+            
+            # If it's new or the answer changed, we need to upsert
+            if q_id not in existing_map or existing_map[q_id] != a_text:
+                docs_to_upsert.append(q_text)
+                metas_to_upsert.append({"answer": a_text})
+                ids_to_upsert.append(q_id)
+                
+        # Delete items that are no longer in the JSON
+        ids_to_delete = set(existing_map.keys()) - valid_ids
+        if ids_to_delete:
+            _qna_collection.delete(ids=list(ids_to_delete))
+            
+        # Upsert only the new/changed items (bypasses heavy ONNX embedding for unchanged items)
+        if docs_to_upsert:
+            try:
+                _qna_collection.upsert(
+                    documents=docs_to_upsert,
+                    metadatas=metas_to_upsert,
+                    ids=ids_to_upsert
+                )
+            except Exception as e:
+                print(f"Failed to upsert to ChromaDB: {e}")
+
+
+def ingest_document(file_path: str) -> None:
+    """
+    Ingest a user document (text/PDF) into ChromaDB for RAG.
+    """
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        return
+        
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    db_path = os.path.join(project_root, "data", "brain_data", "chroma_db")
+    init_chroma(db_path)
+    
+    text = ""
+    if file_path.endswith('.txt') or file_path.endswith('.md'):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            text = f.read()
+    elif file_path.endswith('.pdf'):
+        try:
+            import PyPDF2
+            with open(file_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except ImportError:
+            print("PyPDF2 is required for PDF ingestion. Please install it (`pip install PyPDF2`).")
+            return
+            
+    if not text.strip():
+        print("No text extracted.")
+        return
+        
+    chunk_size = 200
+    overlap = 50
+    words = text.split()
+    chunks = []
+    
+    for i in range(0, len(words), chunk_size - overlap):
+        chunk = " ".join(words[i:i + chunk_size])
+        chunks.append(chunk)
+        
+    documents = chunks
+    metadatas = [{"source": os.path.basename(file_path)} for _ in chunks]
+    ids = [f"{os.path.basename(file_path)}_{i}" for i in range(len(chunks))]
+    
+    try:
+        _docs_collection.upsert(
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids
+        )
+        print(f"Successfully ingested {len(chunks)} chunks from {file_path} into ChromaDB.")
+    except Exception as e:
+        print(f"Failed to ingest document into ChromaDB: {e}")
 
 
 def mind(text: str, threshold: float = 0.7) -> Optional[str]:
     """
     Main interface function for the local Q&A intelligence system.
-    Orchestrates query processing using cached TF-IDF models.
+    Orchestrates query processing using TF-IDF with ChromaDB semantic search as a fallback.
     """
-    # Calculate dataset path
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dataset_path = os.path.join(project_root, "data", "brain_data", "qna_data.json")
 
-    # Ensure the latest version of the model is in memory
     ensure_model_loaded(dataset_path)
 
-    # Process user question and retrieve best answer
+    # Fast exact-match fallback using TF-IDF
     answer, similarity = get_answer(text, _cached_vectorizer, _cached_matrix, _cached_dataset, threshold)
-
-    return answer
+    if answer and similarity > 0.85:
+        # High confidence exact match from TF-IDF
+        return answer
+        
+    # ChromaDB Semantic Similarity / RAG Fallback
+    db_path = os.path.join(os.path.dirname(dataset_path), "chroma_db")
+    init_chroma(db_path)
+    
+    best_answer = answer
+    best_distance = float('inf')
+    
+    try:
+        # Pre-compute the query embedding to cut the inference delay in half
+        # Otherwise, query_texts=[text] runs the neural network twice!
+        emb_fn = _qna_collection._embedding_function
+        query_embedding = emb_fn([text])
+        
+        # Query QnA collection
+        qna_results = _qna_collection.query(
+            query_embeddings=query_embedding,
+            n_results=1
+        )
+        
+        if qna_results['distances'] and qna_results['distances'][0]:
+            qna_dist = qna_results['distances'][0][0]
+            # all-MiniLM-L6-v2 packs embeddings very tightly. 
+            # Unrelated queries often have distances ~0.8. 
+            # We need a very strict threshold (< 0.3) for QnA exact/near-exact matches.
+            if qna_dist < 0.3:  
+                best_distance = qna_dist
+                best_answer = qna_results['metadatas'][0][0]['answer']
+                
+        # Query Docs collection (RAG)
+        docs_results = _docs_collection.query(
+            query_embeddings=query_embedding,
+            n_results=1
+        )
+        
+        if docs_results['distances'] and docs_results['distances'][0]:
+            doc_dist = docs_results['distances'][0][0]
+            # RAG chunks are longer, so distance is naturally higher than QnA pairs.
+            if doc_dist < best_distance and doc_dist < 1.0:
+                best_answer = docs_results['documents'][0][0]
+                
+    except Exception as e:
+        # Fallback to TF-IDF answer if Chroma fails
+        print(f"ChromaDB Query Error: {e}")
+        
+    # If even after ChromaDB we have no answer and similarity is very poor, return None
+    if best_answer is None or (best_distance == float('inf') and similarity < 0.5):
+        return None
+        
+    return best_answer
 
 
 if __name__ == "__main__":
-    """
-    Interactive testing interface for the local Q&A system.
-
-    Provides a command-line interface for testing the mind function
-    with direct user input. Useful for development and debugging.
-
-    Usage:
-        python model.py
-        [Enter question]
-        [View similarity score and response]
-    """
     while True:
         x = input()
-        mind(x)
+        print(mind(x))

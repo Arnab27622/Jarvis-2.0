@@ -57,7 +57,6 @@ nest-asyncio
 networkx
 nltk
 numpy
-onnxruntime
 onnxruntime-gpu
 packaging
 phonemizer-fork
@@ -136,3 +135,5 @@ num2words
 pocketsphinx
 winrt-windows-devices-geolocation
 winrt-windows-foundation
+chromadb
+pypdf
