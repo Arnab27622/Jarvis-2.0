@@ -85,15 +85,48 @@ Wait for the initial system diagnostics (Battery monitoring, Voice Module loadin
 
 ## 📂 Codebase Structure
 The entire project has been systematically documented with detailed inline comments and module-level docstrings for developer clarity.
+
+```mermaid
+flowchart TD
+    User([User]) -->|Voice| Ear[Ear Module\nSTT]
+    User -->|Web UI| Server[FastAPI Server]
+    
+    Ear -->|Text| Registry[Command Registry]
+    Server -->|WebSocket| Registry
+    
+    Registry -->|Keyword Match| Commands[Automation Plugins]
+    Registry -->|Unmatched| Brain[AI Brain]
+    
+    Brain -->|Exact Match| TFIDF[TF-IDF Cache]
+    Brain -->|Semantic Match| Chroma[ChromaDB]
+    Brain -->|Generative| LLM[LLM Manager]
+    
+    LLM -->|Streaming Text| Mouth[Mouth Module\nKokoro TTS]
+    Commands -->|Text Responses| Mouth
+    
+    Mouth -->|Audio| Speaker([Speaker])
+```
+
 - `main.py`: Main entry loop, Web UI initialization, and subsystem restoration.
 - `assistant/core/`: The core engine:
   - `brain.py` / `llm_manager.py`: Multi-LLM routing, context memory, and streaming logic.
   - `mouth.py`: The unified pipelined Kokoro TTS architecture.
   - `ear.py`: Advanced speech recognition and noise calibration.
   - `event_bus.py`: The central Pub/Sub message broker.
+  - `registry.py`: The command router.
 - `assistant/interface/`: Command regex routing, wake-word detection, and welcome logic.
 - `assistant/automation/`: A vast array of integrations spanning App Control, Web Search, Text-to-Image, and background tasks.
 - `assistant/activities/`: System hardware diagnostics, battery tracking, and user activity logging.
+
+## 🛠️ Troubleshooting
+
+- **PyAudio Installation Fails (Windows):** If `pip install pyaudio` fails with a C++ compiler error, download the precompiled wheel from Christoph Gohlke's archive or install via `conda install pyaudio`.
+- **ONNXRuntime CUDA DLL Errors:** If you see errors about missing `cublas64_12.dll` or `cublasLt64_12.dll`, Kokoro TTS requires the NVIDIA CUDA 12.x toolkit and cuDNN 9.x. Ensure they are installed and in your system `PATH`.
+- **PocketSphinx Errors:** If PocketSphinx fails to build, make sure you have Swig installed, or find a pre-compiled Windows wheel for your Python version.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to set up your dev environment, add new voice commands, and integrate new LLM providers.
 
 ---
 *Built by Arnab Dey*
