@@ -1,3 +1,11 @@
+"""
+Module for system-level automation and utility commands.
+
+This module provides functionality to control system hardware (volume, brightness),
+perform desktop automation (keyboard shortcuts, screenshots), and monitor system
+health (battery, processes, hardware tests) via voice commands.
+"""
+
 import os
 import psutil
 from assistant.core.speak_selector import speak, notify
@@ -15,29 +23,7 @@ from assistant.activities.battery_features import battery_monitor
 
 def handle_write(text: str) -> None:
     """
-    Handle text writing commands by typing the specified text.
-    
-    This function extracts text from voice commands and types it using
-    keyboard automation. Useful for hands-free text entry in any application.
-    
-    Args:
-        text (str): The voice command containing text to write.
-                   Expected format: "write [text]" or "right [text]"
-    
-    Process:
-        1. Removes command keywords ("write", "right") from the input
-        2. Strips whitespace from the remaining text
-        3. Uses pyautogui to type the extracted text
-        4. Provides voice feedback on success or failure
-    
-    Example:
-        >>> handle_write("write hello world")
-        # Types: "hello world"
-        # Speaks: "Writing..."
-    
-    Note:
-        The function will type text in whatever application currently has focus.
-        Ensure the correct text field is active before using this command.
+    Types text provided via voice command into the active application.
     """
     notify("Writing...")
     write_text = text.replace("write", "").replace("right", "").strip()
@@ -49,27 +35,7 @@ def handle_write(text: str) -> None:
 
 def handle_volume_change(direction: str) -> None:
     """
-    Adjust system volume with controlled increments.
-    
-    Changes the system volume by sending multiple volume key presses
-    for more noticeable changes than single key presses.
-    
-    Args:
-        direction (str): Either "increase" to raise volume or "decrease" to lower volume
-    
-    Behavior:
-        - Increase: Sends 3 volume up key presses
-        - Decrease: Sends 3 volume down key presses
-        - Provides voice confirmation of the action
-    
-    Example:
-        >>> handle_volume_change("increase")
-        # Presses volume up 3 times
-        # Speaks: "Volume increased"
-    
-    Note:
-        The actual volume change depends on system volume step settings.
-        This uses the default system volume controls.
+    Adjusts system volume by sending multiple volume key presses.
     """
     if direction == "increase":
         for _ in range(3):
@@ -83,30 +49,7 @@ def handle_volume_change(direction: str) -> None:
 
 def handle_brightness(command_text: str) -> None:
     """
-    Adjust or query screen brightness levels.
-    
-    Controls screen brightness with 20% increments/decrements or reports
-    the current brightness level when no change is specified.
-    
-    Args:
-        command_text (str): Voice command containing brightness instructions.
-                          Supported commands:
-                          - "increase brightness" or "brightness up"
-                          - "decrease brightness" or "brightness down"
-                          - Any other text: reports current brightness
-    
-    Behavior:
-        - Increase: Raises brightness by 20% (capped at 100%)
-        - Decrease: Lowers brightness by 20% (capped at 0%)
-        - Query: Reports current brightness percentage
-    
-    Example:
-        >>> handle_brightness("increase brightness")
-        # If current is 50%, sets to 70%
-        # Speaks: "Brightness increased to 70%"
-    
-    Dependencies:
-        Requires screen_brightness_control package for brightness manipulation.
+    Adjusts or reports screen brightness levels.
     """
     if "increase" in command_text or "up" in command_text:
         current_brightness = sbc.get_brightness()[0]
@@ -125,31 +68,8 @@ def handle_brightness(command_text: str) -> None:
 
 def take_screenshot() -> None:
     """
-    Capture a screenshot and save it with timestamp to a dedicated directory.
-    
-    Takes a full-screen screenshot and saves it as a PNG file in the
-    Screenshots folder with a filename containing the date and time.
-    
-    File Naming:
-        Format: screenshot_YYYYMMDD_HHMMSS.png
-        Example: screenshot_20231201_143022.png
-    
-    Save Location:
-        "C:\\Users\\ARNAB DEY\\Pictures\\Screenshots"
-    
-    Process:
-        1. Ensures the screenshot directory exists
-        2. Generates timestamp-based filename
-        3. Captures full screen screenshot
-        4. Saves as PNG format
-        5. Provides voice confirmation
-    
-    Example:
-        >>> take_screenshot()
-        # Saves: C:\\Users\\ARNAB DEY\\Pictures\\Screenshots\\screenshot_20231201_143022.png
-        # Speaks: "Screenshot taken and saved as screenshot_20231201_143022.png"
+    Captures a full-screen screenshot and saves it with a timestamp.
     """
-    # Calculate project root (4 levels up from this file)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     screenshot_dir = os.path.join(project_root, "data", "screenshots")
 
@@ -168,21 +88,7 @@ def take_screenshot() -> None:
 
 def get_system_info() -> None:
     """
-    Provide voice report of key system information.
-    
-    Reports current battery percentage and memory usage to give the user
-    a quick overview of system status without visual interface.
-    
-    Information Provided:
-        - Battery charge percentage (if available)
-        - System memory (RAM) usage percentage
-    
-    Example Output:
-        "Battery is at 85 percent. Memory usage is 45 percent"
-    
-    Note:
-        Battery information may not be available on desktop computers
-        without battery hardware. In such cases, reports "unknown" for battery.
+    Reports battery and memory usage via voice.
     """
     battery = psutil.sensors_battery()
     percent = battery.percent if battery else "unknown"
@@ -195,31 +101,14 @@ from typing import List, Union
 
 def get_running_apps_windows() -> Union[List[str], str]:
     """
-    Retrieve a list of currently running applications on Windows.
-    
-    Uses psutil to iterate through all running processes and collect
-    their executable names. This provides a snapshot of active applications.
-    
-    Returns:
-        list or str: List of application names if successful, 
-                    error message string if an exception occurs
-    
-    Error Handling:
-        - Skips processes that terminate during enumeration
-        - Skips processes with restricted access permissions
-        - Returns error message as string for other exceptions
-    
-    Example:
-        >>> get_running_apps_windows()
-        ['chrome.exe', 'notepad.exe', 'python.exe', ...]
+    Returns a list of unique names of currently running processes.
     """
     try:
-        processes = set()  # Use set to avoid duplicate process names
+        processes = set()
         for proc in psutil.process_iter(["name"]):
             try:
                 processes.add(proc.info["name"])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                # Skip processes that terminate or can't be accessed
                 continue
         return list(processes)
     except Exception as e:
@@ -228,24 +117,11 @@ def get_running_apps_windows() -> Union[List[str], str]:
 
 def check_running_app() -> None:
     """
-    Display currently running applications in the console.
-    
-    This is primarily a debugging and development function that:
-    1. Gets the list of running applications
-    2. Prints them to the console for inspection
-    3. Handles both successful results and error cases
-    
-    Usage:
-        Useful for verifying the system monitoring capabilities
-        or debugging process-related issues.
-    
-    Output:
-        - Success: Prints each application name on a new line
-        - Error: Prints the error message
+    Prints the list of running applications to the console.
     """
     running_apps = get_running_apps_windows()
     if isinstance(running_apps, str):
-        print(running_apps)  # Print error message
+        print(running_apps)
     else:
         print("Running Applications:")
         for app in running_apps:
@@ -253,16 +129,8 @@ def check_running_app() -> None:
 
 
 if __name__ == "__main__":
-    """
-    Test entry point for the utility automation module.
-    
-    When run as a standalone script, this demonstrates the running
-    applications checking functionality. Useful for testing the
-    process monitoring capabilities during development.
-    """
     check_running_app()
 
-# --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
 
 @on_regex(r"\b(?:open\s+)?(?:a\s+)?new tab\b", priority=5)
@@ -407,4 +275,3 @@ def handle_shutdown_cmd():
 def handle_restart_cmd():
     speak("Restarting the system in 10 seconds")
     os.system("shutdown /r /t 10")
-

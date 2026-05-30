@@ -1,37 +1,20 @@
+"""
+Module for handling application closure commands via voice or system shortcuts.
+"""
 import pyautogui as ui
 import random
 import psutil
 from assistant.core.speak_selector import notify
 from data.dlg_data.dlg import closedlg
-
-
 from typing import Optional
+from assistant.core.registry import on_regex, on_fuzzy
 
 def close_command(app_name: Optional[str] = None) -> None:
     """
-    Close the currently active application or window.
+    Closes an application by name or the currently active window.
 
-    This function performs a system-level close operation by:
-    1. Providing voice feedback using a randomly selected closing message
-    2. Sending the Alt+F4 keyboard shortcut to close the active window
-
-    The Alt+F4 shortcut is the standard Windows keyboard command for
-    closing the currently focused application, similar to clicking the
-    X button in the window title bar.
-
-    Note:
-        This will close whatever application currently has focus, so use
-        with caution when important unsaved work might be open.
-
-    Example:
-        >>> close_command()
-        # Speaks: "Closing the application now" (random choice)
-        # Sends: Alt+F4 keyboard shortcut
-
-    Dependencies:
-        - pyautogui: For sending system keyboard shortcuts
-        - speak: For voice feedback to the user
-        - closedlg: For random closing dialogue messages
+    If an app_name is provided, it terminates the process matching that name.
+    Otherwise, it triggers the Alt+F4 shortcut to close the active window.
     """
     if app_name:
         notify(f"Closing {app_name}")
@@ -52,12 +35,10 @@ def close_command(app_name: Optional[str] = None) -> None:
         notify(random.choice(closedlg))
         ui.hotkey("alt", "f4")
 
-
-# --- Command Handlers ---
-from assistant.core.registry import on_regex, on_fuzzy
-
 @on_regex(r"\b(?:close|exit|terminate|kill)\s+(?P<app_name>.+)$")
 @on_fuzzy(["close", "exit", "close that", "close app"], score_cutoff=90)
 def handle_close(app_name=None):
+    """
+    Command handler for closing applications via voice input.
+    """
     close_command(app_name)
-

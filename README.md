@@ -1,24 +1,34 @@
 # Jarvis 2.0 - Advanced Personal AI Voice Assistant
 
-Jarvis 2.0 is an advanced, voice-controlled AI assistant written in Python 3.11. It leverages local and cloud-based models to provide an interactive, conversational experience, along with powerful system automations.
+Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant written in Python 3.11. It is designed to act as a seamless digital companion, featuring true token-level streaming, asynchronous audio pipelining, and a powerful multi-tier LLM architecture.
 
-## Features
+## 🌟 Core Features
 
-* **Advanced Text-to-Speech (TTS):** Uses Kokoro-ONNX for fast, high-quality, and natural-sounding offline voice synthesis.
-* **Large Language Model (LLM) Integration:** Intelligent routing defaults to Gemini 3.1 Flash Lite for lightning-fast conversational responses, with automatic sequential fallbacks to HuggingFace, OpenRouter, and GPT4Free.
-* **Intelligent Automations:**
-  * **System Control:** Open and close applications and websites.
-  * **Web Information:** Integrated Wikipedia search, direct Google Custom Search, real-time news, and weather updates.
-  * **Text-to-Image:** Generates high-quality images via a unified image manager routing between Pollinations AI (Flux), Cloudflare AI (Flux-1-Schnell), and Stability AI (Stable Diffusion XL).
-  * **YouTube Automation:** Play specific videos, control playback, and adjust volume using voice.
-  * **Utilities:** Set alarms, tell jokes, report current location, check internet speed, and LLM-powered semantic memory for taking persistent notes and recalling them contextually.
+* **Instant Voice Synthesis (Pipelined Kokoro-ONNX)**
+  Experience zero-gap conversational fluidity. Jarvis utilizes a two-stage asynchronous audio pipeline: while one sentence is being played, the next is generated in the background using the offline, high-quality Kokoro TTS model.
+* **Intelligent LLM Orchestration**
+  Built-in Multi-LLM Manager defaults to **Gemini 3.1 Flash Lite** for lightning-fast responses, with automatic, robust sequential fallbacks to HuggingFace, OpenRouter, and GPT4Free. Supports true token streaming for instantaneous response starts.
+* **Advanced Speech Recognition**
+  Features automatic ambient noise calibration, dynamic energy thresholding, and offline fallbacks using PocketSphinx, ensuring Jarvis perfectly understands you even in noisy environments.
+* **Event-Driven Architecture**
+  A modular internal Event Bus decouples voice operations, system events, and the internal Web UI Server for robust, thread-safe background execution.
 
-## Prerequisites
+## ⚙️ Intelligent Automations
 
-* **Python 3.11** (Required. Python 3.12+ may have compatibility issues with certain audio libraries).
+Jarvis isn't just a chatbot; it actively controls your digital environment:
+* **System Control:** Open/close applications, control system volume, and manage web browsing.
+* **Creative Text-to-Image:** Unified image manager routing prompts seamlessly to Pollinations AI (Flux), Cloudflare AI (Flux-1-Schnell), and Stability AI (Stable Diffusion XL).
+* **Information & Utilities:**
+  * Integrated Wikipedia, Google Custom Search, and realtime News/Weather parsing.
+  * Context-aware memory: Jarvis learns from your interactions and takes persistent notes.
+  * Fully integrated Alarms, Reminders, Battery monitoring, and Internet Speed diagnostics.
+
+## 📋 Prerequisites
+
+* **Python 3.11** (Required. Python 3.12+ may have compatibility issues with `pyaudio` and legacy speech libraries).
 * A working microphone and speakers.
 
-## Installation
+## 🚀 Installation
 
 1. **Clone the repository:**
    ```bash
@@ -36,11 +46,10 @@ Jarvis 2.0 is an advanced, voice-controlled AI assistant written in Python 3.11.
    ```bash
    pip install -r requirements.txt
    ```
-
-   *Note: If `pyaudio` fails to install, you may need to install the appropriate wheel for your Python version, or install it via conda.*
+   *Note: If `pyaudio` fails to install on Windows, you may need to install the appropriate wheel manually or use conda.*
 
 4. **Setup Environment Variables:**
-   Create a `.env` file in the root directory and add the following keys based on the features you want to use:
+   Create a `.env` file in the root directory. Configure keys based on your desired features:
    ```env
    # Core LLMs
    GEMINI_API_KEY=your_gemini_api_key
@@ -62,19 +71,29 @@ Jarvis 2.0 is an advanced, voice-controlled AI assistant written in Python 3.11.
    ```
 
 5. **Download Kokoro ONNX Models:**
-   The assistant requires the Kokoro TTS models. They are automatically managed, but ensure you have the `kokoro-v0_19.onnx` and `voices.json` correctly placed if doing a manual setup.
+   Place the Kokoro TTS models inside the `models/` directory:
+   - `models/kokoro-v1.0.onnx`
+   - `models/voices-v1.0.bin`
 
-## Usage
+## 🎙️ Usage
 
 Start the assistant by running:
 ```bash
 python main.py
 ```
-Wait for the "Initializing Voice Module" message to finish and then speak your command.
+Wait for the initial system diagnostics (Battery monitoring, Voice Module loading) to complete. You will hear a short Sci-Fi acknowledgment chirp the moment Jarvis detects a command.
 
-## Codebase Structure
-The project is completely type-hinted and documented:
-- `main.py`: Entry point for the assistant.
-- `assistant/core/`: Core modules for Wake word detection, TTS (`mouth.py`), Speech Recognition (`ear.py`), and LLM routing (`llm_manager.py`).
-- `assistant/interface/`: Command routing and GUI handling.
-- `assistant/automation/`: All features, integrations (like `image_manager.py` and `task_schedule_automation.py`), and intelligent background capabilities.
+## 📂 Codebase Structure
+The entire project has been systematically documented with detailed inline comments and module-level docstrings for developer clarity.
+- `main.py`: Main entry loop, Web UI initialization, and subsystem restoration.
+- `assistant/core/`: The core engine:
+  - `brain.py` / `llm_manager.py`: Multi-LLM routing, context memory, and streaming logic.
+  - `mouth.py`: The unified pipelined Kokoro TTS architecture.
+  - `ear.py`: Advanced speech recognition and noise calibration.
+  - `event_bus.py`: The central Pub/Sub message broker.
+- `assistant/interface/`: Command regex routing, wake-word detection, and welcome logic.
+- `assistant/automation/`: A vast array of integrations spanning App Control, Web Search, Text-to-Image, and background tasks.
+- `assistant/activities/`: System hardware diagnostics, battery tracking, and user activity logging.
+
+---
+*Built by Arnab Dey*

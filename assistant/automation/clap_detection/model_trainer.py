@@ -1,3 +1,7 @@
+"""
+Module for training a CNN-based audio classifier to detect clap sounds.
+"""
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
@@ -9,17 +13,13 @@ import os
 
 class AudioClassifierTrainer:
     """
-    Trainer class for the AudioClassifier model.
+    Handles the training pipeline, including data loading, model optimization,
+    and checkpointing for the AudioClassifier.
     """
 
     def __init__(self, noise_dir: str, clap_dir: str, device: torch.device) -> None:
         """
-        Initializes the AudioClassifierTrainer.
-
-        Args:
-            noise_dir (str): Path to the directory containing noise audio files.
-            clap_dir (str): Path to the directory containing clap audio files.
-            device (torch.device): Device to use for training (CPU or CUDA).
+        Initializes the trainer with dataset paths, model, and optimization parameters.
         """
         self.device = device
         self.dataset = AudioDataset(noise_dir, clap_dir)
@@ -35,10 +35,7 @@ class AudioClassifierTrainer:
 
     def prepare_dataloaders(self) -> Tuple[DataLoader, DataLoader]:
         """
-        Prepares the training and validation dataloaders.
-
-        Returns:
-            Tuple[DataLoader, DataLoader]: Training and validation dataloaders.
+        Splits the dataset into training and validation sets and creates DataLoaders.
         """
         train_size = int(0.8 * len(self.dataset))
         val_size = len(self.dataset) - train_size
@@ -53,10 +50,7 @@ class AudioClassifierTrainer:
 
     def train(self, num_epochs: int) -> None:
         """
-        Trains the model for the specified number of epochs.
-
-        Args:
-            num_epochs (int): Number of epochs to train.
+        Executes the training loop over a specified number of epochs.
         """
         best_val_accuracy = 0
 
@@ -75,7 +69,6 @@ class AudioClassifierTrainer:
                 f"LR: {self.optimizer.param_groups[0]['lr']:.2e}"
             )
 
-            # Save best model
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 model_path = os.path.join("data", "Clap_Detect_Model.pth")
@@ -84,14 +77,7 @@ class AudioClassifierTrainer:
 
     def run_epoch(self, dataloader: DataLoader, training: bool) -> Tuple[float, float]:
         """
-        Runs one epoch of training or validation.
-
-        Args:
-            dataloader (DataLoader): Data loader for the current epoch.
-            training (bool): Flag indicating training or validation mode.
-
-        Returns:
-            Tuple[float, float]: Average loss and accuracy for the epoch.
+        Performs a single pass over the dataset for training or evaluation.
         """
         if training:
             self.model.train()
@@ -137,10 +123,7 @@ class AudioClassifierTrainer:
 
     def save_model(self, path: str) -> None:
         """
-        Saves the trained model to a file.
-
-        Args:
-            path (str): Path to save the model.
+        Persists the model state dictionary to the specified file path.
         """
         os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save(self.model.state_dict(), path)
@@ -163,4 +146,4 @@ if __name__ == "__main__":
         print(f"Error: Clap directory not found at {clap_dir}")
 
     trainer = AudioClassifierTrainer(noise_dir, clap_dir, device)
-    trainer.train(num_epochs=20)  # Increased epochs for better training
+    trainer.train(num_epochs=20)

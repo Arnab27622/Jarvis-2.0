@@ -1,10 +1,20 @@
+"""
+Module for handling events and commands in the system.
+It provides an event bus for publishing and subscribing to events,
+and a queue for handling typed text commands from the UI.
+"""
+
+from enum import Enum
 import threading
 from typing import Callable, Any
-from enum import Enum
-
 import queue
 
 class EventType(Enum):
+    """
+    Enum representing different types of events in the system.
+    These events can be used to notify other parts of the system about
+    changes in the state or to trigger specific actions.
+    """
     # Voice/text output
     SPEAK = "speak"              # Jarvis is speaking (chat bubble)
     NOTIFY = "notify"            # Action confirmation (toast notification)
@@ -25,20 +35,43 @@ class EventType(Enum):
     ERROR = "error"              # Something went wrong
 
 class EventBus:
+    """
+    Class representing an event bus, which allows different parts of the system
+    to publish and subscribe to events. This enables loose coupling and makes
+    it easier to add or remove features without affecting other parts of the system.
+    """
     _subscribers: dict[EventType, list[Callable]]
     _lock: threading.Lock
     
     def __init__(self):
+        """
+        Initializes the event bus by creating an empty dictionary of subscribers
+        and a lock for thread safety.
+        """
         self._subscribers = {}
         self._lock = threading.Lock()
     
     def subscribe(self, event_type: EventType, callback: Callable) -> None:
+        """
+        Subscribes a callback function to a specific event type.
+        
+        Args:
+        event_type (EventType): The type of event to subscribe to.
+        callback (Callable): The function to call when the event is emitted.
+        """
         with self._lock:
             if event_type not in self._subscribers:
                 self._subscribers[event_type] = []
             self._subscribers[event_type].append(callback)
     
     def emit(self, event_type: EventType, data: Any = None) -> None:
+        """
+        Emits an event of a specific type, calling all subscribed callback functions.
+        
+        Args:
+        event_type (EventType): The type of event to emit.
+        data (Any): Optional data to pass to the callback functions.
+        """
         with self._lock:
             listeners = self._subscribers.get(event_type, [])[:]
         for cb in listeners:

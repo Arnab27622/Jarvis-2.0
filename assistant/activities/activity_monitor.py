@@ -1,5 +1,8 @@
+"""
+Module for monitoring user inactivity and proactively offering assistance.
+"""
+
 import time
-import threading
 import threading
 from assistant.core.speak_selector import speak
 from assistant.core.event_bus import bus, EventType
@@ -7,37 +10,25 @@ from assistant.core.event_bus import bus, EventType
 
 class ActivityMonitor:
     """
-    A monitor that tracks user inactivity and offers assistance after periods of inactivity.
-
-    The monitor operates in three phases:
-    1. Initial delay period - no monitoring occurs
-    2. Active monitoring - tracks time since last user activity
-    3. Confirmation phase - asks user if they want advice after prolonged inactivity
+    Tracks user inactivity and manages proactive assistance prompts.
 
     Attributes:
-        initial_delay (int): Seconds to wait before starting monitoring
-        check_interval (int): Seconds between inactivity checks
-        inactivity_threshold (int): Seconds of inactivity before offering assistance
-        last_activity_time (float): Timestamp of last recorded activity
-        is_active (bool): Whether user is currently active
-        monitor_thread (threading.Thread): Background monitoring thread
-        stop_signal (bool): Signal to stop the monitoring thread
-        initial_delay_passed (bool): Whether initial delay period has completed
-        awaiting_confirmation (bool): Whether waiting for user response to offer
-        confirmation_response (bool): User's response to assistance offer
-        confirmation_start_time (float): Timestamp when confirmation was requested
-        confirm_phrases (list): Phrases that indicate user accepts assistance
-        decline_phrases (list): Phrases that indicate user declines assistance
+        initial_delay (int): Seconds to wait before starting monitoring.
+        check_interval (int): Seconds between inactivity checks.
+        inactivity_threshold (int): Seconds of inactivity before offering help.
+        last_activity_time (float): Timestamp of last recorded activity.
+        is_active (bool): Current activity status.
+        monitor_thread (threading.Thread): Background thread for monitoring.
+        stop_event (threading.Event): Signal to terminate the monitor thread.
+        initial_delay_passed (bool): Flag indicating initial delay completion.
+        awaiting_confirmation (bool): Flag indicating a pending user response.
+        confirm_phrases (list): Phrases triggering positive assistance response.
+        decline_phrases (list): Phrases triggering negative assistance response.
     """
 
     def __init__(self, initial_delay: int = 100, check_interval: int = 120, inactivity_threshold: int = 180) -> None:
         """
-        Initialize the activity monitor with timing parameters.
-
-        Args:
-            initial_delay (int): Seconds before monitoring starts (default: 100)
-            check_interval (int): Seconds between inactivity checks (default: 120)
-            inactivity_threshold (int): Seconds of inactivity before offering help (default: 180)
+        Initializes the monitor with timing configurations.
         """
         self.initial_delay = initial_delay
         self.check_interval = check_interval
@@ -68,21 +59,19 @@ class ActivityMonitor:
             "skip it",
         ]
 
-        # Start initial delay timer
         threading.Timer(self.initial_delay, self._set_initial_delay_passed).start()
 
     def _set_initial_delay_passed(self) -> None:
-        """Mark that the initial delay has passed and monitoring can begin."""
+        """Sets the flag indicating the initial delay period has elapsed."""
         self.initial_delay_passed = True
 
     def record_activity(self) -> None:
-        """Record user activity and update last activity timestamp."""
+        """Updates the last activity timestamp and sets active status."""
         self.last_activity_time = time.time()
         self.is_active = True
-        # Don't reset awaiting_confirmation here as it interferes with confirmation handling
 
     def start_monitoring(self) -> None:
-        """Start the inactivity monitoring thread."""
+        """Initializes and starts the background monitoring thread."""
         if self.monitor_thread is None:
             self.stop_event.clear()
             self.monitor_thread = threading.Thread(
@@ -91,68 +80,47 @@ class ActivityMonitor:
             self.monitor_thread.start()
 
     def stop_monitoring(self) -> None:
-        """Stop the inactivity monitoring thread."""
+        """Signals the monitoring thread to stop and joins it."""
         self.stop_event.set()
         if self.monitor_thread:
             self.monitor_thread.join(timeout=1.0)
             self.monitor_thread = None
 
     def is_confirmation_response(self, text: str) -> bool:
-        """
-        Check if the given text is a response to the confirmation prompt.
-
-        Args:
-            text (str): The text to check for confirmation response
-
-        Returns:
-            bool: True if text matches confirmation or decline phrases, False otherwise
-        """
+        """Checks if the provided text matches a valid confirmation or decline phrase."""
         if not self.awaiting_confirmation:
             return False
 
         text_lower = text.lower()
 
-        # Check for positive responses
         if any(phrase in text_lower for phrase in self.confirm_phrases):
             return True
 
-        # Check for negative responses
         elif any(phrase in text_lower for phrase in self.decline_phrases):
             return True
 
         return False
 
     def handle_confirmation_response(self, text: str) -> bool | None:
-        """
-        Process a user's response to the confirmation prompt.
-
-        Args:
-            text (str): User's response text
-
-        Returns:
-            bool or None: True if user accepts, False if user declines, None if no match
-        """
+        """Processes user input to determine if they accept or decline assistance."""
         if not self.awaiting_confirmation:
             return None
 
         text_lower = text.lower()
 
-        # Check for positive responses
         if any(phrase in text_lower for phrase in self.confirm_phrases):
             self.awaiting_confirmation = False
             return True
 
-        # Check for negative responses
         elif any(phrase in text_lower for phrase in self.decline_phrases):
             self.awaiting_confirmation = False
             speak("Okay, let me know if you need anything.")
             return False
 
-        # If response doesn't match, return None
         return None
 
     def ask_for_confirmation(self) -> None:
-        """Ask the user if they want assistance after period of inactivity."""
+        """Triggers the assistance prompt and sets the confirmation state."""
         self.awaiting_confirmation = True
         self.confirmation_start_time = time.time()
         msg = "You've been idle for a while. Would you like some advice?"
@@ -160,12 +128,7 @@ class ActivityMonitor:
         bus.emit(EventType.NOTIFY, {"text": msg, "timestamp": time.time()})
 
     def check_confirmation_timeout(self) -> bool:
-        """
-        Check if confirmation timeout has been reached (6 seconds).
-
-        Returns:
-            bool: True if timeout reached, False otherwise
-        """
+        """Checks if the confirmation window has expired."""
         if (
             self.awaiting_confirmation
             and time.time() - self.confirmation_start_time > 6
@@ -175,60 +138,49 @@ class ActivityMonitor:
         return False
 
     def reset_confirmation_state(self) -> None:
-        """Reset the confirmation state when returning to normal command listening."""
+        """Clears the current confirmation state."""
         self.awaiting_confirmation = False
         self.confirmation_response = None
         self.confirmation_start_time = 0
 
     def _monitor_loop(self) -> None:
-        """
-        Main monitoring loop that runs in background thread.
-
-        Continuously checks for user inactivity and manages the confirmation process.
-        """
+        """Background loop that evaluates inactivity and manages prompts."""
         while not self.stop_event.is_set():
-            # Wait for the check_interval, but wake up instantly if stop_event is set
             if self.stop_event.wait(self.check_interval):
                 break
 
-            # Don't check until initial delay has passed
             if not self.initial_delay_passed:
                 continue
 
-            # Check for confirmation timeout
             if self.check_confirmation_timeout():
                 continue
 
             current_time = time.time()
             time_since_last_activity = current_time - self.last_activity_time
 
-            # Check if user is inactive beyond threshold and not already awaiting confirmation
             if (
                 time_since_last_activity >= self.inactivity_threshold
                 and not self.is_active
                 and not self.awaiting_confirmation
             ):
-                # Ask for confirmation before giving advice
                 self.ask_for_confirmation()
 
-            # Update activity status
             self.is_active = False
 
 
-# Global instance
 activity_monitor = ActivityMonitor()
 
 
 def start_activity_monitoring():
-    """Start the global activity monitoring system."""
+    """Starts the global activity monitor."""
     activity_monitor.start_monitoring()
 
 
 def stop_activity_monitoring():
-    """Stop the global activity monitoring system."""
+    """Stops the global activity monitor."""
     activity_monitor.stop_monitoring()
 
 
 def record_user_activity():
-    """Record user activity in the global activity monitor."""
+    """Registers user activity with the global monitor."""
     activity_monitor.record_activity()

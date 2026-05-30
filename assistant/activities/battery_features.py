@@ -1,3 +1,8 @@
+"""
+Module for monitoring system battery status and hardware telemetry.
+Provides background threads for voice alerts, state change detection, and system metrics.
+"""
+
 import psutil
 import time
 import random
@@ -10,26 +15,14 @@ from assistant.core.event_bus import bus, EventType
 
 class BatteryMonitor:
     """
-    A battery monitoring system that tracks battery percentage and power connection status.
+    Manages battery status tracking and system resource telemetry.
 
-    This class provides real-time monitoring of battery levels and power plug status,
-    with automated alerts for low battery, full charge, and plug state changes.
-
-    Features:
-    - Battery percentage monitoring with tiered alerts
-    - Power plug connection/disconnection detection
-    - Background monitoring with configurable intervals
-    - Thread-safe operations with start/stop control
-
-    Attributes:
-        previous_plugged_state (bool): Tracks the last known power plug status
-        monitoring (bool): Flag indicating if monitoring is active
-        alert_thread (threading.Thread): Thread for battery level monitoring
-        plugin_thread (threading.Thread): Thread for plug status monitoring
+    Handles background monitoring of battery levels, power connection states,
+    and system performance metrics (CPU/RAM), emitting events via the EventBus.
     """
 
     def __init__(self):
-        """Initialize the battery monitor with default state."""
+        """Initializes the monitor with default state and thread control."""
         self.previous_plugged_state = None
         self.stop_event = threading.Event()
         self.alert_thread = None
@@ -37,19 +30,10 @@ class BatteryMonitor:
 
     def get_battery_info(self) -> Optional[tuple]:
         """
-        Safely retrieve battery information with comprehensive error handling.
-
-        Uses psutil to get battery status and handles cases where battery
-        information might not be available (desktop computers, virtual environments).
+        Retrieves current battery percentage and power status.
 
         Returns:
-            Optional[tuple]: A tuple containing (percentage, power_plugged) where:
-                - percentage (int): Battery charge percentage (0-100)
-                - power_plugged (bool): True if AC power is connected
-            Returns None if battery information is unavailable or an error occurs.
-
-        Raises:
-            Exception: Logs any exceptions but returns None to maintain system stability
+            Optional[tuple]: (percentage, power_plugged) or None if unavailable.
         """
         try:
             battery = psutil.sensors_battery()
@@ -62,42 +46,32 @@ class BatteryMonitor:
 
     def battery_alert(self, check_interval: int = 300) -> None:
         """
-        Monitor battery level and provide voice alerts for critical states.
-
-        Continuously checks battery percentage and provides alerts for:
-        - Critical low battery (<10%)
-        - Low battery (<30%)
-        - Full battery (100% while plugged in)
-
-        The full battery notification is only given once per charge cycle
-        and resets when battery drops below 95%.
+        Monitors battery levels and triggers voice alerts for critical thresholds.
 
         Args:
-            check_interval (int): Seconds between battery checks (default: 300/5 minutes)
+            check_interval (int): Seconds between checks.
         """
         self.stop_event.clear()
-        notified_full = False  # Track if full battery notification was given
+        notified_full = False
 
         while not self.stop_event.is_set():
             battery_info = self.get_battery_info()
             if battery_info is None:
-                if self.stop_event.wait(60):  # Wait longer if battery info unavailable
+                if self.stop_event.wait(60):
                     break
                 continue
 
             percent, plugged = battery_info
             bus.emit(EventType.BATTERY_UPDATE, {"percent": percent, "plugged": plugged})
 
-            # Tiered alert system based on battery level
             if percent < 10:
-                speak(random.choice(last_low))  # Critical low battery
+                speak(random.choice(last_low))
             elif percent < 30:
-                speak(random.choice(low_b))  # Low battery warning
+                speak(random.choice(low_b))
             elif percent == 100 and plugged and not notified_full:
-                speak(random.choice(full_battery))  # Full charge notification
+                speak(random.choice(full_battery))
                 notified_full = True
             elif percent < 95:
-                # Reset full notification when battery drops below 95%
                 notified_full = False
 
             if self.stop_event.wait(check_interval):
@@ -105,17 +79,13 @@ class BatteryMonitor:
 
     def check_plugin_status(self, check_interval: int = 5) -> None:
         """
-        Monitor power plug connection status changes.
-
-        Detects when the device is plugged in or unplugged from AC power
-        and provides voice notifications for state changes.
+        Monitors power connection status and triggers voice alerts on changes.
 
         Args:
-            check_interval (int): Seconds between plug status checks (default: 5)
+            check_interval (int): Seconds between checks.
         """
         self.stop_event.clear()
 
-        # Get initial state to detect changes
         battery_info = self.get_battery_info()
         if battery_info:
             self.previous_plugged_state = battery_info[1]
@@ -130,27 +100,18 @@ class BatteryMonitor:
             percent, plugged = battery_info
             bus.emit(EventType.BATTERY_UPDATE, {"percent": percent, "plugged": plugged})
 
-            # Only speak if plug state has changed
             if plugged != self.previous_plugged_state:
                 if plugged:
-                    speak(random.choice(plug_in))  # Device plugged in
+                    speak(random.choice(plug_in))
                 else:
-                    speak(random.choice(plug_out))  # Device unplugged
+                    speak(random.choice(plug_out))
                 self.previous_plugged_state = plugged
 
             if self.stop_event.wait(check_interval):
                 break
 
     def battery_percentage(self) -> None:
-        """
-        Report current battery status via voice.
-
-        Provides a comprehensive battery status report including:
-        - Current battery percentage
-        - Power connection status (plugged in or on battery)
-
-        Handles cases where battery information is unavailable.
-        """
+        """Reports current battery status via voice."""
         battery_info = self.get_battery_info()
         if battery_info:
             percent, plugged = battery_info
@@ -162,16 +123,8 @@ class BatteryMonitor:
             speak("Sorry, I couldn't retrieve the battery information.")
 
     def start_monitoring(self) -> None:
-        """
-        Start background battery monitoring in separate threads.
-
-        Initializes and starts two monitoring threads:
-        1. Battery level alerts (5-minute intervals)
-        2. Power plug status (5-second intervals)
-
-        Stops any existing monitoring before starting new threads to prevent duplicates.
-        """
-        self.stop_monitoring()  # Stop any existing monitoring
+        """Starts background threads for battery and telemetry monitoring."""
+        self.stop_monitoring()
 
         self.stop_event.clear()
         self.alert_thread = threading.Thread(target=self.battery_alert, daemon=True)
@@ -188,12 +141,7 @@ class BatteryMonitor:
         print("Battery & Telemetry monitoring started")
 
     def stop_monitoring(self) -> None:
-        """
-        Stop all battery monitoring activities.
-
-        Safely stops both monitoring threads with timeout protection
-        to prevent thread hanging during shutdown.
-        """
+        """Stops all background monitoring threads."""
         self.stop_event.set()
         if self.alert_thread and self.alert_thread.is_alive():
             self.alert_thread.join(timeout=2)
@@ -204,7 +152,6 @@ class BatteryMonitor:
         print("Battery & Telemetry monitoring stopped")
 
 
-# Create a global instance for easy access across the application
     def emit_telemetry(self) -> None:
         """Continuously emits CPU and RAM metrics to the EventBus."""
         self.stop_event.clear()
@@ -224,20 +171,10 @@ class BatteryMonitor:
 battery_monitor = BatteryMonitor()
 
 if __name__ == "__main__":
-    """
-    Demonstration of BatteryMonitor functionality when run as a standalone script.
-
-    Usage example:
-    1. Reports current battery status
-    2. Starts continuous monitoring
-    3. Runs until interrupted with Ctrl+C
-    """
-    # Example usage
     battery_monitor.battery_percentage()
     battery_monitor.start_monitoring()
 
     try:
-        # Keep the main thread alive while monitoring runs in background
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

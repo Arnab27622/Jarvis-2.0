@@ -1,3 +1,7 @@
+"""
+Module for orchestrating text-to-image generation across multiple provider backends.
+"""
+
 from typing import Optional
 from assistant.core.speak_selector import speak
 
@@ -7,9 +11,8 @@ from assistant.automation.text_to_image.text_to_image3 import generate_image_fro
 
 class ImageManager:
     """
-    Manager for handling Text-to-Image generation requests.
-    Routes prompts to specific engines based on user preference, or falls back sequentially
-    to ensure high reliability.
+    Coordinates image generation requests by routing to specific providers
+    and managing automatic fallback logic upon failure.
     """
 
     def __init__(self):
@@ -21,30 +24,30 @@ class ImageManager:
         ]
 
     def _run_stability(self, prompt: str) -> Optional[str]:
+        """Executes image generation via Stability AI."""
         print("[ImageManager] Attempting generation with Stability AI...")
         res = gen_stability(prompt)
-        # Returns path if successful, otherwise None
         return res
 
     def _run_cloudflare(self, prompt: str) -> Optional[str]:
+        """Executes image generation via Cloudflare Flux."""
         print("[ImageManager] Attempting generation with Cloudflare Flux...")
         success, path = gen_cloudflare(prompt)
         return path if success else None
 
     def _run_pollinations(self, prompt: str) -> Optional[str]:
+        """Executes image generation via Pollinations Flux."""
         print("[ImageManager] Attempting generation with Pollinations Flux...")
         res = gen_pollinations(prompt)
-        # Returns path if successful, otherwise None
         return res
 
     def generate_image(self, prompt: str, preferred_engine: Optional[str] = None) -> Optional[str]:
         """
-        Attempts to generate an image using the preferred engine if specified.
-        If it fails, or if no engine is specified, runs through the fallback chain.
+        Generates an image from a prompt, attempting the preferred engine first
+        before iterating through the fallback sequence.
         """
         prompt = prompt.strip()
         
-        # 1. Try preferred engine if specified
         if preferred_engine:
             engine_name = preferred_engine.lower()
             print(f"[ImageManager] User explicitly requested engine: {engine_name}")
@@ -64,10 +67,8 @@ class ImageManager:
                 if res: return res
                 print("[ImageManager] Pollinations failed. Falling back...")
         
-        # 2. Run sequential fallback chain
         print("[ImageManager] Starting sequential fallback chain...")
         for name, func in self.fallback_order:
-            # Skip the one we already tried above
             if preferred_engine and name in preferred_engine.lower():
                 continue
                 
@@ -78,33 +79,27 @@ class ImageManager:
                 
             print(f"[ImageManager] Engine {name} failed, trying next...")
 
-        # 3. All engines failed
         speak("I'm sorry, but all of my image generation modules are currently unavailable.")
         return None
 
-# Singleton instance
 image_manager = ImageManager()
 
 def generate_image(prompt: str, engine: Optional[str] = None) -> Optional[str]:
-    """Consolidated entry point for image generation."""
+    """Provides a global interface for triggering image generation."""
     return image_manager.generate_image(prompt, engine)
 
 if __name__ == "__main__":
-    # Test
     generate_image("A futuristic city", "cloudflare")
 
-
-# --- Command Handlers ---
 from assistant.core.registry import on_regex
 
 @on_regex(r"(?:please\s+)?(?:create|generate)(?:\s+an)?\s+image\s+of\s+(?P<prompt>.*?)(?:\s+using\s+(?P<engine>cloudflare|stability|pollination.*))?$")
 def handle_image_gen(prompt, engine=None):
+    """Handles natural language requests for image generation via regex matching."""
     speak("Generating the image. Please wait a moment...")
     path = generate_image(prompt, engine)
     
     import os
     if path:
         filename = os.path.basename(path)
-        # Speak the message and pass the relative URL for the UI
         speak("Image generation successful.", image=f"/images/{filename}")
-

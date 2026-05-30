@@ -226,6 +226,10 @@ def process_command(normalized_text: str) -> None:
         # Emit PROCESSING event
         from assistant.core.event_bus import bus, EventType
         bus.emit(EventType.PROCESSING, {"state": True})
+        
+        # Play instant acknowledgment chirp so the user gets immediate feedback
+        from assistant.core.speak_selector import play_ack_sound
+        play_ack_sound()
 
         # Attempt to execute command from registry
         if not cmd_registry.execute(normalized_text):

@@ -1,3 +1,8 @@
+"""
+A command dispatching system that routes input text to registered handlers
+using keyword, regex, and fuzzy matching strategies.
+"""
+
 import re
 import inspect
 from rapidfuzz import process, fuzz
@@ -6,8 +11,7 @@ DEBUG_REGISTRY = True
 
 class CommandRegistry:
     """
-    A registry system for managing and executing voice commands.
-    Supports tiered matching: Keyword/Exact -> Regex -> Fuzzy.
+    Manages command registration and execution across multiple matching tiers.
     """
     def __init__(self):
         self._keyword_handlers = []
@@ -15,16 +19,19 @@ class CommandRegistry:
         self._fuzzy_handlers = []
 
     def register_keyword(self, keywords, handler, priority=0):
+        """Registers a handler triggered by specific keyword presence."""
         if isinstance(keywords, str):
             keywords = [keywords]
         self._keyword_handlers.append((keywords, handler, priority))
         self._keyword_handlers.sort(key=lambda x: x[2], reverse=True)
 
     def register_regex(self, pattern, handler, priority=0):
+        """Registers a handler triggered by a regex pattern match."""
         self._regex_handlers.append((re.compile(pattern, re.IGNORECASE), handler, priority))
         self._regex_handlers.sort(key=lambda x: x[2], reverse=True)
 
     def register_fuzzy(self, phrases, handler, score_cutoff=80, priority=0):
+        """Registers a handler triggered by fuzzy string similarity."""
         if isinstance(phrases, str):
             phrases = [phrases]
         self._fuzzy_handlers.append((phrases, handler, score_cutoff, priority))
@@ -32,7 +39,7 @@ class CommandRegistry:
 
     def execute(self, text: str) -> bool:
         """
-        Find and execute the first matching command handler across tiers.
+        Attempts to match text against registered handlers in order of priority.
         """
         # Tier 1: Keyword / Exact Match
         for keywords, handler, _ in self._keyword_handlers:
@@ -52,7 +59,6 @@ class CommandRegistry:
         # Tier 3: Fuzzy Match (for variations)
         best_overall_match = None
         for phrases, handler, cutoff, _ in self._fuzzy_handlers:
-            # Check all phrases for this handler
             match = process.extractOne(text, phrases, scorer=fuzz.WRatio)
             if match and match[1] >= cutoff:
                 if best_overall_match is None or match[1] > best_overall_match[1]:
@@ -66,10 +72,10 @@ class CommandRegistry:
         return False
 
     def _run_handler(self, handler, text, match=None):
+        """Invokes a handler with appropriate arguments based on signature."""
         sig = inspect.signature(handler)
         params = sig.parameters
         
-        # 1. Try named capture groups from regex (highest precision)
         if match and hasattr(match, 'groupdict'):
             kwargs = match.groupdict()
             valid_kwargs = {k: v for k, v in kwargs.items() if k in params}
@@ -77,50 +83,47 @@ class CommandRegistry:
                 handler(**valid_kwargs)
                 return True
                 
-        # 2. Fallback: Positional logic
         args = []
         if "text" in params:
             args.append(text)
         elif len(params) > 0 and match:
-            # If handler takes arguments and we have a regex match, pass groups
             groups = match.groups()
             if groups:
                 args.extend(groups)
             else:
                 args.append(match.group(0))
         elif len(params) > 0:
-            # Final fallback: pass text as first argument
             args.append(text)
             
         handler(*args[:len(params)])
         return True
 
-# Main registry instance
 cmd_registry = CommandRegistry()
 
-# Helper decorators
 def on_keywords(keywords, priority=0):
+    """Decorator to register a keyword-based command."""
     def decorator(handler_func):
         cmd_registry.register_keyword(keywords, handler_func, priority)
         return handler_func
     return decorator
 
 def on_regex(pattern, priority=0):
+    """Decorator to register a regex-based command."""
     def decorator(handler_func):
         cmd_registry.register_regex(pattern, handler_func, priority)
         return handler_func
     return decorator
 
 def on_fuzzy(phrases, score_cutoff=80, priority=0):
+    """Decorator to register a fuzzy-matched command."""
     def decorator(handler_func):
         cmd_registry.register_fuzzy(phrases, handler_func, score_cutoff, priority)
         return handler_func
     return decorator
 
 def on_condition(condition_func, priority=0):
-    """Legacy/Custom condition support"""
+    """Decorator to register a conditional command."""
     def decorator(handler_func):
-        # We wrap it as a keyword-like check for simplicity in the new loop
         cmd_registry.register_keyword([], lambda text: condition_func(text) and handler_func(text), priority)
         return handler_func
     return decorator

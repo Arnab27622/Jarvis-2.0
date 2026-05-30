@@ -1,3 +1,7 @@
+"""
+Module for fetching random advice from multiple APIs with intelligent fallback strategy.
+"""
+
 import requests
 import random
 import time

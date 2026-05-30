@@ -1,9 +1,13 @@
+"""
+Module for parsing natural language time, duration, and reminder messages.
+"""
+
 import datetime
 import re
 from typing import Optional, Tuple
 
 def parse_time(time_str: str) -> Optional[Tuple[int, int]]:
-    """Parse time string into (hour, minute) tuple"""
+    """Converts a time string into an (hour, minute) tuple."""
     time_str = time_str.lower().strip()
 
     # Handle special time words
@@ -63,7 +67,7 @@ def parse_time(time_str: str) -> Optional[Tuple[int, int]]:
     return None
 
 def parse_duration(duration_str: str) -> Optional[int]:
-    """Parse duration string into total minutes"""
+    """Converts a duration string into total minutes."""
     duration_str = duration_str.lower()
 
     # Handle decimal hours and minutes
@@ -93,7 +97,6 @@ def parse_duration(duration_str: str) -> Optional[int]:
             minutes = int(match.group(2))
             return hours * 60 + minutes
 
-    # Hours
     hour_patterns = [
         r"(\d+)\s*hours?",
         r"(\d+)\s*hrs?",
@@ -105,7 +108,6 @@ def parse_duration(duration_str: str) -> Optional[int]:
         if match:
             return int(match.group(1)) * 60
 
-    # Minutes
     minute_patterns = [
         r"(\d+)\s*minutes?",
         r"(\d+)\s*mins?",
@@ -120,6 +122,7 @@ def parse_duration(duration_str: str) -> Optional[int]:
     return None
 
 def extract_reminder_message_simple(command_text: str, duration: int) -> str:
+    """Extracts the reminder content from a relative time command."""
     temp_text = command_text.lower()
 
     duration_patterns = [
@@ -164,6 +167,7 @@ def extract_reminder_message_simple(command_text: str, duration: int) -> str:
     return message if message and len(message) > 2 else "You have a reminder!"
 
 def extract_message_absolute(command_text: str, time_str: str, target_time: datetime.datetime, is_reminder: bool) -> str:
+    """Extracts the reminder content from an absolute time command."""
     temp_text = command_text.lower()
     temp_text = temp_text.replace(time_str, "")
 
@@ -209,6 +213,7 @@ def extract_message_absolute(command_text: str, time_str: str, target_time: date
     return message if message and len(message) > 2 and not message.isdigit() else default_msg
 
 def parse_relative_time(command_text: str) -> Optional[Tuple[datetime.datetime, str]]:
+    """Parses commands like 'remind me in 10 minutes'."""
     command_lower = command_text.lower()
     
     duration_minutes = parse_duration(command_lower)
@@ -220,6 +225,7 @@ def parse_relative_time(command_text: str) -> Optional[Tuple[datetime.datetime, 
     return None, ""
 
 def parse_absolute_time(command_text: str, is_reminder: bool = False) -> Optional[Tuple[datetime.datetime, str]]:
+    """Parses commands with specific times like 'remind me at 5pm'."""
     command_lower = command_text.lower()
     now = datetime.datetime.now()
 

@@ -1,3 +1,8 @@
+"""
+Module for diagnosing microphone hardware and testing audio input capabilities,
+specifically tailored for clap detection applications.
+"""
+
 import sounddevice as sd
 import numpy as np
 import time
@@ -8,13 +13,15 @@ import os
 from typing import Optional, List, Tuple, Any
 
 def test_microphone(device_index: Optional[int] = None, duration: int = 5, sample_rate: int = 22050) -> bool:
-    """Test microphone by recording and analyzing audio"""
+    """
+    Records audio from the specified device and analyzes it for signal presence.
+    Returns True if audio amplitude exceeds the silence threshold.
+    """
 
     print("🎤 Testing Microphone...")
     print("Recording for 5 seconds... Speak or make some noise!")
 
     try:
-        # Record audio
         recording = sd.rec(
             int(duration * sample_rate),
             samplerate=sample_rate,
@@ -22,17 +29,15 @@ def test_microphone(device_index: Optional[int] = None, duration: int = 5, sampl
             dtype="int16",
             device=device_index,
         )
-        sd.wait()  # Wait until recording is finished
+        sd.wait()
 
         print("Recording complete!")
 
-        # Analyze the recording
         audio_data = recording.flatten()
 
-        # Calculate statistics
         max_amplitude = np.max(np.abs(audio_data))
         rms_amplitude = np.sqrt(np.mean(audio_data**2))
-        silence_threshold = 100  # Adjust based on your environment
+        silence_threshold = 100
 
         print(f"📊 Audio Analysis:")
         print(f"   Max Amplitude: {max_amplitude}")
@@ -49,7 +54,6 @@ def test_microphone(device_index: Optional[int] = None, duration: int = 5, sampl
         else:
             print("✅ Microphone is working!")
 
-        # Save the recording for manual inspection
         filename = "test_recording.wav"
         with wave.open(filename, "wb") as wf:
             wf.setnchannels(1)
@@ -67,7 +71,10 @@ def test_microphone(device_index: Optional[int] = None, duration: int = 5, sampl
 
 
 def list_audio_devices() -> List[Tuple[int, Any]]:
-    """List all available audio devices"""
+    """
+    Queries and displays all available audio input devices.
+    Returns a list of tuples containing device index and device info.
+    """
     print("\n🔊 Available Audio Devices:")
     devices = sd.query_devices()
 
@@ -83,7 +90,9 @@ def list_audio_devices() -> List[Tuple[int, Any]]:
 
 
 def real_time_mic_monitor(device_index: Optional[int] = None, duration: int = 10) -> None:
-    """Real-time microphone level monitoring"""
+    """
+    Streams audio from the microphone and displays a visual volume meter in the console.
+    """
     print("\n📈 Real-time Microphone Monitoring (10 seconds)...")
     print("Watch the levels as you speak or make noise:")
 
@@ -94,7 +103,6 @@ def real_time_mic_monitor(device_index: Optional[int] = None, duration: int = 10
             if status:
                 print(f"Audio status: {status}")
 
-            # Calculate current level
             current_level = np.max(np.abs(indata))
             # Create a simple level meter
             bars = int(current_level / 1000)  # Scale for visualization
@@ -118,21 +126,20 @@ def real_time_mic_monitor(device_index: Optional[int] = None, duration: int = 10
 
 
 def test_clap_detection_hardware(device_index: Optional[int] = None) -> bool:
-    """Test if clap detection can work with current hardware"""
+    """
+    Performs a sequence of tests to verify if the hardware is suitable for clap detection.
+    """
     print("\n👏 Testing Clap Detection Hardware Setup...")
 
-    # Test 1: Basic microphone functionality
     mic_working = test_microphone(device_index, duration=3)
 
     if not mic_working:
         print("❌ Cannot proceed - microphone not working")
         return False
 
-    # Test 2: Real-time monitoring
     print("\n🔊 Make 3 loud claps near the microphone...")
     real_time_mic_monitor(device_index, duration=10)
 
-    # Test 3: Record and analyze claps
     print("\n🎯 Recording clap test...")
     recording = sd.rec(
         int(5 * 22050), samplerate=22050, channels=1, dtype="int16", device=device_index
@@ -142,9 +149,8 @@ def test_clap_detection_hardware(device_index: Optional[int] = None) -> bool:
     sd.wait()
 
     audio_data = recording.flatten()
-    clap_threshold = 5000  # Adjust based on your environment
+    clap_threshold = 5000
 
-    # Find potential claps (peaks above threshold)
     peaks = np.where(np.abs(audio_data) > clap_threshold)[0]
 
     if len(peaks) > 0:
@@ -161,10 +167,12 @@ def test_clap_detection_hardware(device_index: Optional[int] = None) -> bool:
 
 
 if __name__ == "__main__":
+    """
+    Main entry point for the diagnostic tool.
+    """
     print("🔍 Audio Hardware Diagnostic Tool")
     print("=" * 40)
 
-    # List available devices
     input_devices = list_audio_devices()
 
     if not input_devices:
@@ -172,10 +180,8 @@ if __name__ == "__main__":
         exit(1)
 
     try:
-        # Let user select device
         device_index = int(input("\nEnter device index to test: "))
 
-        # Run comprehensive tests
         test_clap_detection_hardware(device_index)
 
     except ValueError:

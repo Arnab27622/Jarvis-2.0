@@ -4,6 +4,9 @@ Mouth Module - Unified Text-to-Speech (TTS) System
 Now powered by Kokoro TTS for ultra-low latency streaming, with a clean
 asynchronous background worker system to prevent main-thread blocking.
 
+Architecture (Pipelined):
+  tts_queue (text) → Generator Worker → _playback_queue (audio) → Player Worker
+
 Provides two output channels:
   - speak()  : Always queues to TTS. For conversational content (LLM, weather, jokes).
   - notify() : Speaks when idle, prints to console when voice is busy.
@@ -11,10 +14,13 @@ Provides two output channels:
 """
 
 import sys
+import os
 import time
+import wave
 import queue
 import threading
 import uuid
+import numpy as np
 import sounddevice as sd
 from kokoro_onnx import Kokoro
 import asyncio
@@ -33,12 +39,47 @@ except Exception as e:
     print(f"Failed to load Kokoro model: {e}")
     kokoro_ready = False
 
-tts_queue = queue.Queue()
+# --- Acknowledgment Chirp ---
+ACK_SOUND_PATH = "data/sounds/ack_chirp.wav"
+_ack_audio = None
+_ack_sample_rate = 24000
+
+def _load_ack_sound():
+    """Pre-load the acknowledgment chirp into memory for instant playback."""
+    global _ack_audio, _ack_sample_rate
+    try:
+        if os.path.exists(ACK_SOUND_PATH):
+            with wave.open(ACK_SOUND_PATH, 'rb') as wf:
+                _ack_sample_rate = wf.getframerate()
+                frames = wf.readframes(wf.getnframes())
+                _ack_audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32767.0
+            print("[Mouth] Acknowledgment sound loaded.")
+    except Exception as e:
+        print(f"[Mouth] Could not load ack sound: {e}")
+
+_load_ack_sound()
+
+def play_ack_sound() -> None:
+    """Play the instant acknowledgment chirp (non-blocking, ~150ms)."""
+    if _ack_audio is not None:
+        try:
+            # Play on a separate stream so it doesn't interfere with TTS playback
+            sd.play(_ack_audio, samplerate=_ack_sample_rate, device=sd.default.device[1])
+        except Exception as e:
+            pass  # Silently fail - this is just a UX enhancement
+
+# --- Queues & State ---
+tts_queue = queue.Queue()             # Stage 1: text items waiting for audio generation
+_playback_queue = queue.Queue(maxsize=5)  # Stage 2: generated audio waiting for playback
 _is_tts_running = False
 _is_voice_busy = False
-tts_thread = None
-tts_loop = None
+_generator_thread = None
+_player_thread = None
+_gen_loop = None
 _current_message_id = None
+
+# Sentinel to signal "end of stream" to the player
+_STREAM_END = object()
 
 def print_animated_message(message: str) -> None:
     """
@@ -50,72 +91,32 @@ def print_animated_message(message: str) -> None:
         time.sleep(0.065)
     print()
 
-async def _stream_audio_and_text(text: str, image: str = None, message_id: str = None) -> None:
-    """
-    Generate audio stream using Kokoro TTS and synchronize it with console text printing.
-    """
+def _generate_audio(text: str):
+    """Synchronously generate audio from text using Kokoro. Returns (audio_array, sample_rate) or None."""
     if not kokoro_ready:
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image, "message_id": message_id})
-        await asyncio.to_thread(print_animated_message, text)
-        return
-
+        return None
     try:
         from assistant.core.llm_utils import clean_for_speech
         tts_text = clean_for_speech(text)
-        
         if not tts_text.strip():
-            # If text is entirely formatting (like ```python), don't speak, just emit
-            bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": len(text) * 0.065, "image": image, "message_id": message_id})
-            await asyncio.to_thread(print_animated_message, text)
-            return
-
-        # Generate the full audio for the sentence at once
-        # (Since text is usually a single sentence, this is fast enough)
-        audio, _ = await asyncio.to_thread(kokoro.create, tts_text, voice=VOICE_NAME, speed=1.08, lang="en-us")
-        
-        # Calculate exact audio duration
-        audio_duration = len(audio) / 24000.0
-        
-        # Calculate delay per character (subtracting a tiny bit to ensure printing finishes exactly as speech ends)
-        delay = (audio_duration - 0.1) / max(len(text), 1)
-        if delay < 0.01: delay = 0.01
-        
-        # Emit to UI with exact duration for synced typing animation
-        bus.emit(EventType.SPEAK, {"text": text, "timestamp": time.time(), "duration": audio_duration, "image": image, "message_id": message_id})
-        
-        # Play the audio
-        sd.play(audio, samplerate=24000)
-        await asyncio.sleep(0.1) # small delay for audio device wake-up
-        
-        # Print perfectly synchronized
-        def print_synced():
-            for char in text:
-                sys.stdout.write(char)
-                sys.stdout.flush()
-                time.sleep(delay)
-            print()
-            
-        print_thread = threading.Thread(target=print_synced)
-        print_thread.start()
-        
-        # Wait for audio to finish
-        await asyncio.to_thread(sd.wait)
-        await asyncio.to_thread(print_thread.join)
-        
+            return None
+        audio, _ = kokoro.create(tts_text, voice=VOICE_NAME, speed=1.08, lang="en-us")
+        return audio
     except Exception as e:
-        print(f"Kokoro Streaming Error: {e}")
-        # fallback to just printing if playback fails
-        await asyncio.to_thread(print_animated_message, text)
+        print(f"[Mouth] Kokoro generation error: {e}")
+        return None
 
-async def _tts_worker() -> None:
-    """Background worker that continuously consumes from the TTS queue."""
-    global _is_tts_running, _is_voice_busy
+async def _tts_generator_worker() -> None:
+    """
+    Stage 1: Continuously takes text from tts_queue, generates audio with Kokoro,
+    and pushes the result to _playback_queue for the player to consume.
+    """
+    global _is_tts_running
     while _is_tts_running:
         try:
-            # Non-blocking get inside the async loop
             item = await asyncio.to_thread(tts_queue.get, True, 1.0)
-            _is_voice_busy = True
-            
+
+            # Parse the queue item
             if isinstance(item, tuple):
                 if len(item) == 3:
                     text, image, message_id = item
@@ -126,40 +127,129 @@ async def _tts_worker() -> None:
                 text = item
                 image = None
                 message_id = None
-                
-            global _current_message_id
-            _current_message_id = message_id
-                
-            await _stream_audio_and_text(text, image, message_id)
-            
-            _current_message_id = None
-            _is_voice_busy = False
+
+            # Generate audio (this is the slow part - ~1s)
+            audio = await asyncio.to_thread(_generate_audio, text)
+
+            # Push to playback queue (blocks if player is backed up, which is fine)
+            await asyncio.to_thread(
+                _playback_queue.put,
+                (text, audio, image, message_id)
+            )
+
             tts_queue.task_done()
         except queue.Empty:
             continue
         except Exception as e:
-            _current_message_id = None
-            _is_voice_busy = False
-            print(f"Streaming error: {e}")
+            print(f"[Mouth] Generator error: {e}")
+            try:
+                tts_queue.task_done()
+            except ValueError:
+                pass
 
-def _start_tts_loop():
-    """Runs the dedicated TTS event loop in a background thread."""
-    global tts_loop
-    tts_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(tts_loop)
-    tts_loop.run_until_complete(_tts_worker())
-    tts_loop.close()
+def _play_audio_item(text, audio, image, message_id):
+    """Play a single audio item synchronously (runs in the player thread)."""
+    global _is_voice_busy, _current_message_id
+    _is_voice_busy = True
+    _current_message_id = message_id
+
+    try:
+        if audio is not None:
+            # Calculate audio duration for synchronized text printing
+            audio_duration = len(audio) / 24000.0
+            delay = (audio_duration - 0.1) / max(len(text), 1)
+            if delay < 0.01:
+                delay = 0.01
+
+            # Emit to UI with exact duration
+            bus.emit(EventType.SPEAK, {
+                "text": text,
+                "timestamp": time.time(),
+                "duration": audio_duration,
+                "image": image,
+                "message_id": message_id
+            })
+
+            # Play the audio
+            sd.play(audio, samplerate=24000)
+            time.sleep(0.1)  # small delay for audio device wake-up
+
+            # Print synchronized text
+            def print_synced():
+                for char in text:
+                    sys.stdout.write(char)
+                    sys.stdout.flush()
+                    time.sleep(delay)
+                print()
+
+            print_thread = threading.Thread(target=print_synced)
+            print_thread.start()
+
+            # Wait for audio to finish
+            sd.wait()
+            print_thread.join()
+        else:
+            # Fallback: no audio generated (Kokoro failed or text was empty formatting)
+            bus.emit(EventType.SPEAK, {
+                "text": text,
+                "timestamp": time.time(),
+                "duration": len(text) * 0.065,
+                "image": image,
+                "message_id": message_id
+            })
+            print_animated_message(text)
+    except Exception as e:
+        print(f"[Mouth] Playback error: {e}")
+        # Fallback to just printing
+        try:
+            print_animated_message(text)
+        except:
+            pass
+    finally:
+        _current_message_id = None
+        _is_voice_busy = False
+
+def _audio_playback_worker() -> None:
+    """
+    Stage 2: Continuously takes pre-generated audio from _playback_queue
+    and plays it. Because the generator is working ahead, the next sentence
+    is usually already waiting by the time we finish playing the current one.
+    """
+    while _is_tts_running:
+        try:
+            item = _playback_queue.get(timeout=1.0)
+            if item is _STREAM_END:
+                _playback_queue.task_done()
+                continue
+
+            text, audio, image, message_id = item
+            _play_audio_item(text, audio, image, message_id)
+            _playback_queue.task_done()
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"[Mouth] Player error: {e}")
+
+def _start_generator_loop():
+    """Runs the dedicated TTS generator event loop in a background thread."""
+    global _gen_loop
+    _gen_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_gen_loop)
+    _gen_loop.run_until_complete(_tts_generator_worker())
+    _gen_loop.close()
 
 def start_tts_consumer() -> None:
-    """Start the background TTS consumer thread."""
-    global _is_tts_running, tts_thread
+    """Start both background TTS worker threads (generator + player)."""
+    global _is_tts_running, _generator_thread, _player_thread
     if not _is_tts_running:
         _is_tts_running = True
-        tts_thread = threading.Thread(target=_start_tts_loop, daemon=True)
-        tts_thread.start()
+        _generator_thread = threading.Thread(target=_start_generator_loop, daemon=True)
+        _generator_thread.start()
+        _player_thread = threading.Thread(target=_audio_playback_worker, daemon=True)
+        _player_thread.start()
 
 def stop_tts_consumer() -> None:
-    """Stop the background TTS consumer thread."""
+    """Stop the background TTS consumer threads."""
     global _is_tts_running
     _is_tts_running = False
 
@@ -191,6 +281,15 @@ def speak_streaming(sentences: list[str]) -> None:
         start_tts_consumer()
         
     # Clear queue of any previous items to prioritize this stream
+    _clear_tts_queue()
+
+    message_id = str(uuid.uuid4())
+    for s in sentences:
+        if s.strip():
+            tts_queue.put((s, None, message_id))
+
+def _clear_tts_queue():
+    """Drain the text queue safely."""
     while not tts_queue.empty():
         try:
             tts_queue.get_nowait()
@@ -198,44 +297,66 @@ def speak_streaming(sentences: list[str]) -> None:
         except queue.Empty:
             break
 
-    message_id = str(uuid.uuid4())
-    for s in sentences:
-        if s.strip():
-            tts_queue.put((s, None, message_id))
+def _clear_playback_queue():
+    """Drain the playback queue safely."""
+    while not _playback_queue.empty():
+        try:
+            _playback_queue.get_nowait()
+            _playback_queue.task_done()
+        except queue.Empty:
+            break
 
 def wait_for_tts_completion() -> None:
     """Blocks until all queued TTS messages have finished playing."""
     tts_queue.join()
+    _playback_queue.join()
     while _is_voice_busy:
         time.sleep(0.1)
 
 def stop_llm_speech() -> None:
     """
     Stop only the streaming speech (LLM responses) without affecting other notifications.
-    Clears items with a message_id from the queue and stops audio if currently playing one.
+    Clears items with a message_id from both queues and stops audio if currently playing one.
     """
     global _current_message_id
     
-    # 1. Filter the queue: keep items without message_id, discard items with message_id
-    temp_queue = []
+    # 1. Filter the text queue: keep items without message_id
+    temp_items = []
     while not tts_queue.empty():
         try:
             item = tts_queue.get_nowait()
             if isinstance(item, tuple) and len(item) == 3:
                 msg_id = item[2]
                 if msg_id is None:
-                    temp_queue.append(item)
+                    temp_items.append(item)
             else:
-                temp_queue.append(item)
+                temp_items.append(item)
             tts_queue.task_done()
         except queue.Empty:
             break
             
-    # Put kept items back
-    for item in temp_queue:
+    for item in temp_items:
         tts_queue.put(item)
+
+    # 2. Filter the playback queue: keep items without message_id
+    temp_playback = []
+    while not _playback_queue.empty():
+        try:
+            item = _playback_queue.get_nowait()
+            if isinstance(item, tuple) and len(item) == 4:
+                _, _, _, msg_id = item
+                if msg_id is None:
+                    temp_playback.append(item)
+            else:
+                temp_playback.append(item)
+            _playback_queue.task_done()
+        except queue.Empty:
+            break
+
+    for item in temp_playback:
+        _playback_queue.put(item)
         
-    # 2. If currently playing an LLM response (has message_id), stop audio
+    # 3. If currently playing an LLM response (has message_id), stop audio
     if _current_message_id is not None:
         try:
             sd.stop()

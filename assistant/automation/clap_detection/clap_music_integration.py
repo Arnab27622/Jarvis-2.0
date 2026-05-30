@@ -1,18 +1,6 @@
-#!/usr/bin/env python3
 """
-Fixed Clap-to-Music Integration Script
-
-This script integrates clap detection with music playback functionality.
-Fixed version to prevent audio interference issues.
-
-Usage:
-    python clap_music_integration_fixed.py
-
-Features:
-    - Single clap: Play/Pause music
-    - Double clap: Play new random song
-    - Non-blocking operations to prevent interference
-    - Optimized audio settings
+Module for integrating clap detection with music playback.
+Provides a robust system to control music via audio input while minimizing interference.
 """
 
 import os
@@ -25,28 +13,30 @@ from assistant.automation.clap_detection.clap_detector import (
 
 class FinalClapMusicSystem:
     """
-    🎯 THE FINAL SOLUTION - Guaranteed to work with music interference!
+    Manages the lifecycle of the clap-to-music integration system.
+    Handles setup, device selection, and the main execution loop.
     """
 
     def __init__(self, music_directory: str):
-        """Initialize the FINAL system."""
+        """Initializes the system with a target music directory."""
         self.music_directory: str = music_directory
         self.clap_music = None
         self.device_index: int | None = None
 
     def setup(self) -> bool:
-        """Set up the FINAL system."""
+        """
+        Configures the music player and prompts the user to select an input device.
+        Returns True if setup is successful, False otherwise.
+        """
         print("🎯 FINAL Clap-to-Music System Setup")
         print("=" * 60)
         print("🔥 ULTIMATE SOLUTION - GUARANTEED TO WORK!")
         print()
 
-        # Validate music directory
         if not os.path.exists(self.music_directory):
             print(f"❌ Error: Music directory '{self.music_directory}' does not exist")
             return False
 
-        # Initialize FINAL music integration
         self.clap_music = FinalClapMusicIntegration(self.music_directory)
 
         if not self.clap_music.music_player.music_files:
@@ -66,7 +56,6 @@ class FinalClapMusicSystem:
         )
         print()
 
-        # Get audio device
         list_devices()
 
         try:
@@ -82,7 +71,9 @@ class FinalClapMusicSystem:
         return True
 
     def start(self) -> None:
-        """Start the FINAL system."""
+        """
+        Starts the clap detection loop and handles real-time audio processing.
+        """
         if not self.clap_music or self.device_index is None:
             print("❌ Error: System not properly set up. Call setup() first.")
             return
@@ -109,10 +100,9 @@ class FinalClapMusicSystem:
         print("Press Ctrl+C to stop\\n")
 
         try:
-            # Start FINAL clap detection
             final_detect_claps(
                 device_index=self.device_index,
-                chunk_duration=0.3,  # Ultra-fast processing
+                chunk_duration=0.3,
                 clap_callback=self.clap_music.on_clap_detected,
             )
         except KeyboardInterrupt:
@@ -130,15 +120,14 @@ class FinalClapMusicSystem:
             self.cleanup()
 
     def cleanup(self) -> None:
-        """Clean up system resources."""
+        """Stops music playback and releases system resources."""
         if self.clap_music and self.clap_music.music_player.is_playing:
             self.clap_music.music_player.stop()
         print("🧹 FINAL system cleanup completed")
 
 
 def main() -> None:
-    """Main function."""
-    # Music directory
+    """Entry point for the application."""
     default_music_dir = r"C:\Users\ARNAB DEY\Music"
 
     print("🎯 FINAL Clap-to-Music Integration System")

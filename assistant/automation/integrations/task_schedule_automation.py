@@ -1,3 +1,8 @@
+"""
+Module for managing persistent user memory, allowing the assistant to store,
+retrieve, and summarize information using local JSON storage and LLM processing.
+"""
+
 import datetime
 import json
 import os
@@ -7,7 +12,7 @@ from assistant.core.speak_selector import speak
 JSON_FILE = r"C:\Users\ARNAB DEY\MyPC\Python\Projects\Jarvis 2.0\data\remembered_info.json"
 
 def _load_remembered_info() -> dict:
-    """Load the remembered information from the JSON file."""
+    """Reads and parses the persistent memory JSON file."""
     if os.path.exists(JSON_FILE):
         try:
             with open(JSON_FILE, "r") as f:
@@ -17,8 +22,7 @@ def _load_remembered_info() -> dict:
     return {}
 
 def _save_remembered_info(data: dict) -> None:
-    """Save the remembered information to the JSON file."""
-    # Ensure the directory exists before saving
+    """Serializes and writes the memory dictionary to the JSON file."""
     os.makedirs(os.path.dirname(JSON_FILE), exist_ok=True)
     with open(JSON_FILE, "w") as f:
         json.dump(data, f, indent=4)
@@ -26,40 +30,12 @@ def _save_remembered_info(data: dict) -> None:
 
 def remember_info(command_text: str) -> None:
     """
-    Store user-provided information with automatic timestamping for later recall.
-
-    This function extracts information from voice commands and stores it in a
-    persistent JSON file with the current timestamp as the key. Useful for
-    remembering notes, reminders, or important information across sessions.
-
-    Args:
-        command_text (str): The voice command containing information to remember.
-                          Expected format: "remember that [information]"
-
-    Process:
-        1. Extracts information by removing the "remember that" trigger phrase
-        2. Generates a timestamp for when the information was stored
-        3. Loads existing data from remembered_info.json
-        4. Adds the new information to the dictionary
-        5. Saves the updated dictionary back to the JSON file
-        6. Provides voice confirmation of successful storage
-
-    Example:
-        >>> remember_info("remember that my meeting is at 3 PM tomorrow")
-        # Stores: {'2024-01-15 14:30:25': 'my meeting is at 3 PM tomorrow'}
-        # Speaks: "I've remembered that information"
-
-    Storage:
-        Information is persistently stored in data/remembered_info.json and 
-        will survive application restarts.
+    Parses a command to extract information and saves it with a timestamp.
     """
-    # Extract the actual information by removing the command trigger phrase
     info = command_text.replace("remember that", "").strip()
     if info:
-        # Create timestamp in human-readable format for easy recall
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Load existing data, add new entry, and save
         data = _load_remembered_info()
         data[timestamp] = info
         _save_remembered_info(data)
@@ -71,11 +47,7 @@ def remember_info(command_text: str) -> None:
 
 def recall_info(query: str = None) -> None:
     """
-    Recall stored information using an LLM for semantic summarization.
-
-    Instead of reading the entire JSON file verbatim, this sends the data to 
-    Gemini 3.1 Flash Lite to provide a concise, natural summary of the notes,
-    or to answer specific questions about the stored data.
+    Retrieves stored memory and uses an LLM to provide a conversational summary.
     """
     data = _load_remembered_info()
     
@@ -88,7 +60,6 @@ def recall_info(query: str = None) -> None:
         speak("I cannot access my thinking modules to analyze the memory.")
         return
 
-    # Prepare prompt for the LLM
     data_str = json.dumps(data, indent=2)
     prompt = (
         "You are Jarvis, a helpful AI assistant. The user asked you to recall "
@@ -113,7 +84,6 @@ def recall_info(query: str = None) -> None:
         result = response.json()
         summary = result['candidates'][0]['content']['parts'][0]['text']
         
-        # Clean up Markdown for text-to-speech
         summary = summary.replace("*", "").replace("#", "")
         
         speak(summary)
@@ -123,14 +93,14 @@ def recall_info(query: str = None) -> None:
         speak("I had trouble analyzing the memory file, but you do have notes saved.")
 
 
-# --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
 
 @on_regex(r"remember\s+that\s+(?P<text>.*)$")
 def handle_remember(text):
+    """Regex handler for triggering the memory storage function."""
     remember_info(text)
 
 @on_fuzzy(["what did i ask you to remember", "what do you remember", "recall"], score_cutoff=90)
 def handle_recall():
+    """Fuzzy match handler for triggering the memory recall function."""
     recall_info()
-

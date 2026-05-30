@@ -1,3 +1,7 @@
+"""
+Module for loading and preprocessing audio datasets for classification tasks.
+"""
+
 import os
 import torch
 import torchaudio
@@ -11,13 +15,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 def get_wav_files(directory: str) -> list:
     """
-    Get a list of WAV file paths in the given directory.
-
-    Args:
-        directory (str): Path to the directory containing WAV files.
-
-    Returns:
-        list: List of WAV file paths.
+    Retrieves a list of absolute file paths for all .wav files in a directory.
     """
     wav_files = []
     for filename in os.listdir(directory):
@@ -28,16 +26,13 @@ def get_wav_files(directory: str) -> list:
 
 class AudioDataset(Dataset):
     """
-    Dataset for audio classification.
+    A PyTorch Dataset that loads audio files, converts them to log-mel spectrograms,
+    and provides labels for binary classification (noise vs. clap).
     """
 
     def __init__(self, noise_dir: str, clap_dir: str) -> None:
         """
-        Initializes the AudioDataset.
-
-        Args:
-            noise_dir (str): Path to the directory containing noise audio files.
-            clap_dir (str): Path to the directory containing clap audio files.
+        Initializes the dataset by scanning directories and assigning binary labels.
         """
         noise_files = get_wav_files(noise_dir)
         clap_files = get_wav_files(clap_dir)
@@ -51,7 +46,7 @@ class AudioDataset(Dataset):
 
     def __len__(self) -> int:
         """
-        Returns the total number of samples in the dataset.
+        Returns the total number of audio samples in the dataset.
         """
         return len(self.file_list)
 
@@ -59,31 +54,20 @@ class AudioDataset(Dataset):
         self, idx: int, n_mels: int = 64, n_fft: int = 400, hop_length: int = 200
     ) -> tuple:
         """
-        Gets the item at the specified index.
-
-        Args:
-            idx (int): Index of the sample to retrieve.
-            n_mels (int, optional): Number of mel frequency channels. Defaults to 64.
-            n_fft (int, optional): Size of FFT. Defaults to 400.
-            hop_length (int, optional): Hop length of the STFT. Defaults to 200.
-
-        Returns:
-            tuple: A tuple containing the spectrogram and the label.
+        Loads an audio file, processes it into a normalized 256x256 log-mel spectrogram,
+        and returns the tensor with its corresponding label.
         """
         try:
             waveform, sample_rate = torchaudio.load(self.file_list[idx])
 
-            # Ensure we have mono audio
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-            # Resample to consistent rate if needed
             if sample_rate != 22050:
                 resampler = T.Resample(sample_rate, 22050)
                 waveform = resampler(waveform)
                 sample_rate = 22050
 
-            # Generate mel spectrogram
             mel_spectrogram = T.MelSpectrogram(
                 sample_rate=sample_rate,
                 n_fft=n_fft,
@@ -92,13 +76,10 @@ class AudioDataset(Dataset):
                 n_mels=n_mels,
             )(waveform)
 
-            # Convert to log scale (dB)
             mel_spectrogram = torchaudio.transforms.AmplitudeToDB()(mel_spectrogram)
 
-            # Resize to consistent dimensions
             mel_spectrogram = Resize((256, 256))(mel_spectrogram)
 
-            # Normalize
             if mel_spectrogram.std() > 0:
                 mel_spectrogram = (
                     mel_spectrogram - mel_spectrogram.mean()
@@ -111,7 +92,6 @@ class AudioDataset(Dataset):
 
         except Exception as e:
             print(f"Error loading {self.file_list[idx]}: {e}")
-            # Return a properly shaped dummy tensor
             dummy_spec = torch.zeros((1, 256, 256))
             label = self.labels[idx]
             return dummy_spec, torch.tensor(label, dtype=torch.long)

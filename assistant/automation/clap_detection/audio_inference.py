@@ -1,3 +1,7 @@
+"""
+Module for loading an audio classification model and performing inference on audio files.
+"""
+
 import os
 import torch
 import torchaudio
@@ -10,15 +14,12 @@ import warnings
 
 class AudioModelHandler:
     """
-    Handler class for loading and using the audio classification model.
+    Handles loading the audio classification model and processing audio for inference.
     """
 
     def __init__(self, model_path: str):
         """
-        Initializes the AudioModelHandler.
-
-        Args:
-            model_path (str): Path to the saved model file.
+        Initializes the handler and loads the model into evaluation mode.
         """
         self.model = self.load_model(model_path)
         self.model.eval()
@@ -26,13 +27,7 @@ class AudioModelHandler:
     @staticmethod
     def load_model(model_path: str) -> nn.Module:
         """
-        Loads the saved model from the specified path.
-
-        Args:
-            model_path (str): Path to the saved model file.
-
-        Returns:
-            nn.Module: Loaded model.
+        Loads the model state dictionary from a file.
         """
         model = AudioClassifier()
         try:
@@ -56,16 +51,7 @@ class AudioModelHandler:
         hop_length: int = 200,
     ) -> torch.Tensor:
         """
-        Transforms the audio file into a normalized mel spectrogram tensor.
-
-        Args:
-            audio_path_index (str): Path to the audio file.
-            n_mels (int, optional): Number of mel frequency channels. Defaults to 64.
-            n_fft (int, optional): Size of FFT. Defaults to 400.
-            hop_length (int, optional): Hop length of the STFT. Defaults to 200.
-
-        Returns:
-            torch.Tensor: Normalized mel spectrogram tensor.
+        Loads, resamples, and converts audio into a normalized mel spectrogram tensor.
         """
         try:
             try:
@@ -73,9 +59,7 @@ class AudioModelHandler:
                     audio_path_index
                 )
             except AttributeError:
-                # Fallback for older TorchAudio versions that don't have load_with_torchcodec
                 try:
-                    # Suppress the specific deprecation warning
                     with warnings.catch_warnings():
                         warnings.filterwarnings(
                             "ignore",
@@ -84,12 +68,10 @@ class AudioModelHandler:
                         )
                         waveform, sample_rate = torchaudio.load(audio_path_index)
                 except Exception:
-                    # Final fallback with backend specification
                     waveform, sample_rate = torchaudio.load(
                         audio_path_index, backend="soundfile"
                     )
             except Exception as e:
-                # If TorchCodec loading fails, use traditional method with warning suppression
                 with warnings.catch_warnings():
                     warnings.filterwarnings(
                         "ignore",
@@ -103,17 +85,14 @@ class AudioModelHandler:
                             audio_path_index, backend="soundfile"
                         )
 
-            # Convert to mono if needed
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-            # Resample to 22050 if needed
             if sample_rate != 22050:
                 resampler = T.Resample(sample_rate, 22050)
                 waveform = resampler(waveform)
                 sample_rate = 22050
 
-            # Generate mel spectrogram
             mel_spectrogram = T.MelSpectrogram(
                 sample_rate=sample_rate,
                 n_fft=n_fft,
@@ -122,13 +101,10 @@ class AudioModelHandler:
                 n_mels=n_mels,
             )(waveform)
 
-            # Convert to dB scale
             mel_spectrogram = torchaudio.transforms.AmplitudeToDB()(mel_spectrogram)
 
-            # Resize to consistent dimensions
             mel_spectrogram = Resize((256, 256))(mel_spectrogram)
 
-            # Normalize
             if mel_spectrogram.std() > 0:
                 normalized_spec = (
                     mel_spectrogram - mel_spectrogram.mean()
@@ -140,21 +116,13 @@ class AudioModelHandler:
 
         except Exception as e:
             print(f"Error transforming audio: {e}")
-            # Return a properly shaped zero tensor
             return torch.zeros((1, 1, 256, 256))
 
     def predict(
         self, audio_path_index: str, confidence_threshold: float = 0.8
     ) -> tuple:
         """
-        Predicts the class of the audio file using the loaded model.
-
-        Args:
-            audio_path_index (str): Path to the audio file.
-            confidence_threshold (float): Minimum confidence threshold for clap detection.
-
-        Returns:
-            tuple: (predicted_class, confidence, probabilities)
+        Runs inference on an audio file and returns the class, confidence, and probabilities.
         """
         try:
             spec = self.transform_audio(audio_path_index)
@@ -166,22 +134,20 @@ class AudioModelHandler:
                 confidence_value = confidence.item()
                 predicted_class = predicted.item()
 
-                # Apply confidence threshold
                 if predicted_class == 1 and confidence_value < confidence_threshold:
-                    predicted_class = 0  # Reject low-confidence clap predictions
+                    predicted_class = 0
 
                 return predicted_class, confidence_value, probabilities[0].tolist()
 
         except Exception as e:
             print(f"Prediction error: {e}")
-            return 0, 0.0, [0.5, 0.5]  # Default to noise on error
+            return 0, 0.0, [0.5, 0.5]
 
 
 def main(audio_path_index: str) -> None:
     """
-    Main function to run the audio classification prediction.
+    Executes the prediction workflow for a given audio file path.
     """
-    # Calculate project root (4 levels up from this file)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     model_path = os.path.join(project_root, "data", "Clap_Detect_Model.pth")
 

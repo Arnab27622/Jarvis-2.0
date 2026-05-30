@@ -12,4 +12,5 @@ from assistant.core.mouth import (
     wait_for_tts_completion,
     start_tts_consumer,
     stop_tts_consumer,
+    play_ack_sound,
 )

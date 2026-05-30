@@ -1,11 +1,18 @@
+"""
+Module for speaker health testing through audio playback.
+
+This module provides functions to generate and play test tones and frequency sweeps,
+allowing for the assessment of speaker performance across the frequency spectrum.
+"""
+
 import numpy as np
 import pyaudio
 import time
 from scipy import signal
 from assistant.core.speak_selector import speak, wait_for_tts_completion
 
-
 from typing import Optional
+
 
 def play_tone(frequency: float, duration: float = 2, volume: float = 0.5, sample_rate: int = 44100, p: Optional[pyaudio.PyAudio] = None) -> None:
     """

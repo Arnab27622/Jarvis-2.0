@@ -1,3 +1,7 @@
+"""
+Module for real-time clap detection using audio stream analysis and machine learning.
+"""
+
 import os
 import time
 import warnings
@@ -13,27 +17,25 @@ import torch
 from scipy.io.wavfile import write
 from assistant.automation.clap_detection.audio_inference import AudioModelHandler
 
-# Suppress warnings
 warnings.filterwarnings("ignore")
 
 
 class FinalAudioProcessor:
     """
-    Improved clap detection with better audio processing and filtering.
+    Handles real-time audio stream processing, signal filtering, and clap inference.
     """
 
     def __init__(
         self,
         device_index: int,
         model_path: str,
-        chunk_duration: float = 0.5,  # Increased for better analysis
-        buffer_duration: float = 2.0,  # Increased buffer
+        chunk_duration: float = 0.5,
+        buffer_duration: float = 2.0,
         sample_rate: int = 22050,
         dtype: Any = np.int16,
         directory: str = "./",
         clap_callback: Optional[Callable[[float], None]] = None,
     ):
-        """Initialize with improved audio processing."""
         self.chunk_duration = chunk_duration
         self.buffer_duration = buffer_duration
         self.sample_rate = sample_rate
@@ -42,29 +44,24 @@ class FinalAudioProcessor:
         self.chunk_samples = int(chunk_duration * sample_rate)
         self.buffer_samples = int(buffer_duration * sample_rate)
 
-        # Load model
         self.model_handler = AudioModelHandler(model_path)
         self.buffer = deque(maxlen=self.buffer_samples)
         self.clap_callback = clap_callback
         self.last_detection_time = 0
-        self.detection_cooldown = 1.0  # Increased cooldown
+        self.detection_cooldown = 1.0
 
-        # Audio analysis parameters
         self.baseline_level = None
-        self.baseline_samples = deque(maxlen=50)  # Store recent audio levels
-        self.min_clap_amplitude = 500  # Minimum amplitude for clap consideration
+        self.baseline_samples = deque(maxlen=50)
+        self.min_clap_amplitude = 500
 
-        # Use relative path for temp file
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
         self.temp_filename = os.path.join(project_root, "data", "temp_clap.wav")
         os.makedirs(os.path.dirname(self.temp_filename), exist_ok=True)
 
-        # Register cleanup
         self._register_cleanup()
 
-        # Configure audio stream
         self.stream = sd.InputStream(
             device=device_index,
             channels=1,
@@ -74,7 +71,7 @@ class FinalAudioProcessor:
         )
 
     def _register_cleanup(self):
-        """Register cleanup function."""
+        """Registers system signal handlers and exit hooks for resource cleanup."""
 
         def cleanup():
             if os.path.exists(self.temp_filename):
@@ -93,36 +90,30 @@ class FinalAudioProcessor:
         signal.signal(signal.SIGTERM, signal_handler)
 
     def _update_baseline(self, audio_data: np.ndarray):
-        """Update baseline audio level dynamically."""
+        """Updates the rolling median of audio levels to adapt to background noise."""
         current_level = np.mean(np.abs(audio_data))
         self.baseline_samples.append(current_level)
 
-        if len(self.baseline_samples) >= 10:  # Wait for enough samples
+        if len(self.baseline_samples) >= 10:
             self.baseline_level = np.median(self.baseline_samples)
 
     def _is_potential_clap(self, audio_data: np.ndarray) -> bool:
-        """Check if audio data has characteristics of a clap."""
+        """Analyzes audio signal for amplitude spikes and sharp attack characteristics."""
         if len(audio_data) == 0 or self.baseline_level is None:
             return False
 
-        # Calculate audio features
         max_amplitude = np.max(np.abs(audio_data))
         rms = np.sqrt(np.mean(audio_data**2))
 
-        # Basic amplitude threshold
         if max_amplitude < self.min_clap_amplitude:
             return False
 
-        # Check if significantly above baseline
         if max_amplitude < self.baseline_level * 3:
             return False
 
-        # Look for sharp attack (characteristic of claps)
         if len(audio_data) > 100:
-            # Find the peak
             peak_idx = np.argmax(np.abs(audio_data))
 
-            # Check for sharp rise before peak
             if peak_idx > 50:
                 pre_peak_rms = np.sqrt(
                     np.mean(audio_data[peak_idx - 50 : peak_idx - 10] ** 2)
@@ -131,19 +122,17 @@ class FinalAudioProcessor:
                     np.mean(audio_data[peak_idx - 10 : peak_idx + 10] ** 2)
                 )
 
-                if peak_rms > pre_peak_rms * 2:  # Sharp attack
+                if peak_rms > pre_peak_rms * 2:
                     return True
 
         return False
 
     def enable_debug_mode(self):
-        """Enable verbose debug output"""
+        """Enables verbose logging for audio analysis."""
         self.debug = True
 
     def record_and_detect_debug(self) -> None:
-        """
-        Debug version with detailed audio analysis
-        """
+        """Runs the detection loop with detailed console output for debugging."""
         with self.stream:
             print("🐛 DEBUG MODE: Clap Detection with Detailed Audio Analysis")
             print("=" * 50)
@@ -161,15 +150,12 @@ class FinalAudioProcessor:
                         self.buffer.extend(chunk.flatten())
                         frame_count += 1
 
-                        # Analyze current audio chunk
                         audio_data = np.array(chunk.flatten())
                         max_amp = np.max(np.abs(audio_data))
                         rms = np.sqrt(np.mean(audio_data**2))
 
-                        # Update baseline more frequently in debug mode
                         self._update_baseline(audio_data)
 
-                        # Print audio analysis every 50 frames
                         if frame_count % 50 == 0:
                             baseline_info = (
                                 f"{self.baseline_level:.1f}"
@@ -194,7 +180,6 @@ class FinalAudioProcessor:
                                         )
                                     )
 
-                                    # Detailed output for every processed chunk
                                     print(
                                         f"🔍 Model Analysis: Pred={prediction}, Conf={confidence:.3f}, Probs=[Noise: {probabilities[0]:.3f}, Clap: {probabilities[1]:.3f}]"
                                     )
@@ -230,30 +215,23 @@ class FinalAudioProcessor:
                 )
 
     def save_buffer_to_wav(self, filename: str) -> bool:
-        """
-        Save current buffer to WAV file if it contains potential clap.
-        """
+        """Writes the current audio buffer to a temporary WAV file for inference."""
         if len(self.buffer) < self.chunk_samples:
             return False
 
         audio_data = np.array(self.buffer, dtype=self.dtype)
 
-        # Update baseline
         self._update_baseline(audio_data)
 
-        # Check if this could be a clap
         if self._is_potential_clap(audio_data):
             write(filename, self.sample_rate, audio_data)
             return True
         else:
-            # Write minimal file to avoid processing
             write(filename, self.sample_rate, np.zeros(1000, dtype=self.dtype))
             return False
 
     def record_and_detect(self) -> None:
-        """
-        Main detection loop with improved processing.
-        """
+        """Main execution loop for continuous audio monitoring and clap detection."""
         with self.stream:
             print("🎯 Clap Detection Active...")
             print("🔧 Improved audio processing: ON")
@@ -271,26 +249,22 @@ class FinalAudioProcessor:
                         if overflowed:
                             print("⚠️ Audio buffer overflow")
 
-                        # Add new audio to buffer
                         self.buffer.extend(chunk.flatten())
 
                         current_time = time.time()
 
-                        # Only process if enough time has passed since last detection
                         if (
                             current_time - self.last_detection_time
                             >= self.detection_cooldown
                         ):
                             if self.save_buffer_to_wav(self.temp_filename):
                                 try:
-                                    # Get prediction with confidence
                                     prediction, confidence, probabilities = (
                                         self.model_handler.predict(
                                             self.temp_filename, confidence_threshold=0.7
                                         )
                                     )
 
-                                    # Only accept high-confidence clap detections
                                     if prediction == 1 and confidence > 0.85:
                                         self.last_detection_time = current_time
                                         detection_count += 1
@@ -300,10 +274,8 @@ class FinalAudioProcessor:
                                             f"👏 CLAP DETECTED! Confidence: {confidence:.3f} (#{detection_count})"
                                         )
 
-                                        # Reset consecutive detections after a valid detection
                                         consecutive_detections = 0
 
-                                        # Call callback
                                         if self.clap_callback:
                                             try:
                                                 self.clap_callback(confidence)
@@ -332,7 +304,6 @@ class FinalAudioProcessor:
             except Exception as e:
                 print(f"Unexpected error: {e}")
             finally:
-                # Cleanup
                 if os.path.exists(self.temp_filename):
                     try:
                         os.remove(self.temp_filename)
@@ -341,7 +312,7 @@ class FinalAudioProcessor:
 
 
 def list_devices() -> None:
-    """List available audio input devices."""
+    """Prints a list of all available audio input devices."""
     devices = sd.query_devices()
     print("\nAvailable audio input devices:")
     for i, device in enumerate(devices):
@@ -354,8 +325,7 @@ def final_detect_claps(
     chunk_duration: float = 0.5,
     clap_callback: Optional[Callable[[float], None]] = None,
 ) -> None:
-    """Main clap detection function."""
-    # Use relative path
+    """Initializes and starts the clap detection process."""
     project_root = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
@@ -377,7 +347,7 @@ def final_detect_claps(
 
 
 def main() -> None:
-    """Main function."""
+    """Entry point for the clap detection CLI."""
     try:
         list_devices()
         device_index = int(input("\nEnter device index: "))

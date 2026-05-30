@@ -1,19 +1,25 @@
+"""
+Module for testing audio output device functionality using generated sine waves.
+"""
+
 import sounddevice as sd
 import numpy as np
 import time
 
-
 from typing import Optional
 
 def test_speaker(device_index: Optional[int] = None) -> None:
-    """Test speaker functionality"""
+    """
+    Plays low and high frequency sine waves to verify speaker output.
+
+    Args:
+        device_index: The index of the audio output device to test.
+    """
     print("🔊 Testing Speaker...")
 
-    # Generate test tones
     sample_rate = 22050
     duration = 2
 
-    # Low frequency tone
     print("Playing low tone (250Hz)...")
     t = np.linspace(0, duration, int(sample_rate * duration))
     tone_low = 0.3 * np.sin(2 * np.pi * 250 * t)
@@ -22,7 +28,6 @@ def test_speaker(device_index: Optional[int] = None) -> None:
 
     time.sleep(0.5)
 
-    # High frequency tone
     print("Playing high tone (1000Hz)...")
     tone_high = 0.3 * np.sin(2 * np.pi * 1000 * t)
     sd.play(tone_high, sample_rate, device=device_index)
@@ -33,6 +38,9 @@ def test_speaker(device_index: Optional[int] = None) -> None:
 
 
 if __name__ == "__main__":
+    """
+    Lists available output devices and executes the speaker test.
+    """
     devices = sd.query_devices()
     print("Available output devices:")
     for i, device in enumerate(devices):

@@ -1,10 +1,17 @@
+"""
+Module for comprehensive microphone health analysis.
+
+Provides functionality to list available input devices, select a device for testing,
+and perform a range of health checks including audio activity detection, signal-to-noise
+ratio analysis, clipping detection, frequency response analysis, and dynamic noise floor estimation.
+"""
+
 import pyaudio
 import numpy as np
 import time
 from assistant.core.speak_selector import speak
 
-
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Optional, Dict
 
 def list_input_devices() -> List[Tuple[int, str]]:
     """

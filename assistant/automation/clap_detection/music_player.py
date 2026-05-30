@@ -1,4 +1,7 @@
-# final_music_player.py
+"""
+Module for a minimal, low-interference music player controlled by clap detection.
+"""
+
 import os
 import random
 import threading
@@ -10,11 +13,11 @@ import time
 
 class FinalMusicPlayer:
     """
-    FINAL music player with ultra-minimal interference.
+    Handles audio playback with optimized settings to minimize system interference.
     """
     
     def __init__(self, music_directory: str):
-        """Initialize with final anti-interference settings."""
+        """Initializes the mixer and scans the directory for supported audio files."""
         self.music_directory = Path(music_directory)
         self.supported_formats = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".wma"}
         self.current_song = None
@@ -22,32 +25,29 @@ class FinalMusicPlayer:
         self.is_paused = False
         self.volume = 0.25
         
-        # Initialize pygame mixer with FINAL settings
         pygame.mixer.quit()
         pygame.mixer.pre_init(
-            frequency=48000,    # MAXIMUM separation from clap detection (22050)
+            frequency=48000,
             size=-16, 
             channels=2, 
-            buffer=4096        # MAXIMUM buffer size
+            buffer=4096
         )
         pygame.mixer.init()
         pygame.mixer.music.set_volume(self.volume)
         
-        # Get list of music files
         self.music_files = self._get_music_files()
         
         if not self.music_files:
             print(f"Warning: No supported music files found in {music_directory}")
     
     def _get_music_files(self) -> List[Path]:
-        """Get all supported music files from the directory."""
+        """Recursively retrieves all supported audio files from the directory."""
         music_files = []
         
         if not self.music_directory.exists():
             print(f"Warning: Music directory {self.music_directory} does not exist")
             return music_files
         
-        # Recursively search for music files
         for file_path in self.music_directory.rglob("*"):
             if (file_path.is_file() and 
                 file_path.suffix.lower() in self.supported_formats):
@@ -56,19 +56,16 @@ class FinalMusicPlayer:
         return music_files
     
     def play_random_song(self) -> None:
-        """Play a random song with maximum anti-interference."""
+        """Selects and plays a random track from the library."""
         if not self.music_files:
             print("No music files available to play")
             return
         
-        # Stop current song if playing
         if self.is_playing:
             self.stop()
         
-        # Longer pause to let audio system settle
         time.sleep(0.3)
         
-        # Select random song
         self.current_song = random.choice(self.music_files)
         
         try:
@@ -78,7 +75,6 @@ class FinalMusicPlayer:
             self.is_playing = True
             self.is_paused = False
             
-            # Start monitoring thread
             self._start_monitoring_thread()
             
         except pygame.error as e:
@@ -86,7 +82,7 @@ class FinalMusicPlayer:
             self.is_playing = False
     
     def _start_monitoring_thread(self) -> None:
-        """Start a thread to monitor music playback status."""
+        """Spawns a background thread to detect when a song finishes."""
         def monitor():
             while self.is_playing:
                 if not pygame.mixer.music.get_busy() and not self.is_paused:
@@ -98,30 +94,30 @@ class FinalMusicPlayer:
         threading.Thread(target=monitor, daemon=True).start()
     
     def pause(self) -> None:
-        """Pause the current song."""
+        """Pauses the currently playing track."""
         if self.is_playing and not self.is_paused:
             pygame.mixer.music.pause()
             self.is_paused = True
             print("⏸️ Music paused")
     
     def resume(self) -> None:
-        """Resume the paused song."""
+        """Resumes playback of a paused track."""
         if self.is_playing and self.is_paused:
             pygame.mixer.music.unpause()
             self.is_paused = False
             print("▶️ Music resumed")
     
     def stop(self) -> None:
-        """Stop the current song."""
+        """Stops playback entirely."""
         if self.is_playing:
             pygame.mixer.music.stop()
             self.is_playing = False
             self.is_paused = False
             print("⏹️ Music stopped")
-            time.sleep(0.3)  # Longer pause
+            time.sleep(0.3)
     
     def toggle_play_pause(self) -> None:
-        """Toggle between play/pause states."""
+        """Switches between play and pause states."""
         if self.is_playing:
             if self.is_paused:
                 self.resume()
@@ -131,13 +127,13 @@ class FinalMusicPlayer:
             self.play_random_song()
     
     def set_volume(self, volume: float) -> None:
-        """Set the volume (capped at 20% maximum)."""
-        self.volume = max(0.0, min(0.2, volume))  # Cap at 20%
+        """Sets the playback volume, capped at 20%."""
+        self.volume = max(0.0, min(0.2, volume))
         pygame.mixer.music.set_volume(self.volume)
         print(f"🔊 Volume: {int(self.volume * 100)}% (Ultra-low for interference prevention)")
     
     def get_status(self) -> dict:
-        """Get current player status."""
+        """Returns the current state of the player."""
         return {
             "is_playing": self.is_playing,
             "is_paused": self.is_paused,
@@ -149,48 +145,41 @@ class FinalMusicPlayer:
 
 class FinalClapMusicIntegration:
     """
-    FINAL integration with minimal interference.
+    Bridges clap detection events to music player actions.
     """
     
     def __init__(self, music_directory: str):
-        """Initialize with final settings."""
+        """Initializes the integration with clap timing logic."""
         self.music_player = FinalMusicPlayer(music_directory)
         self.last_clap_time = 0
-        self.cooldown_period = 1.0  # Shorter for better responsiveness
+        self.cooldown_period = 1.0
         self.processing_clap = False
         self.pending_single_clap = None
-        self.double_clap_timeout = 0.8  # Shorter timeout
+        self.double_clap_timeout = 0.8
     
     def on_clap_detected(self, confidence: float = 0.0):
-        """FINAL callback with minimal processing."""
+        """Processes clap events to trigger play/pause or track skipping."""
         current_time = time.time()
         
-        # Prevent overlapping clap processing
         if self.processing_clap:
             return
             
-        # Check cooldown
         if current_time - self.last_clap_time < self.cooldown_period:
             return
         
-        # Simplified double-clap logic
         if self.pending_single_clap:
             time_since_first = current_time - self.pending_single_clap
             
             if time_since_first <= self.double_clap_timeout:
-                # Double clap detected
                 self.pending_single_clap = None
                 self._handle_double_clap_immediate(confidence)
                 return
             else:
-                # Process previous single clap
                 self._handle_single_clap_immediate(confidence)
                 self.pending_single_clap = None
         
-        # Set up for potential double clap
         self.pending_single_clap = current_time
         
-        # Handle single clap timeout
         def process_single_clap():
             time.sleep(self.double_clap_timeout)
             if self.pending_single_clap == current_time:
@@ -200,7 +189,7 @@ class FinalClapMusicIntegration:
         threading.Thread(target=process_single_clap, daemon=True).start()
     
     def _handle_single_clap_immediate(self, confidence: float):
-        """Handle single clap with minimal processing."""
+        """Executes play/pause toggle."""
         if self.processing_clap:
             return
         
@@ -215,14 +204,13 @@ class FinalClapMusicIntegration:
         except Exception as e:
             print(f"Error in single clap action: {e}")
         finally:
-            # Quick release of processing flag
             def release_flag():
                 time.sleep(0.3)
                 self.processing_clap = False
             threading.Thread(target=release_flag, daemon=True).start()
     
     def _handle_double_clap_immediate(self, confidence: float):
-        """Handle double clap with minimal processing."""
+        """Executes random track skip."""
         if self.processing_clap:
             return
         
@@ -237,23 +225,20 @@ class FinalClapMusicIntegration:
         except Exception as e:
             print(f"Error in double clap action: {e}")
         finally:
-            # Quick release of processing flag
             def release_flag():
                 time.sleep(0.3)
                 self.processing_clap = False
             threading.Thread(target=release_flag, daemon=True).start()
     
     def get_player(self) -> FinalMusicPlayer:
-        """Get the music player instance."""
+        """Returns the underlying music player instance."""
         return self.music_player
 
 
-# Usage functions
 def create_final_clap_music_system(music_directory: str) -> FinalClapMusicIntegration:
-    """Create the final clap-music system."""
+    """Factory function to initialize the clap-controlled music system."""
     return FinalClapMusicIntegration(music_directory)
 
 
 if __name__ == "__main__":
-    # Example usage - keeping minimal as requested
     pass

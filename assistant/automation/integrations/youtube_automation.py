@@ -1,25 +1,28 @@
-from assistant.automation.features.window_automation import toggle_fullscreen
-from dotenv import load_dotenv
-from assistant.core.speak_selector import speak
+"""Module for automating YouTube interactions, including playback control and search."""
+
 import os
 import webbrowser
+import time
+import re
 from urllib.parse import quote
 import pyautogui as ui
-import time
 import pygetwindow as gw
-import re
+from dotenv import load_dotenv
+from assistant.automation.features.window_automation import toggle_fullscreen
+from assistant.core.speak_selector import speak
+from assistant.core.registry import on_regex, on_fuzzy
 
-# Load environment variables from .env file for API key security
 load_dotenv()
 
 youtube_player_state = {
-    "is_playing": False,  # Current playback status (playing/paused)
-    "is_muted": False,  # Current mute status
-    "current_volume": 100,  # Current volume level (0-100)
-    "current_video_id": None,  # Currently playing video ID for tracking
+    "is_playing": False,
+    "is_muted": False,
+    "current_volume": 100,
+    "current_video_id": None,
 }
 
 def activate_youtube_window(timeout: int = 5) -> bool:
+    """Brings the active YouTube browser window to the foreground."""
     try:
         all_windows = gw.getAllWindows()
         youtube_windows = [
@@ -36,6 +39,7 @@ def activate_youtube_window(timeout: int = 5) -> bool:
         return False
 
 def play_on_youtube(search_query: str) -> None:
+    """Searches for and plays a video or playlist on YouTube."""
     try:
         from googleapiclient.discovery import build
         
@@ -92,6 +96,7 @@ def play_on_youtube(search_query: str) -> None:
         speak(f"Showing results for {search_query} on YouTube")
 
 def search_on_youtube(search_query: str) -> None:
+    """Opens a YouTube search results page for the given query."""
     remove_words = ["youtube", "search", "for", "on", "jarvis"]
     for word in remove_words:
         search_query = re.sub(rf'\b{word}\b', '', search_query, flags=re.IGNORECASE).strip()
@@ -106,6 +111,7 @@ def search_on_youtube(search_query: str) -> None:
     speak(f"Showing results for {search_query} on YouTube")
 
 def control_youtube_video(action: str) -> None:
+    """Executes keyboard shortcuts to control YouTube playback."""
     try:
         if not activate_youtube_window():
             speak("Could not find an active YouTube window to control.")
@@ -187,6 +193,7 @@ def control_youtube_video(action: str) -> None:
         speak("Sorry, I couldn't control the video")
 
 def set_volume(volume_level: int) -> None:
+    """Adjusts the YouTube volume to a specific percentage."""
     current = youtube_player_state["current_volume"]
     if volume_level < 0 or volume_level > 100:
         speak("Volume level must be between 0 and 100")
@@ -203,10 +210,6 @@ def set_volume(volume_level: int) -> None:
         for _ in range(abs(difference) // 5):
             control_youtube_video("volume decrease")
             time.sleep(0.1)
-
-
-# --- Command Handlers ---
-from assistant.core.registry import on_regex, on_fuzzy
 
 @on_regex(r"(?P<text>.*(?:full\s*screen|fullscreen).*)$")
 def handle_fullscreen_logic(text):

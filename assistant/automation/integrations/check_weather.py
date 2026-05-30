@@ -1,3 +1,8 @@
+"""
+Module for retrieving and announcing weather information using OpenWeatherMap API.
+Provides functionality for location detection, temperature checks, and detailed reports.
+"""
+
 import requests
 import os
 import geocoder
@@ -5,15 +10,13 @@ from dotenv import load_dotenv
 from assistant.core.speak_selector import speak
 from typing import Dict, Union, Optional, Any
 
-# Load environment variables from .env file for secure API key storage
 load_dotenv()
 
 def get_location() -> Optional[Dict[str, Union[float, str]]]:
     """
-    Determine current geographical location using IP address geolocation.
+    Detects the user's current geographical location via IP geolocation services.
     """
     try:
-        # Primary: ipapi.co
         location_response = requests.get("https://ipapi.co/json/", timeout=5)
         if location_response.status_code == 200:
             location_data = location_response.json()
@@ -25,7 +28,6 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
             if lat is not None and lon is not None:
                 return {"latitude": lat, "longitude": lon, "city": city, "country": country}
 
-        # Fallback: geocoder
         g = geocoder.ip("me")
         if g.ok:
             return {
@@ -39,7 +41,6 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
         return None
     except Exception as e:
         print(f"Error getting location: {str(e)}")
-        # Final attempt fallback
         try:
             g = geocoder.ip("me")
             if g.ok:
@@ -55,13 +56,7 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
 
 def get_wind_direction(degrees: float) -> str:
     """
-    Convert wind direction in degrees to cardinal direction.
-
-    Args:
-        degrees (float): Wind direction in degrees (0-360)
-
-    Returns:
-        str: Cardinal direction (N, NE, E, SE, S, SW, W, NW)
+    Maps wind direction in degrees to a cardinal direction string.
     """
     directions = [
         "North", "Northeast", "East", "Southeast",
@@ -71,7 +66,9 @@ def get_wind_direction(degrees: float) -> str:
     return directions[idx]
 
 def _fetch_weather_data(lat: Optional[float] = None, lon: Optional[float] = None, address: Optional[str] = None, units: str = "metric") -> Optional[Dict[str, Any]]:
-    """Helper method to fetch weather data from OpenWeatherMap API."""
+    """
+    Internal helper to query the OpenWeatherMap API for weather data.
+    """
     WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
     if not WEATHER_API_KEY:
         print("OpenWeatherMap API key is required. Please set the WEATHER_API_KEY environment variable.")
@@ -103,11 +100,13 @@ def _fetch_weather_data(lat: Optional[float] = None, lon: Optional[float] = None
     return weather_data
 
 def _format_weather_report(weather_data: Dict[str, Any], units: str, city_name: str, country_name: str) -> str:
-    """Helper method to format the comprehensive weather report string."""
+    """
+    Internal helper to generate a human-readable weather report string.
+    """
     main_data = weather_data["main"]
     weather_desc = weather_data["weather"][0]
     wind_data = weather_data.get("wind", {})
-    visibility = weather_data.get("visibility", 0) / 1000  # Convert meters to km
+    visibility = weather_data.get("visibility", 0) / 1000
     clouds = weather_data.get("clouds", {}).get("all", 0)
 
     temp = main_data["temp"]
@@ -147,7 +146,9 @@ def _format_weather_report(weather_data: Dict[str, Any], units: str, city_name: 
     return weather_report
 
 def _extract_comprehensive_data(weather_data: Dict[str, Any], units: str, city_name: str, country_name: str) -> Dict[str, Any]:
-    """Helper method to extract the structured dictionary from raw weather data."""
+    """
+    Internal helper to parse raw API data into a structured dictionary.
+    """
     main_data = weather_data["main"]
     wind_data = weather_data.get("wind", {})
     wind_deg = wind_data.get("deg", 0)
@@ -169,7 +170,9 @@ def _extract_comprehensive_data(weather_data: Dict[str, Any], units: str, city_n
 
 
 def get_current_temperature(units: str = "metric") -> None:
-    """Get and announce current temperature for the user's location."""
+    """
+    Fetches and speaks the current temperature for the user's location.
+    """
     try:
         location_info = get_location()
         if not location_info:
@@ -202,7 +205,9 @@ def get_current_temperature(units: str = "metric") -> None:
 
 
 def get_overall_weather(units: str = "metric") -> Optional[Dict[str, Any]]:
-    """Get comprehensive weather report for current location."""
+    """
+    Fetches and speaks a comprehensive weather report for the user's location.
+    """
     try:
         location_info = get_location()
         if not location_info:
@@ -228,7 +233,9 @@ def get_overall_weather(units: str = "metric") -> Optional[Dict[str, Any]]:
 
 
 def get_weather_by_address(address: str, units: str = "metric") -> Optional[Dict[str, Any]]:
-    """Get comprehensive weather information for a specific location by address."""
+    """
+    Fetches and speaks weather information for a specific location string.
+    """
     try:
         if not address or not isinstance(address, str):
             print("Please provide a valid address/city name as a string.")
@@ -257,25 +264,26 @@ def get_weather_by_address(address: str, units: str = "metric") -> Optional[Dict
 
 
 if __name__ == "__main__":
-    # Option 2: Comprehensive weather information for current location
     get_overall_weather(units="metric")
 
 
-# --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
 
 @on_fuzzy(["check temperature", "check the temperature", "what is the temperature"], score_cutoff=90)
 def handle_temp():
+    """Handles voice commands to check current temperature."""
     speak("Checking the temperature. Please wait a moment...")
     get_current_temperature()
 
 @on_regex(r"(?:check\s+(?:the\s+)?)?weather$")
 @on_fuzzy(["what's the weather today", "check today's weather", "today's weather", "weather today", "check the weather"], score_cutoff=90)
 def handle_weather_today():
+    """Handles voice commands to check today's weather."""
     speak("Checking Today's weather conditions. Please wait a moment...")
     get_overall_weather()
 
 @on_regex(r"(?:check\s+the\s+)?weather\s+(?:in|for|at|of)\s+(?P<location>.*)$")
 def handle_weather_location(location):
+    """Handles voice commands to check weather in a specific location."""
     speak(f"Checking the weather in {location}. Please wait a moment...")
     get_weather_by_address(address=location)
