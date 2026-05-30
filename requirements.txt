@@ -33,6 +33,7 @@ google-api-python-client
 google-auth
 google-auth-httplib2
 google-auth-oauthlib
+google-genai
 google_search_results
 googleapis-common-protos
 groq
