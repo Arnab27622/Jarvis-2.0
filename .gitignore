@@ -1,6 +1,7 @@
 .vscode
 .venv
 *__pycache__
+*pytest_cache
 .env
 JARVIS_2.0.egg-info
 images
@@ -12,8 +13,11 @@ screenshots
 models
 commands_list.txt
 data/remembered_info.json
-tests/
+ingest_document.py
+test.py
+test2.py
 tools/
+chat_history.json
 data/logs
 data/brain_data/chroma_db/
 data/credentials/

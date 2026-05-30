@@ -1,0 +1,74 @@
+name: Jarvis 2.0 CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  backend-checks:
+    name: Python Backend Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Install system dependencies (PortAudio)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y portaudio19-dev python3-pyaudio libespeak-ng-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio ruff mypy
+
+    - name: Lint with Ruff
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        ruff check . --select=E9,F63,F7,F82 --show-source
+        # Output warnings for other style issues (without failing the build)
+        ruff check . --exit-zero
+
+    - name: Run Pytest
+      # We mock/skip certain imports if they fail on headless linux, but unit tests should run
+      run: |
+        pytest tests/
+
+  frontend-checks:
+    name: Frontend UI Checks
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./jarvis-ui
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "18"
+        cache: "npm"
+        cache-dependency-path: "./jarvis-ui/package-lock.json"
+
+    - name: Install NPM dependencies
+      run: npm ci
+
+    - name: Lint Frontend
+      run: npm run lint
+      continue-on-error: true # Don't fail build for UI lint warnings immediately
+
+    - name: Build Frontend
+      run: npm run build
