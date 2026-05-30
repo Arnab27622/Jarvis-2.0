@@ -33,8 +33,22 @@ VOICE_NAME = "am_michael"
 
 print("Initializing Voice Module (Kokoro)...")
 try:
-    kokoro = Kokoro(KOKORO_MODEL_PATH, KOKORO_VOICES_PATH)
+    import torch
+    import onnxruntime as ort
+    
+    # Workaround for Windows ONNXRuntime CUDA DLL issue
+    torch.cuda.init()
+    
+    session = ort.InferenceSession(
+        KOKORO_MODEL_PATH,
+        providers=[
+            "CUDAExecutionProvider",
+            "CPUExecutionProvider"
+        ]
+    )
+    kokoro = Kokoro.from_session(session, KOKORO_VOICES_PATH)
     kokoro_ready = True
+    print(f"[Mouth] Kokoro ready. Providers: {session.get_providers()}")
 except Exception as e:
     print(f"Failed to load Kokoro model: {e}")
     kokoro_ready = False
