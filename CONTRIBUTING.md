@@ -6,7 +6,7 @@ First off, thank you for considering contributing to Jarvis 2.0! It's people lik
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository_url>
+   git clone [https://github.com/Arnab27622/Jarvis-2.0.git](https://github.com/Arnab27622/Jarvis-2.0.git)
    cd Jarvis-2.0
    ```
 
