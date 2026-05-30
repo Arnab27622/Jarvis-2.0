@@ -40,7 +40,7 @@ def get_gmail_service():
         print(f"An error occurred: {e}")
         return None
 
-@on_fuzzy(["check my email", "do i have new emails", "read my inbox"])
+@on_fuzzy(["check my email", "do i have new emails", "read my inbox", "any new emails", "read emails", "check emails", "check inbox", "show my emails"], score_cutoff=85)
 def check_email(text):
     service = get_gmail_service()
     if not service:
@@ -76,7 +76,7 @@ def check_email(text):
         print(f"Error checking email: {e}")
         speak("I ran into an issue while checking your inbox.")
 
-@on_regex(r".*send email to (.*) about (.*)")
+@on_regex(r".*(?:send|write|compose|draft).*(?:an\s+)?email\s+(?:to\s+)?(.*?)\s+(?:about|on|regarding)\s+(.*)", priority=5)
 def send_email(recipient, subject):
     recipient = recipient.strip()
     subject = subject.strip()
