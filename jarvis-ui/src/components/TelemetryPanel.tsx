@@ -4,19 +4,22 @@ import { motion } from 'framer-motion';
 export interface TelemetryData {
   cpu: number;
   ram: number;
+  disk: number;
+  gpu: number;
+  network: {
+    upload: number;
+    download: number;
+  };
 }
 
 const TelemetryPanel: React.FC = () => {
-  const [telemetry, setTelemetry] = useState<TelemetryData>({ cpu: 0, ram: 0 });
+  const [telemetry, setTelemetry] = useState<TelemetryData>({ cpu: 0, ram: 0, disk: 0, gpu: 0, network: { upload: 0, download: 0 } });
 
   useEffect(() => {
     const handleMetrics = (event: CustomEvent<TelemetryData>) => {
       setTelemetry(event.detail);
     };
 
-    // The websocket handler in App.tsx will dispatch a custom event to window
-    // so we don't have to drill props if we don't want to, but actually
-    // passing it as a prop is better React practice.
     window.addEventListener('sys_metrics', handleMetrics as EventListener);
     
     return () => {
@@ -24,38 +27,48 @@ const TelemetryPanel: React.FC = () => {
     };
   }, []);
 
+  const formatNetworkSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec === 0) return '0 B/s';
+    const k = 1024;
+    const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+    const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
+    return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const renderProgressBar = (label: string, value: number, color: string = 'var(--primary-glow)') => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <span style={{ minWidth: '40px', color: color, fontWeight: 'bold' }}>{label}</span>
+      <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
+        <motion.div 
+          style={{ background: color, height: '100%' }}
+          animate={{ width: `${value}%` }}
+          transition={{ ease: "easeOut", duration: 0.5 }}
+        />
+      </div>
+      <span style={{ minWidth: '40px', textAlign: 'right' }}>{Math.round(value)}%</span>
+    </div>
+  );
+
   return (
     <div className="hud-panel widget" style={{ marginTop: '20px' }}>
       <h3 style={{ marginBottom: '15px', color: 'var(--text-secondary)' }}>SYS.METRICS</h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+        {renderProgressBar('CPU', telemetry.cpu || 0)}
+        {renderProgressBar('RAM', telemetry.ram || 0)}
+        {renderProgressBar('GPU', telemetry.gpu || 0)}
+        {renderProgressBar('DSK', telemetry.disk || 0)}
         
-        {/* CPU Tracker */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ minWidth: '40px', color: 'var(--primary-glow)', fontWeight: 'bold' }}>CPU</span>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
-            <motion.div 
-              style={{ background: 'var(--primary-glow)', height: '100%' }}
-              animate={{ width: `${telemetry.cpu}%` }}
-              transition={{ ease: "easeOut", duration: 0.5 }}
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>NET.UP</span>
+            <span>{formatNetworkSpeed(telemetry.network?.upload || 0)}</span>
           </div>
-          <span style={{ minWidth: '40px', textAlign: 'right' }}>{Math.round(telemetry.cpu)}%</span>
-        </div>
-
-        {/* RAM Tracker */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ minWidth: '40px', color: 'var(--primary-glow)', fontWeight: 'bold' }}>RAM</span>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
-            <motion.div 
-              style={{ background: 'var(--primary-glow)', height: '100%' }}
-              animate={{ width: `${telemetry.ram}%` }}
-              transition={{ ease: "easeOut", duration: 0.5 }}
-            />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>NET.DN</span>
+            <span>{formatNetworkSpeed(telemetry.network?.download || 0)}</span>
           </div>
-          <span style={{ minWidth: '40px', textAlign: 'right' }}>{Math.round(telemetry.ram)}%</span>
         </div>
-
       </div>
     </div>
   );

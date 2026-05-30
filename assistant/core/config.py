@@ -25,6 +25,7 @@ Usage:
 """
 
 import os
+import json
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
@@ -91,6 +92,12 @@ class JarvisConfig:
         self.tts_speed: float = 1.08
         self.tts_language: str = "en-us"
         self.ack_sound_path: Path = self.sounds_dir / "ack_chirp.wav"
+        
+        # UI Settings
+        self.theme: str = "cyan"
+
+        # Load overrides from config.json
+        self._load_json_config()
 
         # ── Speech Recognition Settings ──
         self.stt_energy_threshold: int = 35100
@@ -138,6 +145,35 @@ class JarvisConfig:
         ]
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
+
+    def _load_json_config(self) -> None:
+        """Load settings overrides from config.json."""
+        self.config_file = self.project_root / "config.json"
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, "r") as f:
+                    data = json.load(f)
+                    self.tts_voice = data.get("tts_voice", self.tts_voice)
+                    self.tts_speed = data.get("tts_speed", self.tts_speed)
+                    self.theme = data.get("theme", self.theme)
+            except Exception as e:
+                print(f"[Config] Error loading config.json: {e}")
+
+    def save_settings(self, data: dict) -> None:
+        """Update and save settings to config.json."""
+        if "tts_voice" in data: self.tts_voice = data["tts_voice"]
+        if "tts_speed" in data: self.tts_speed = float(data["tts_speed"])
+        if "theme" in data: self.theme = data["theme"]
+        
+        try:
+            with open(self.config_file, "w") as f:
+                json.dump({
+                    "tts_voice": self.tts_voice,
+                    "tts_speed": self.tts_speed,
+                    "theme": self.theme
+                }, f, indent=4)
+        except Exception as e:
+            print(f"[Config] Error saving config.json: {e}")
 
     def _log_provider_status(self) -> None:
         """Report which API providers are configured at startup."""

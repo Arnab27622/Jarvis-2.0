@@ -1,13 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../App';
 import { User, Cpu, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import TypingIndicator from './TypingIndicator';
 
 interface DataStreamProps {
   logs: LogEntry[];
+  isProcessing?: boolean;
 }
 
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
@@ -98,26 +100,43 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
   );
 };
 
-const DataStream: React.FC<DataStreamProps> = ({ logs }) => {
+const DataStream: React.FC<DataStreamProps> = ({ logs, isProcessing }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [logs, isProcessing]);
+
+  const filteredLogs = logs.filter(log => 
+    log.text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="chat-log" ref={scrollRef}>
-      <AnimatePresence initial={false}>
-        {logs.map((log) => (
-          <motion.div 
-            key={log.id} 
-            className={`log-entry ${log.sender}`}
-            initial={{ opacity: 0, x: -20, height: 0 }}
-            animate={{ opacity: 1, x: 0, height: 'auto' }}
-            transition={{ duration: 0.3 }}
-          >
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <div style={{ marginBottom: '15px' }}>
+        <input 
+          type="text" 
+          placeholder="SEARCH COMMUNICATION LOGS..." 
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="hud-input"
+          style={{ width: '100%', fontSize: '14px', padding: '5px' }}
+        />
+      </div>
+      <div className="chat-log" ref={scrollRef}>
+        <AnimatePresence initial={false}>
+          {filteredLogs.map((log) => (
+            <motion.div 
+              key={log.id} 
+              className={`log-entry ${log.sender}`}
+              initial={{ opacity: 0, x: -20, height: 0 }}
+              animate={{ opacity: 1, x: 0, height: 'auto' }}
+              transition={{ duration: 0.3 }}
+              title={new Date(log.timestamp).toLocaleTimeString()}
+            >
             <div className="log-icon">
               {log.sender === 'user' ? <User size={24} /> : <Cpu size={24} />}
             </div>
@@ -136,8 +155,10 @@ const DataStream: React.FC<DataStreamProps> = ({ logs }) => {
               )}
             </div>
           </motion.div>
-        ))}
-      </AnimatePresence>
+          ))}
+          {isProcessing && <TypingIndicator key="typing-indicator" />}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

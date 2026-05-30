@@ -33,7 +33,6 @@ logger = get_logger("Mouth")
 # --- Global State ---
 KOKORO_MODEL_PATH = str(config.kokoro_model_path)
 KOKORO_VOICES_PATH = str(config.kokoro_voices_path)
-VOICE_NAME = config.tts_voice
 
 logger.info("Initializing Voice Module (Kokoro)...")
 try:
@@ -118,7 +117,7 @@ def _generate_audio(text: str):
         tts_text = clean_for_speech(text)
         if not tts_text.strip():
             return None
-        audio, _ = kokoro.create(tts_text, voice=VOICE_NAME, speed=config.tts_speed, lang=config.tts_language)
+        audio, _ = kokoro.create(tts_text, voice=config.tts_voice, speed=config.tts_speed, lang=config.tts_language)
         return audio
     except Exception as e:
         logger.error("Kokoro generation error: %s", e)

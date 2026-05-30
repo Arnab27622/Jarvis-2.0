@@ -11,6 +11,39 @@
   --alert-glow: #ff2a00;
 }
 
+[data-theme="amber"] {
+  --primary-glow: #ff9900;
+  --secondary-glow: #cc5500;
+  --bg-color: #1a0f00;
+  --panel-bg: rgba(26, 15, 0, 0.7);
+  --border-color: rgba(255, 153, 0, 0.3);
+  --text-primary: #ffebcc;
+  --text-secondary: #ff9900;
+  --alert-glow: #ff0000;
+}
+
+[data-theme="minimal"] {
+  --primary-glow: #0055ff;
+  --secondary-glow: #0022cc;
+  --bg-color: #f0f5ff;
+  --panel-bg: rgba(255, 255, 255, 0.9);
+  --border-color: rgba(0, 85, 255, 0.2);
+  --text-primary: #112244;
+  --text-secondary: #0055ff;
+  --alert-glow: #dd0000;
+}
+
+[data-theme="oled"] {
+  --primary-glow: #ffffff;
+  --secondary-glow: #aaaaaa;
+  --bg-color: #000000;
+  --panel-bg: #000000;
+  --border-color: rgba(255, 255, 255, 0.2);
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --alert-glow: #ff3333;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -52,7 +85,7 @@ body::after {
   width: 100vw;
   display: grid;
   grid-template-columns: 2fr 1fr;
-  grid-template-rows: 60px 1fr 80px;
+  grid-template-rows: 60px minmax(0, 1fr) 80px;
   grid-template-areas: 
     "header header"
     "main sidebar"
@@ -265,6 +298,11 @@ body::after {
   box-shadow: 0 5px 15px -5px rgba(0, 240, 255, 0.4);
 }
 
+.hud-input option {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
 .hud-btn {
   background: rgba(0, 240, 255, 0.1);
   border: 1px solid var(--primary-glow);
@@ -361,4 +399,66 @@ body::after {
   font-weight: bold;
   text-shadow: 0 0 10px var(--primary-glow);
   position: absolute;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 992px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .hud-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas: 
+      "header"
+      "main"
+      "sidebar"
+      "footer";
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .chat-log {
+    min-height: 50vh;
+  }
+  
+  .hud-sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow-y: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .hud-header {
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+  }
+  
+  .hud-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .hud-sidebar {
+    display: none; /* Full screen chat on small mobile */
+  }
+  
+  .hud-header h1 {
+    font-size: 20px;
+  }
+  
+  .hud-footer {
+    padding: 10px;
+  }
+  
+  .hud-btn {
+    padding: 10px;
+    font-size: 14px;
+  }
 }

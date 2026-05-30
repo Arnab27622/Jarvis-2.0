@@ -137,3 +137,4 @@ winrt-windows-devices-geolocation
 winrt-windows-foundation
 chromadb
 pypdf
+gputil

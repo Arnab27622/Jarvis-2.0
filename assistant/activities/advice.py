@@ -93,15 +93,17 @@ def rand_advice() -> Optional[str]:
         return random.choice(advice_cache)
 
     # Try to get advice from APIs concurrently for better performance
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # Submit API calls to thread pool
-        future_to_api = {
-            executor.submit(fetch_advice_slip): "AdviceSlip",
-            executor.submit(fetch_zen_quotes): "ZenQuotes",
-        }
+    import concurrent.futures
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+    # Submit API calls to thread pool
+    future_to_api = {
+        executor.submit(fetch_advice_slip): "AdviceSlip",
+        executor.submit(fetch_zen_quotes): "ZenQuotes",
+    }
 
-        # Process completed API calls as they finish (with 3 second timeout)
-        for future in as_completed(future_to_api, timeout=3):
+    # Process completed API calls as they finish (with 3 second timeout)
+    try:
+        for future in concurrent.futures.as_completed(future_to_api, timeout=3):
             try:
                 advice = future.result()
                 if advice:
@@ -111,10 +113,14 @@ def rand_advice() -> Optional[str]:
                     advice_cache.append(advice)
                     LAST_API_CALL = current_time
                     print(f"Successfully fetched advice from {future_to_api[future]}")
+                    executor.shutdown(wait=False, cancel_futures=True)
                     return advice
-            except:
+            except Exception:
                 continue  # If one API fails, try the next one
+    except concurrent.futures.TimeoutError:
+        print("Advice APIs timed out")
 
+    executor.shutdown(wait=False, cancel_futures=True)
     # If all APIs fail, use local fallback advice
     print("All advice APIs failed, using local fallback")
     return random.choice(fallback_advice)

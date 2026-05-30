@@ -3,7 +3,8 @@ import DataStream from './components/DataStream';
 import StatusPanel from './components/StatusPanel';
 import TelemetryPanel from './components/TelemetryPanel';
 import AlertManager from './components/AlertManager';
-import { Terminal, Loader } from 'lucide-react';
+import SettingsPanel from './components/SettingsPanel';
+import { Terminal, Loader, Settings } from 'lucide-react';
 
 export type LogEntry = {
   id: string;
@@ -33,7 +34,14 @@ const Clock = () => {
 };
 
 function App() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('jarvis_chat_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [alerts, setAlerts] = useState<ToastAlert[]>([]);
   const [input, setInput] = useState('');
   const [battery, setBattery] = useState({ percent: 100, plugged: true });
@@ -41,6 +49,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [glitch, setGlitch] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const ws = useRef<WebSocket | null>(null);
 
   const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
@@ -73,6 +82,22 @@ function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('jarvis_chat_history', JSON.stringify(logs));
+  }, [logs]);
+
+  useEffect(() => {
+    // Load initial theme from backend
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.theme) {
+          document.documentElement.setAttribute('data-theme', data.theme);
+        }
+      })
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -189,17 +214,22 @@ function App() {
     <div className={`hud-container ${glitch ? 'glitch-effect' : ''}`}>
       <header className="hud-header hud-panel">
         <h1><Terminal size={28} /> JARVIS 2.0_</h1>
-        <div className="status-indicators">
+        <div className="status-indicators" style={{ display: 'flex', alignItems: 'center' }}>
           <span style={{ color: isOnline ? 'inherit' : 'var(--alert-glow)' }}>
             SYS.{isOnline ? 'ONLINE' : 'OFFLINE'}
           </span>
           <span>SEC.M5</span>
           <Clock />
+          <Settings 
+            size={24} 
+            style={{ cursor: 'pointer', color: 'var(--primary-glow)', marginLeft: '10px' }} 
+            onClick={() => setIsSettingsOpen(true)} 
+          />
         </div>
       </header>
       
       <main className="hud-main hud-panel">
-        <DataStream logs={logs} />
+        <DataStream logs={logs} isProcessing={isProcessing} />
       </main>
       
       <aside className="hud-sidebar">
@@ -229,6 +259,7 @@ function App() {
       </footer>
       
       <AlertManager alerts={alerts} setAlerts={setAlerts} />
+      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

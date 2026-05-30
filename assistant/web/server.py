@@ -4,12 +4,19 @@ FastAPI web server providing a real-time dashboard and WebSocket interface for J
 
 import asyncio
 import os
+import psutil
+try:
+    import GPUtil
+except ImportError:
+    GPUtil = None
 from typing import List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import Request
 import uvicorn
 from assistant.core.event_bus import bus, EventType, text_command_queue
+from assistant.core.config import config
 
 app = FastAPI()
 
@@ -28,11 +35,100 @@ if os.path.exists(IMAGES_DIR):
 if os.path.exists(SCREENSHOTS_DIR):
     app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots")
 
+# Global network IO trackers
+_last_net_io = None
+_last_net_time = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background tasks when the server starts."""
+    asyncio.create_task(metrics_emitter())
+
+async def metrics_emitter():
+    """Periodically collects and broadcasts system metrics."""
+    global _last_net_io, _last_net_time
+    import time
+    while True:
+        try:
+            if manager.active_connections:
+                current_io = psutil.net_io_counters()
+                current_time = time.time()
+                
+                upload_speed = 0
+                download_speed = 0
+                
+                if _last_net_io and _last_net_time:
+                    dt = current_time - _last_net_time
+                    if dt > 0:
+                        upload_speed = (current_io.bytes_sent - _last_net_io.bytes_sent) / dt
+                        download_speed = (current_io.bytes_recv - _last_net_io.bytes_recv) / dt
+                        
+                _last_net_io = current_io
+                _last_net_time = current_time
+                
+                metrics = {
+                    "cpu": psutil.cpu_percent(interval=None),
+                    "ram": psutil.virtual_memory().percent,
+                    "disk": psutil.disk_usage('/').percent,
+                    "network": {
+                        "upload": upload_speed,
+                        "download": download_speed
+                    }
+                }
+                
+                if GPUtil:
+                    gpus = GPUtil.getGPUs()
+                    if gpus:
+                        metrics["gpu"] = gpus[0].load * 100
+                else:
+                    metrics["gpu"] = 0
+                
+                await manager.broadcast({
+                    "type": EventType.SYS_METRICS.value,
+                    "data": metrics
+                })
+        except Exception:
+            pass
+        await asyncio.sleep(2)
+
 @app.get("/")
 async def serve_index():
     """Serves the main React application entry point."""
     with open(os.path.join(UI_DIR, "index.html"), "r") as f:
         return HTMLResponse(content=f.read())
+
+@app.get("/api/settings")
+async def get_settings():
+    return JSONResponse({
+        "tts_voice": config.tts_voice,
+        "tts_speed": config.tts_speed,
+        "theme": config.theme
+    })
+
+@app.post("/api/settings")
+async def update_settings(request: Request):
+    data = await request.json()
+    old_theme = config.theme
+    old_voice = config.tts_voice
+    
+    config.save_settings(data)
+    
+    # Broadcast changes to active clients only if they actually changed
+    if data.get("theme") and data.get("theme") != old_theme:
+        broadcast_event(EventType.NOTIFY, {"text": f"Theme updated to {data['theme'].upper()}"})
+    if data.get("tts_voice") and data.get("tts_voice") != old_voice:
+        broadcast_event(EventType.NOTIFY, {"text": f"Voice updated to {data['tts_voice'].upper()}"})
+        
+    return JSONResponse({"status": "success", "settings": data})
+
+@app.get("/api/status")
+async def get_status():
+    return JSONResponse({
+        "providers": config.get_available_llm_providers(),
+        "status": "online",
+        "stt": "Google Web Speech",
+        "tts": "Kokoro TTS"
+    })
 
 class ConnectionManager:
     """Manages active WebSocket connections and message broadcasting."""
