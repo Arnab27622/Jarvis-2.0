@@ -80,8 +80,12 @@ def _load_ack_sound():
         if os.path.exists(ACK_SOUND_PATH):
             with wave.open(ACK_SOUND_PATH, 'rb') as wf:
                 _ack_sample_rate = wf.getframerate()
+                channels = wf.getnchannels()
                 frames = wf.readframes(wf.getnframes())
-                _ack_audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32767.0
+                audio_data = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32767.0
+                if channels > 1:
+                    audio_data = audio_data.reshape(-1, channels)
+                _ack_audio = audio_data
             logger.info("Acknowledgment sound loaded.")
     except Exception as e:
         logger.warning("Could not load ack sound: %s", e)
