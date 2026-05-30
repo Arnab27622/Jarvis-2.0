@@ -62,6 +62,9 @@ def brain(text: str, threshold: float = 0.85) -> None:
             from assistant.core.speak_selector import speak_streaming
             from assistant.core.llm_utils import split_sentences
             speak_streaming(split_sentences(response))
+            
+            from assistant.core.llm_manager import add_to_history
+            add_to_history(text, response)
             return
 
         # Use local dataset and model for primary response generation
@@ -81,6 +84,9 @@ def brain(text: str, threshold: float = 0.85) -> None:
         from assistant.core.speak_selector import speak_streaming
         from assistant.core.llm_utils import split_sentences
         speak_streaming(split_sentences(response))
+        
+        from assistant.core.llm_manager import add_to_history
+        add_to_history(text, response)
 
         # Store the new Q&A pair in local database for future use
         with qa_lock:  # Ensure thread-safe database operations

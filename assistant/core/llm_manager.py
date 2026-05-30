@@ -16,10 +16,44 @@ from assistant.core.llm_utils import clean_llm_output, split_sentences, trim_his
 from assistant.activities.activity_monitor import record_user_activity
 
 load_dotenv()
+import json
+
+HISTORY_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "brain_data", "chat_history.json")
 
 # Global conversation history
 CHAT_HISTORY: List[Dict[str, str]] = []
 HISTORY_LOCK = threading.Lock()
+
+def load_history():
+    global CHAT_HISTORY
+    if os.path.exists(HISTORY_FILE_PATH):
+        try:
+            with open(HISTORY_FILE_PATH, "r", encoding="utf-8") as f:
+                CHAT_HISTORY = json.load(f)
+                if not isinstance(CHAT_HISTORY, list):
+                    CHAT_HISTORY = []
+        except Exception as e:
+            print(f"[LLM] Error loading chat history: {e}")
+            CHAT_HISTORY = []
+
+def save_history():
+    try:
+        os.makedirs(os.path.dirname(HISTORY_FILE_PATH), exist_ok=True)
+        with open(HISTORY_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(CHAT_HISTORY, f, indent=4)
+    except Exception as e:
+        print(f"[LLM] Error saving chat history: {e}")
+
+load_history()
+
+def add_to_history(user_text: str, assistant_text: str):
+    """Allows other modules (like local brain) to inject interactions into LLM context."""
+    global CHAT_HISTORY
+    with HISTORY_LOCK:
+        CHAT_HISTORY.append({"role": "user", "content": user_text})
+        CHAT_HISTORY.append({"role": "assistant", "content": assistant_text})
+        CHAT_HISTORY = trim_history(CHAT_HISTORY, max_messages=10)
+        save_history()
 
 SYSTEM_PROMPT = (
     "You are JARVIS, a friendly, intelligent, and loyal digital companion for your creator, Arnab Dey. "
@@ -130,6 +164,7 @@ class LLMManager:
         with HISTORY_LOCK:
             CHAT_HISTORY.append({"role": "user", "content": user_input})
             CHAT_HISTORY = trim_history(CHAT_HISTORY, max_messages=10)
+            save_history()
             messages_to_send = list(CHAT_HISTORY)
 
         if intent == "technical":
@@ -162,6 +197,7 @@ class LLMManager:
             with HISTORY_LOCK:
                 if CHAT_HISTORY and CHAT_HISTORY[-1].get("role") == "user":
                     CHAT_HISTORY.pop()
+                    save_history()
             return error_msg
 
         clean_text = clean_llm_output(res)
@@ -169,6 +205,7 @@ class LLMManager:
         # Save assistant response to history
         with HISTORY_LOCK:
             CHAT_HISTORY.append({"role": "assistant", "content": clean_text})
+            save_history()
             
         await asyncio.to_thread(save_to_brain, user_input, clean_text)
         

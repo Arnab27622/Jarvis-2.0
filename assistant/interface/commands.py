@@ -21,7 +21,7 @@ import time
 import importlib
 import pkgutil
 
-FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "tell me", "i want to", "start", "run", "ok", "okay", "alright"]
+FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "ok", "okay", "alright"]
 
 def normalize_command(text: str) -> str:
     """
