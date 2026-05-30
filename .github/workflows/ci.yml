@@ -37,7 +37,7 @@ jobs:
     - name: Run Pytest
       # We mock/skip certain imports if they fail on headless linux, but unit tests should run
       run: |
-        pytest tests/
+        python -m pytest tests/
 
   frontend-checks:
     name: Frontend UI Checks
