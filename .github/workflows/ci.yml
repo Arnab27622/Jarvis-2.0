@@ -9,7 +9,7 @@ on:
 jobs:
   backend-checks:
     name: Python Backend Checks
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     steps:
     - name: Checkout repository
@@ -20,11 +20,6 @@ jobs:
       with:
         python-version: "3.11"
         cache: "pip"
-
-    - name: Install system dependencies (PortAudio)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y portaudio19-dev python3-pyaudio libespeak-ng-dev
 
     - name: Install Python dependencies
       run: |
@@ -59,7 +54,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: "18"
+        node-version: "20"
         cache: "npm"
         cache-dependency-path: "./jarvis-ui/package-lock.json"
 
