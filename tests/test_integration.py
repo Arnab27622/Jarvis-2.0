@@ -1,6 +1,5 @@
 import pytest
-import asyncio
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 from assistant.core.llm_manager import LLMManager
 
 @pytest.mark.asyncio

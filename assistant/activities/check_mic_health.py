@@ -242,7 +242,7 @@ def mic_health() -> None:
         # Validate choice
         valid_choices = [device[0] for device in devices]
         if choice not in valid_choices:
-            speak(f"Invalid choice. Using default device.")
+            speak("Invalid choice. Using default device.")
             choice = None
     except:
         speak("Invalid input. Using default device.")

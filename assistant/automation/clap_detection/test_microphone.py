@@ -7,7 +7,6 @@ import sounddevice as sd
 import numpy as np
 import time
 import wave
-import os
 
 
 from typing import Optional, List, Tuple, Any
@@ -39,7 +38,7 @@ def test_microphone(device_index: Optional[int] = None, duration: int = 5, sampl
         rms_amplitude = np.sqrt(np.mean(audio_data**2))
         silence_threshold = 100
 
-        print(f"📊 Audio Analysis:")
+        print("📊 Audio Analysis:")
         print(f"   Max Amplitude: {max_amplitude}")
         print(f"   RMS Amplitude: {rms_amplitude:.2f}")
         print(f"   Silence Threshold: {silence_threshold}")

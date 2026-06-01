@@ -5,7 +5,6 @@ Provides functions that the LLM can natively call using Function Calling.
 These functions wrap the existing automation scripts so the LLM can use them seamlessly.
 """
 
-from typing import Optional, Dict, Any
 from assistant.automation.integrations.check_weather import _fetch_weather_data, _extract_comprehensive_data, get_location
 from assistant.automation.integrations.detailed_web_search import get_web_info
 from assistant.core.logger import get_logger

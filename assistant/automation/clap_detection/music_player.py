@@ -2,7 +2,6 @@
 Module for a minimal, low-interference music player controlled by clap detection.
 """
 
-import os
 import random
 import threading
 import pygame

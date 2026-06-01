@@ -1,5 +1,3 @@
-import pytest
-import datetime
 from assistant.utils.time_parser import parse_time, parse_duration, parse_relative_time, parse_absolute_time
 
 def test_parse_time():

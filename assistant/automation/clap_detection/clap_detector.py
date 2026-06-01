@@ -13,7 +13,6 @@ from typing import Any, Callable, Optional
 
 import numpy as np
 import sounddevice as sd
-import torch
 from scipy.io.wavfile import write
 from assistant.automation.clap_detection.audio_inference import AudioModelHandler
 

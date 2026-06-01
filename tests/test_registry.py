@@ -1,4 +1,3 @@
-import pytest
 from assistant.core.registry import CommandRegistry
 
 def test_keyword_registry():

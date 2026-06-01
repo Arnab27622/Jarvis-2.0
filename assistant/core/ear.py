@@ -177,8 +177,8 @@ class AdvancedSpeechRecognizer:
         except sr.UnknownValueError:
             print(Fore.YELLOW + "Google Web Speech could not understand audio")
             return None
-        except sr.RequestError as e:
-            print(Fore.YELLOW + f"Google Web Speech offline or request error. Attempting offline fallback...")
+        except sr.RequestError:
+            print(Fore.YELLOW + "Google Web Speech offline or request error. Attempting offline fallback...")
             try:
                 # Fallback to offline Sphinx recognition
                 recognized_text = self.recognizer.recognize_sphinx(audio)

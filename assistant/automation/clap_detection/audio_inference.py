@@ -71,7 +71,7 @@ class AudioModelHandler:
                     waveform, sample_rate = torchaudio.load(
                         audio_path_index, backend="soundfile"
                     )
-            except Exception as e:
+            except Exception:
                 with warnings.catch_warnings():
                     warnings.filterwarnings(
                         "ignore",

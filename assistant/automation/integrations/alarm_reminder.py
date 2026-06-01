@@ -294,7 +294,6 @@ load_reminders()
 
 # --- Command Handlers ---
 from assistant.core.registry import on_regex, on_fuzzy
-import pyautogui as ui
 
 @on_regex(r"(?:set\s+)?(?:an\s+)?alarm\s+(?:for|at|in|after)?\s*(?P<time_text>.*)$")
 @on_fuzzy(["set alarm", "wake me up", "alarm at"], score_cutoff=90)

@@ -18,7 +18,7 @@ def get_country_by_ip() -> str:
     Detects the user's country code via IP geolocation services.
     """
     try:
-        response = requests.get(f"https://ipinfo.io", timeout=10)
+        response = requests.get("https://ipinfo.io", timeout=10)
         if response.status_code == 200:
             data = response.json()
             country = data.get("country", "").lower()
@@ -56,12 +56,12 @@ def get_news_everything_endpoint(category: str = "general", limit: int = 3) -> N
 
     category_query_map = {
         "general": "India",
-        "sports": f"sports India",
-        "technology": f"technology India",
-        "health": f"health India",
-        "business": f"business India",
-        "entertainment": f"entertainment India",
-        "science": f"science India",
+        "sports": "sports India",
+        "technology": "technology India",
+        "health": "health India",
+        "business": "business India",
+        "entertainment": "entertainment India",
+        "science": "science India",
     }
 
     query = category_query_map.get(category, "India")

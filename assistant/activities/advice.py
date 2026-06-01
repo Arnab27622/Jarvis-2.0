@@ -6,7 +6,6 @@ import requests
 import random
 import time
 from typing import Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from assistant.core.speak_selector import speak
 
 # Cache to store recent advice to avoid repeated API calls

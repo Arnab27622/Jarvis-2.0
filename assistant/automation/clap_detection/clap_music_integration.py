@@ -52,7 +52,7 @@ class FinalClapMusicSystem:
             f"🔊 Volume: {int(self.clap_music.music_player.volume * 100)}% (Ultra-low - NO INTERFERENCE!)"
         )
         print(
-            f"🎵 Music frequency: 48kHz (MAXIMUM separation from 22kHz clap detection)"
+            "🎵 Music frequency: 48kHz (MAXIMUM separation from 22kHz clap detection)"
         )
         print()
 

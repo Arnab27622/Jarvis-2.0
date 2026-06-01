@@ -4,7 +4,7 @@ LLM Search Module - Wrapper for Consolidated LLM Manager
 
 from assistant.core.llm_manager import llm_response as manager_response
 from assistant.core.llm_manager import llm_response_streaming as manager_streaming
-from assistant.core.speak_selector import speak_streaming, wait_for_tts_completion
+from assistant.core.speak_selector import wait_for_tts_completion
 
 def llm_response_streaming(user_input: str):
     """Get streaming response from the consolidated LLM Manager."""

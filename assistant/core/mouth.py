@@ -98,7 +98,7 @@ def play_ack_sound() -> None:
         try:
             # Play on a separate stream so it doesn't interfere with TTS playback
             sd.play(_ack_audio, samplerate=_ack_sample_rate, device=sd.default.device[1])
-        except Exception as e:
+        except Exception:
             pass  # Silently fail - this is just a UX enhancement
 
 # --- Queues & State ---

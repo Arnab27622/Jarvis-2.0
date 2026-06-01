@@ -3,7 +3,6 @@ Module for performing real-time web searches and AI-driven response generation.
 Integrates SerpApi for search data and Groq LLM for intelligent query processing.
 """
 
-import os
 import json
 from groq import Groq
 from serpapi import GoogleSearch

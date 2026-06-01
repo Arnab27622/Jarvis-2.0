@@ -124,7 +124,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
             # Decode base64 image data and save as PNG file
             f.write(base64.b64decode(image["base64"]))
         last_filename = filename
-        speak(f"Image saved in Images folder.")
+        speak("Image saved in Images folder.")
     
     return last_filename
 

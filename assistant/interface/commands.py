@@ -17,7 +17,6 @@ from assistant.core.registry import cmd_registry
 from assistant.core.logger import get_logger
 import random
 import re
-import os
 import time
 import importlib
 import pkgutil
@@ -153,7 +152,7 @@ def command() -> None:
                         stop_llm_speech()
                         speak("Cancelled response.")
                     else:
-                        print(f"[Debug] calling process_command")
+                        print("[Debug] calling process_command")
                         process_command(normalized_text)
                 text_command_queue.task_done()
             except Exception as e:

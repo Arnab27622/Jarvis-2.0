@@ -1,4 +1,3 @@
-import pytest
 from assistant.interface.commands import normalize_command
 
 def test_normalize_command():
