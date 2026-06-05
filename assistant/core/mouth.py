@@ -47,7 +47,8 @@ def _load_kokoro():
         import onnxruntime as ort
         
         # Workaround for Windows ONNXRuntime CUDA DLL issue
-        torch.cuda.init()
+        if torch.cuda.is_available():
+            torch.cuda.init()
         
         session = ort.InferenceSession(
             KOKORO_MODEL_PATH,

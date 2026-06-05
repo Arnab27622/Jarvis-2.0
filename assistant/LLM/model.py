@@ -34,6 +34,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 import os
+
+# Fix for Protobuf Descriptor error when importing chromadb with newer protobuf versions
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 import chromadb
 import joblib
 
@@ -258,8 +261,8 @@ def ingest_document(file_path: str) -> None:
         print(f"File not found: {file_path}")
         return
         
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(project_root, "data", "brain_data", "chroma_db")
+    from assistant.core.config import config
+    db_path = str(config.brain_data_dir / "chroma_db")
     init_chroma(db_path)
     
     text = ""
@@ -312,8 +315,8 @@ def mind(text: str, threshold: float = 0.7) -> Optional[str]:
     Main interface function for the local Q&A intelligence system.
     Orchestrates query processing using TF-IDF with ChromaDB semantic search as a fallback.
     """
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    dataset_path = os.path.join(project_root, "data", "brain_data", "qna_data.json")
+    from assistant.core.config import config
+    dataset_path = str(config.qna_data_path)
 
     ensure_model_loaded(dataset_path)
 

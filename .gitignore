@@ -3,7 +3,7 @@
 *__pycache__
 *pytest_cache
 .env
-JARVIS_2.0.egg-info
+*.egg-info
 images
 claps
 noise2
