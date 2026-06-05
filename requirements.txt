@@ -68,8 +68,6 @@ idna==3.17
 importlib_resources==7.1.0
 iniconfig==2.3.0
 isodate==0.7.2
--e git+https://github.com/Arnab27622/Jarvis-2.0.git@c141389279566758acfe900f9c553af95ba4421b#egg=jarvis
--e git+https://github.com/Arnab27622/Jarvis-2.0.git@c141389279566758acfe900f9c553af95ba4421b#egg=JARVIS_2.0
 Jinja2==3.1.6
 joblib==1.5.3
 jsonschema==4.26.0
