@@ -219,10 +219,8 @@ def _play_audio_item(text, audio, image, message_id):
             sd.wait()
             print_thread.join()
             
-            # Phase 7.3 Memory Management: Explicit cleanup of numpy arrays
+            # Memory Management: Rely on CPython reference counting
             del audio
-            import gc
-            gc.collect()
         else:
             # Fallback: no audio generated (Kokoro failed or text was empty formatting)
             bus.emit(EventType.SPEAK, {
@@ -297,6 +295,16 @@ def speak(text: str, image: str = None, message_id: str = None) -> None:
     if not _is_tts_running:
         start_tts_consumer()
     tts_queue.put((text, image, message_id))
+
+# Event handler for LLM streaming sentences
+def _on_llm_stream(data):
+    # data is expected to be a tuple (text, image, message_id)
+    if not _is_tts_running:
+        start_tts_consumer()
+    tts_queue.put(data)
+
+# Register the subscription to bridge llm_manager and mouth decoupling
+bus.subscribe(EventType.LLM_STREAMING, _on_llm_stream)
 
 def notify(text: str) -> None:
     """

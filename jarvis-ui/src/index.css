@@ -349,14 +349,14 @@ body::after {
 }
 
 .toast {
-  background: rgba(0, 20, 40, 0.9);
+  background: var(--panel-bg);
   border-left: 4px solid var(--primary-glow);
   padding: 15px 20px;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 15px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
 .toast.alert {

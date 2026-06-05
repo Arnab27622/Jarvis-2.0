@@ -216,12 +216,16 @@ async def websocket_endpoint(websocket: WebSocket):
             if data.get("type") == "command":
                 text = data.get("data", {}).get("text", "")
                 if text:
-                    await manager.broadcast({
-                        "type": EventType.USER_TEXT.value,
-                        "data": {"text": text}
-                    })
-                    print(f"[Debug] server.py putting text in queue: {text}")
-                    text_command_queue.put(text)
+                    import html
+                    # Sanitize input to prevent injection
+                    clean_text = html.escape(text.strip())
+                    if clean_text:
+                        await manager.broadcast({
+                            "type": EventType.USER_TEXT.value,
+                            "data": {"text": clean_text}
+                        })
+                        print(f"[Debug] server.py putting text in queue: {clean_text}")
+                        text_command_queue.put(clean_text)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
@@ -229,4 +233,4 @@ def start_web_server(port: int = 1410):
     """Initializes the event bridge and starts the Uvicorn server."""
     setup_event_bridge()
     print(f"Starting JARVIS Web Server on port {port}...")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="error")

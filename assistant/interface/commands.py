@@ -248,7 +248,8 @@ def process_command(normalized_text: str) -> None:
             background_task_started = True
             threading.Thread(target=brain, args=(normalized_text,), daemon=True).start()
     except Exception as e:
-        print(f"Error in process_command: {e}")
+        import traceback
+        print(f"Error in process_command:\n{traceback.format_exc()}")
         speak("I had trouble understanding or executing that command.")
     finally:
         from assistant.core.ear import recognizer

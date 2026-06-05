@@ -97,7 +97,8 @@ def brain(text: str, threshold: float = 0.85) -> None:
 
     except Exception as e:
         # Handle any processing errors gracefully
-        error_msg = f"Error in brain function: {e}"
+        import traceback
+        error_msg = f"Error in brain function:\n{traceback.format_exc()}"
         print(error_msg)
         llm_response_streaming(text)
     finally:

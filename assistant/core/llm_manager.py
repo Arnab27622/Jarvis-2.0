@@ -153,13 +153,13 @@ class LLMManager:
                         # Queue all complete sentences
                         for complete_sentence in parts[:-1]:
                             if complete_sentence.strip():
-                                tts_queue.put((complete_sentence.strip(), None, message_id))
+                                bus.emit(EventType.LLM_STREAMING, (complete_sentence.strip(), None, message_id))
                         # Keep the incomplete part in the buffer
                         current_sentence = parts[-1]
             
             # Flush the remaining buffer
             if current_sentence.strip():
-                tts_queue.put((current_sentence.strip(), None, message_id))
+                bus.emit(EventType.LLM_STREAMING, (current_sentence.strip(), None, message_id))
 
             return full_text
 
@@ -205,7 +205,7 @@ class LLMManager:
                 sentences = split_sentences(full_text)
                 message_id = str(uuid.uuid4())
                 for sentence in sentences:
-                    tts_queue.put((sentence, None, message_id))
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
                     
             return full_text
 
