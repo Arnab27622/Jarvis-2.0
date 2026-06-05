@@ -248,13 +248,14 @@ stopcmd = [
     "dismissed",
     "stand down",
     "mute yourself",
-    "rest",
+    "take a rest",
     "pause listening",
 ]
 
 cancel_cmd = [
     "stop talking",
-    "cancel",
+    "cancel response",
+    "cancel that",
     "shut up",
     "quiet",
     "stop speaking",

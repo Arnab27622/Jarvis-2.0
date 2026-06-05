@@ -223,11 +223,11 @@ def handle_video_exit_fullscreen():
 def handle_youtube_play(q):
     play_on_youtube(q)
 
-@on_fuzzy(["previous video", "last video", "go back video"], score_cutoff=90)
+@on_fuzzy(["previous video", "last video", "go back video", "play the previous video", "play previous video"], score_cutoff=90, priority=5)
 def handle_yt_prev():
     control_youtube_video("previous video")
 
-@on_fuzzy(["next video", "skip to next video"], score_cutoff=90)
+@on_fuzzy(["next video", "skip to next video", "play the next video", "play next video"], score_cutoff=90, priority=5)
 def handle_yt_next():
     control_youtube_video("next video")
 

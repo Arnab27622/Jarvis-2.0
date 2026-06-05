@@ -196,21 +196,18 @@ def command() -> None:
         record_user_activity()
         normalized_text = normalize_command(text_lower)
 
-        if any(keyword.strip() in normalized_text for keyword in stopcmd):
-            speak(random.choice(stopdlg))
+        # Exact match or startswith for stop commands to prevent substring false positives
+        if any(normalized_text == keyword.strip() or normalized_text.startswith(keyword.strip() + " ") for keyword in stopcmd):
+            from assistant.core.speak_selector import notify
+            notify("Understood. Entering sleep mode.")
             command_mode = False
-            continue
-
-        if any(keyword.strip() in normalized_text for keyword in cancel_cmd):
-            from assistant.core.mouth import stop_llm_speech
-            stop_llm_speech()
-            speak("Cancelled response.")
             continue
 
         try:
             process_command(normalized_text)
         except Exception as e:
             print(f"Error in command execution: {e}")
+            from assistant.core.speak_selector import speak
             speak("I encountered an internal problem while executing that command.")
 
 
@@ -239,6 +236,13 @@ def process_command(normalized_text: str) -> None:
 
         # Attempt to execute command from registry
         if not cmd_registry.execute(normalized_text):
+            # Check for exact matches in cancel_cmd BEFORE falling back to brain
+            if any(normalized_text == keyword.strip() or normalized_text.startswith(keyword.strip() + " ") for keyword in cancel_cmd):
+                from assistant.core.mouth import stop_llm_speech
+                stop_llm_speech()
+                speak("Cancelled response.")
+                return
+
             # Fallback to AI brain for unrecognized commands
             # Run in a background thread to prevent blocking the main listening loop
             background_task_started = True

@@ -47,6 +47,8 @@ def clean_llm_output(raw_text: str) -> str:
 
     # 6. Strip LaTeX commands and symbols that TTS struggles with (without removing markdown chars)
     clean = clean.replace('$', '')
+    # Remove rogue trailing asterisks attached to punctuation (e.g., "mind.* ") without breaking math "1 * 2" or "**bold**"
+    clean = re.sub(r'([.,!?])\*+(?=\s|$)', r'\1', clean)
     clean = re.sub(r'\\text\{([^}]*)\}', r'\1', clean)
     clean = clean.replace(r'\times', 'times')
     clean = clean.replace(r'\div', 'divided by')

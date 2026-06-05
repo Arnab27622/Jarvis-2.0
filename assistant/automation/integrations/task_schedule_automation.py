@@ -101,7 +101,7 @@ def handle_remember(text):
     """Regex handler for triggering the memory storage function."""
     remember_info(text)
 
-@on_fuzzy(["what did i ask you to remember", "what do you remember", "recall"], score_cutoff=90)
+@on_fuzzy(["what did i ask you to remember", "what do you remember", "recall", "recall what i told you"], score_cutoff=90, priority=5)
 def handle_recall():
     """Fuzzy match handler for triggering the memory recall function."""
     recall_info()

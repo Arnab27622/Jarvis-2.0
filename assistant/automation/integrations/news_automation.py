@@ -9,6 +9,8 @@ import re
 from assistant.core.config import config
 from assistant.core.speak_selector import speak, wait_for_tts_completion
 from assistant.core.ear import listen
+from assistant.core.mouth import tts_queue
+import uuid
 
 newsapi = config.news_api_key
 
@@ -88,9 +90,9 @@ def get_news_everything_endpoint(category: str = "general", limit: int = 3) -> N
 
             if valid_articles:
                 country_name = "India" if dynamic_country == "in" else "your region"
-                speak(
-                    f"Here are the top {len(valid_articles)} {category} headlines for {country_name}."
-                )
+                news_message_id = str(uuid.uuid4())
+                
+                tts_queue.put((f"Here are the top {len(valid_articles)} {category} headlines for {country_name}.", None, news_message_id))
 
                 for idx, article in enumerate(valid_articles, start=1):
                     title = html.unescape(article.get("title", "No title"))
@@ -100,19 +102,19 @@ def get_news_everything_endpoint(category: str = "general", limit: int = 3) -> N
                     description = html.unescape(article.get("description", ""))
 
                     if idx == 1:
-                        speak(f"Our top story today comes from {source}.")
+                        tts_queue.put((f"Our top story today comes from {source}.", None, news_message_id))
                     else:
-                        speak(f"In other news, {source} reports:")
+                        tts_queue.put((f"In other news, {source} reports:", None, news_message_id))
                     
-                    speak(title)
+                    tts_queue.put((title, None, news_message_id))
                     
                     if description:
                         clean_desc = re.sub(r'<[^>]+>', '', description)
                         if len(clean_desc) > 250:
                             clean_desc = clean_desc[:247] + "..."
-                        speak(f"Here are the details. {clean_desc}")
+                        tts_queue.put((f"Here are the details. {clean_desc}", None, news_message_id))
                     
-                    time.sleep(1.2)
+                    time.sleep(0.1) # Small delay to queue them up properly
                 return
             else:
                 print("No valid articles found in the response.")

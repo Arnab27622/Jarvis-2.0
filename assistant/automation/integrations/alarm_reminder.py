@@ -146,6 +146,12 @@ def reminder_worker(reminder_id: str, target_time: datetime.datetime, message: s
     reminder_threads.pop(reminder_id, None)
 
 
+def _format_day_ordinal(day: int) -> str:
+    """Returns the day with its ordinal suffix (e.g., 1st, 2nd, 3rd, 4th)."""
+    if 11 <= (day % 100) <= 13:
+        return f"{day}th"
+    return f"{day}{['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'][day % 10]}"
+
 def set_alarm(command_text: str) -> None:
     try:
         command_lower = command_text.lower()
@@ -178,7 +184,7 @@ def set_alarm(command_text: str) -> None:
             else:
                 speak(f"Alarm set for {time_str} today")
         else:
-            time_str = target_time.strftime("%I:%M %p on %B %d")
+            time_str = f"{target_time.strftime('%I:%M %p')} on {target_time.strftime('%B')} {_format_day_ordinal(target_time.day)}"
             if message and message != "Time's up!":
                 speak(f"Alarm set for {time_str} with message: {message}")
             else:
@@ -217,7 +223,7 @@ def set_reminder(command_text: str) -> None:
             time_str = target_time.strftime("%I:%M %p")
             speak(f"Reminder set for {time_str} today: {message}")
         else:
-            time_str = target_time.strftime("%I:%M %p on %B %d")
+            time_str = f"{target_time.strftime('%I:%M %p')} on {target_time.strftime('%B')} {_format_day_ordinal(target_time.day)}"
             speak(f"Reminder set for {time_str}: {message}")
     except Exception as e:
         print(f"Error setting reminder: {e}")
@@ -237,7 +243,7 @@ def list_alarms() -> None:
         if alarm_time.date() == datetime.datetime.now().date():
             time_display = f"today at {time_str}"
         else:
-            time_display = f"on {alarm_time.strftime('%B %d')} at {time_str}"
+            time_display = f"on {alarm_time.strftime('%B')} {_format_day_ordinal(alarm_time.day)} at {time_str}"
 
         message = alarm_data.get("message", "")
         if message:
@@ -259,7 +265,7 @@ def list_reminders() -> None:
         if reminder_time.date() == datetime.datetime.now().date():
             time_display = f"today at {time_str}"
         else:
-            time_display = f"on {reminder_time.strftime('%B %d')} at {time_str}"
+            time_display = f"on {reminder_time.strftime('%B')} {_format_day_ordinal(reminder_time.day)} at {time_str}"
 
         message = reminder_data.get("message", "")
         speak(f"Reminder {time_display}: {message}")
@@ -302,7 +308,7 @@ def handle_set_alarm(text):
 
 @on_regex(r"\b(?:remind\s+me\s+(?:to|about|that)|remember\s+to)\s+(?P<reminder_text>.*)$")
 @on_regex(r"\b(?:set\s+)?(?:a\s+)?reminder\s+(?:for|at|in|after)?\s*(?P<reminder_text>.*)$")
-@on_fuzzy(["set reminder", "remind me to", "remember to"], score_cutoff=90)
+@on_fuzzy(["set reminder", "set a reminder"], score_cutoff=90)
 def handle_set_reminder(text):
     set_reminder(text)
 

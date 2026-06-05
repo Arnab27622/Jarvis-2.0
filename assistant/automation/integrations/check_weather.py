@@ -7,6 +7,8 @@ import requests
 import geocoder
 from assistant.core.config import config
 from assistant.core.speak_selector import speak
+from assistant.core.mouth import tts_queue
+import uuid
 from typing import Dict, Union, Optional, Any
 
 def get_windows_location() -> Optional[Dict[str, float]]:
@@ -225,10 +227,12 @@ def get_current_temperature(units: str = "metric") -> None:
         city_name = location_info.get("city") or weather_data.get("name", "Unknown Location")
         country_name = location_info.get("country") or weather_data.get("sys", {}).get("country", "")
 
-        speak(
+        weather_msg_id = str(uuid.uuid4())
+        msg = (
             f"Current temperature in {city_name}, {country_name} is {temp}{unit_symbol}. "
             f"Low: {min_temp}{unit_symbol} and High: {max_temp}{unit_symbol}."
         )
+        tts_queue.put((msg, None, weather_msg_id))
 
     except requests.exceptions.RequestException as e:
         print(f"Network error: {str(e)}")
@@ -257,7 +261,9 @@ def get_overall_weather(units: str = "metric") -> Optional[Dict[str, Any]]:
         country_name = location_info.get("country") or weather_data.get("sys", {}).get("country", "")
 
         report_str = _format_weather_report(weather_data, units, city_name, country_name)
-        speak(report_str)
+        
+        weather_msg_id = str(uuid.uuid4())
+        tts_queue.put((report_str, None, weather_msg_id))
 
         return _extract_comprehensive_data(weather_data, units, city_name, country_name)
 
@@ -281,23 +287,25 @@ def get_weather_by_address(address: str, units: str = "metric") -> Optional[Dict
         weather_data = _fetch_weather_data(address=address, units=units)
         
         if not weather_data:
-            speak("Sorry, I couldn't get the weather information for that place right now.")
+            tts_queue.put(("Sorry, I couldn't get the weather information for that place right now.", None, str(uuid.uuid4())))
             return None
 
         city_name = weather_data.get("name", address)
         country_name = weather_data.get("sys", {}).get("country", "")
-
+        
         report_str = _format_weather_report(weather_data, units, city_name, country_name)
-        speak(report_str)
-
+        
+        weather_msg_id = str(uuid.uuid4())
+        tts_queue.put((report_str, None, weather_msg_id))
+        
         return _extract_comprehensive_data(weather_data, units, city_name, country_name)
 
     except requests.exceptions.RequestException as e:
         print(f"Network error: {str(e)}")
-        speak(f"I'm sorry, I couldn't get the weather for {address} due to a network issue.")
+        tts_queue.put((f"I'm sorry, I couldn't get the weather for {address} due to a network issue.", None, str(uuid.uuid4())))
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
-        speak(f"I had trouble fetching the weather information for {address}.")
+        tts_queue.put((f"I had trouble fetching the weather information for {address}.", None, str(uuid.uuid4())))
 
 
 if __name__ == "__main__":

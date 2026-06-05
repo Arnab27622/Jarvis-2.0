@@ -296,22 +296,28 @@ def toggle_fullscreen() -> None:
 
 def reload_page() -> None:
     """
-    Reload or refresh the current web page.
+    Reload the current web page.
 
-    Uses F5 key which is the standard refresh shortcut in web browsers
-    and many other applications that display dynamic content.
+    Uses Ctrl+R instead of F5 as it's the more universal shortcut
+    across all major web browsers and operating systems.
     """
+    if not activate_browser():
+        notify("No browser window found to reload")
+        return
     notify("Reloading page")
-    ui.hotkey("f5")
+    ui.hotkey("ctrl", "r")
 
 
 def go_back() -> None:
     """
     Navigate back to the previous page in browser history.
 
-    Uses Alt+Left arrow which is the standard back navigation shortcut
+    Uses Alt+Left arrow which is the standard backward navigation shortcut
     in most web browsers and file explorers.
     """
+    if not activate_browser():
+        notify("No browser window found to navigate")
+        return
     notify("Going back")
     ui.hotkey("alt", "left")
 
@@ -323,6 +329,9 @@ def go_forward() -> None:
     Uses Alt+Right arrow which is the standard forward navigation shortcut
     in most web browsers and file explorers.
     """
+    if not activate_browser():
+        notify("No browser window found to navigate")
+        return
     notify("Going forward")
     ui.hotkey("alt", "right")
 
@@ -342,6 +351,9 @@ def duplicate_tab() -> None:
         Works with Chrome, Edge, and other Chromium-based browsers.
         Firefox uses Ctrl+L then Alt+Enter for the same functionality.
     """
+    if not activate_browser():
+        notify("No browser window found to duplicate tab in")
+        return
     notify("Duplicating tab")
     ui.hotkey("alt", "d")
     time.sleep(0.1)

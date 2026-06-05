@@ -131,14 +131,10 @@ class BatteryMonitor:
         self.plugin_thread = threading.Thread(
             target=self.check_plugin_status, daemon=True
         )
-        self.telemetry_thread = threading.Thread(
-            target=self.emit_telemetry, daemon=True
-        )
-
         self.alert_thread.start()
         self.plugin_thread.start()
-        self.telemetry_thread.start()
-        print("Battery & Telemetry monitoring started")
+        # Telemetry is now exclusively handled by server.py to prevent conflicts
+        print("Battery monitoring started")
 
     def stop_monitoring(self) -> None:
         """Stops all background monitoring threads."""

@@ -11,18 +11,43 @@ import geocoder
 
 def get_current_location() -> None:
     """
-    Determines and announces the user's approximate geographic location via IP.
+    Determines and announces the user's approximate geographic location via OS/IP.
     """
     try:
-        g = geocoder.ip("me")
+        from assistant.automation.integrations.check_weather import get_location
+        location_data = get_location()
 
-        if g.ok:
-            city = g.city
-            state = g.state
-            country = g.country
-            speak(
-                f"Based on your IP address, you appear to be in {city}, {state}, {country}"
-            )
+        if location_data:
+            city = location_data.get("city", "")
+            country = location_data.get("country", "")
+            
+            # If the OS provided lat/lon but no city name, fallback to IP geocoding for the name
+            if not city:
+                import geocoder
+                g = geocoder.ip("me")
+                if g.ok:
+                    city = g.city or ""
+                    country_code = g.country or ""
+                    
+                    # Convert common ISO codes to full country names for better TTS pronunciation
+                    country_map = {
+                        "IN": "India", "US": "United States", "GB": "United Kingdom",
+                        "UK": "United Kingdom", "CA": "Canada", "AU": "Australia",
+                        "NZ": "New Zealand", "ZA": "South Africa", "IE": "Ireland",
+                        "SG": "Singapore", "MY": "Malaysia", "PH": "Philippines",
+                        "PK": "Pakistan", "BD": "Bangladesh", "LK": "Sri Lanka",
+                        "AE": "United Arab Emirates", "SA": "Saudi Arabia", "DE": "Germany",
+                        "FR": "France", "IT": "Italy", "ES": "Spain", "NL": "Netherlands"
+                    }
+                    country = country_map.get(country_code.upper(), country_code)
+            
+            if city:
+                location_str = city
+                if country:
+                    location_str += f", {country}"
+                speak(f"Based on my data, you appear to be in {location_str}")
+            else:
+                speak("Sorry, I couldn't determine your current location name")
         else:
             speak("Sorry, I couldn't determine your current location")
     except Exception as e:

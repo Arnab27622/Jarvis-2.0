@@ -132,9 +132,13 @@ if __name__ == "__main__":
     check_running_app()
 
 from assistant.core.registry import on_regex, on_fuzzy
+from assistant.automation.features.window_automation import activate_browser
 
 @on_regex(r"\b(?:open\s+)?(?:a\s+)?new tab\b", priority=5)
 def handle_new_tab():
+    if not activate_browser():
+        notify("No browser window found to open a new tab in")
+        return
     ui.hotkey("ctrl", "t")
     notify("New tab opened")
 

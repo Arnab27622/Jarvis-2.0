@@ -48,6 +48,15 @@ async def metrics_emitter():
     """Periodically collects and broadcasts system metrics."""
     global _last_net_io, _last_net_time
     import time
+    
+    # Prime the CPU percent counter so first read isn't 0
+    psutil.cpu_percent()
+    
+    # Simple Exponential Moving Average (EMA) to smooth network speeds
+    ema_upload = 0.0
+    ema_download = 0.0
+    alpha = 0.3  # Smoothing factor (lower = smoother but slower to react)
+    
     while True:
         try:
             if manager.active_connections:
@@ -63,16 +72,27 @@ async def metrics_emitter():
                         upload_speed = (current_io.bytes_sent - _last_net_io.bytes_sent) / dt
                         download_speed = (current_io.bytes_recv - _last_net_io.bytes_recv) / dt
                         
+                # Apply EMA
+                if ema_upload == 0 and ema_download == 0:
+                    ema_upload = upload_speed
+                    ema_download = download_speed
+                else:
+                    ema_upload = (alpha * upload_speed) + ((1 - alpha) * ema_upload)
+                    ema_download = (alpha * download_speed) + ((1 - alpha) * ema_download)
+                        
                 _last_net_io = current_io
                 _last_net_time = current_time
+                
+                # Determine proper disk path based on OS
+                disk_path = 'C:\\' if os.name == 'nt' else '/'
                 
                 metrics = {
                     "cpu": psutil.cpu_percent(interval=None),
                     "ram": psutil.virtual_memory().percent,
-                    "disk": psutil.disk_usage('/').percent,
+                    "disk": psutil.disk_usage(disk_path).percent,
                     "network": {
-                        "upload": upload_speed,
-                        "download": download_speed
+                        "upload": ema_upload,
+                        "download": ema_download
                     }
                 }
                 

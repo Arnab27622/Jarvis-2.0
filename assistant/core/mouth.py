@@ -69,36 +69,31 @@ def _load_kokoro():
 # Start loading in background immediately
 threading.Thread(target=_load_kokoro, daemon=True).start()
 
-# --- Acknowledgment Chirp ---
+# --- Acknowledgment Chirp (uses pygame.mixer to avoid sounddevice TTS conflict) ---
 ACK_SOUND_PATH = str(config.ack_sound_path)
-_ack_audio = None
-_ack_sample_rate = 24000
+_ack_pygame_sound = None
 
 def _load_ack_sound():
-    """Pre-load the acknowledgment chirp into memory for instant playback."""
-    global _ack_audio, _ack_sample_rate
+    """Pre-load the acknowledgment chirp as a pygame Sound for instant, conflict-free playback."""
+    global _ack_pygame_sound
     try:
+        import pygame
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
         if os.path.exists(ACK_SOUND_PATH):
-            with wave.open(ACK_SOUND_PATH, 'rb') as wf:
-                _ack_sample_rate = wf.getframerate()
-                channels = wf.getnchannels()
-                frames = wf.readframes(wf.getnframes())
-                audio_data = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32767.0
-                if channels > 1:
-                    audio_data = audio_data.reshape(-1, channels)
-                _ack_audio = audio_data
-            logger.info("Acknowledgment sound loaded.")
+            _ack_pygame_sound = pygame.mixer.Sound(ACK_SOUND_PATH)
+            _ack_pygame_sound.set_volume(0.5)
+            logger.info("Acknowledgment sound loaded (pygame).")
     except Exception as e:
         logger.warning("Could not load ack sound: %s", e)
 
 _load_ack_sound()
 
 def play_ack_sound() -> None:
-    """Play the instant acknowledgment chirp (non-blocking, ~150ms)."""
-    if _ack_audio is not None:
+    """Play the instant acknowledgment chirp (non-blocking, ~150ms). Uses pygame to avoid conflict with sounddevice TTS."""
+    if _ack_pygame_sound is not None:
         try:
-            # Play on a separate stream so it doesn't interfere with TTS playback
-            sd.play(_ack_audio, samplerate=_ack_sample_rate, device=sd.default.device[1])
+            _ack_pygame_sound.play()
         except Exception:
             pass  # Silently fail - this is just a UX enhancement
 

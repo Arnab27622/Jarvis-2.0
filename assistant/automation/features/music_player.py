@@ -420,6 +420,10 @@ def handle_play_specific_song(song_name=None):
            "increase music volume", "music volume up", "louder music",
            "decrease music volume", "music volume down", "softer music"], score_cutoff=90)
 def handle_music_control(text=None, action=None):
+    cmd_full = (text or action or "").lower()
+    if "video" in cmd_full:
+        return  # Let youtube automation handle video commands
+    
     cmd = (action or text or "").lower()
     if "pause" in cmd:
         music_player.pause_music()
