@@ -264,8 +264,57 @@ class LLMManager:
             except: return None
         return await asyncio.to_thread(run_g4f)
 
+    async def _call_vision(self, messages: List[Dict[str, str]]) -> Optional[str]:
+        """Captures the screen and asks Gemini Vision."""
+        if not self.gemini_client: return None
+        
+        def run_vision():
+            from assistant.core.vision import capture_screen
+            contents = []
+            for msg in messages:
+                role = "user" if msg["role"] == "user" else "model"
+                contents.append(
+                    types.Content(role=role, parts=[types.Part.from_text(text=msg.get("content", ""))])
+                )
+            
+            last_msg = contents.pop()
+            
+            chat = self.gemini_client.chats.create(
+                model="gemini-3.1-flash-lite",
+                history=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=config.llm_temperature
+                )
+            )
+            
+            img = capture_screen()
+            if not img:
+                response = chat.send_message(last_msg.parts[0].text + " (Note: I couldn't capture the screen, let the user know.)")
+            else:
+                response = chat.send_message([img, last_msg.parts[0].text])
+                
+            full_text = response.text or ""
+            
+            if full_text:
+                from assistant.core.llm_utils import split_sentences
+                sentences = split_sentences(full_text)
+                message_id = str(uuid.uuid4())
+                for sentence in sentences:
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
+                    
+            return full_text
+            
+        try:
+            return await asyncio.to_thread(run_vision)
+        except Exception as e:
+            logger.error("Vision API error: %s", e)
+            return None
+
     def _identify_intent(self, text: str) -> str:
         text = text.lower()
+        if any(kw in text for kw in ["my screen", "screen", "look at this", "see this", "what is this", "what's on"]):
+            return "vision"
         if any(kw in text for kw in ["python", "code", "bug", "error", "fix", "function", "write a", "program"]):
             return "technical"
         if any(kw in text for kw in ["news", "weather", "today", "current", "search for"]):
@@ -285,7 +334,11 @@ class LLMManager:
             save_history()
             messages_to_send = list(CHAT_HISTORY)
 
-        if intent == "technical":
+        if intent == "vision":
+            logger.info("Vision query. Using Gemini Vision...")
+            res = await self._call_vision(messages_to_send)
+            if res: tts_handled = True
+        elif intent == "technical":
             logger.info("Technical query. Using HuggingFace (Primary)...")
             res = await self._call_huggingface(messages_to_send)
         elif intent == "web":

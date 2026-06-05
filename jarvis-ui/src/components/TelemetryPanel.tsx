@@ -38,9 +38,9 @@ const TelemetryPanel: React.FC = () => {
   const renderProgressBar = (label: string, value: number, color: string = 'var(--primary-glow)') => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
       <span style={{ minWidth: '40px', color: color, fontWeight: 'bold' }}>{label}</span>
-      <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', height: '10px', borderRadius: '5px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
         <motion.div 
-          style={{ background: color, height: '100%' }}
+          style={{ background: color, height: '100%', boxShadow: `0 0 10px ${color}` }}
           animate={{ width: `${value}%` }}
           transition={{ ease: "easeOut", duration: 0.5 }}
         />
@@ -50,8 +50,8 @@ const TelemetryPanel: React.FC = () => {
   );
 
   return (
-    <div className="hud-panel widget" style={{ marginTop: '20px' }}>
-      <h3 style={{ marginBottom: '15px', color: 'var(--text-secondary)' }}>SYS.METRICS</h3>
+    <div className="hud-panel widget hover-glow">
+      <h3 style={{ marginBottom: '24px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>SYS.METRICS</h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
         {renderProgressBar('CPU', telemetry.cpu || 0)}

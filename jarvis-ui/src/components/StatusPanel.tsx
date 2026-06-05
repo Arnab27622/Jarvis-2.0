@@ -16,8 +16,8 @@ const visualizerBars = [...Array(12)].map(() => ({
 const StatusPanel: React.FC<StatusPanelProps> = ({ battery, isListening }) => {
   return (
     <>
-      <div className="hud-panel widget">
-        <h3 style={{ marginBottom: '15px', color: 'var(--text-secondary)' }}>PWR.SYSTEM</h3>
+      <div className="hud-panel widget hover-glow">
+        <h3 style={{ marginBottom: '24px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>PWR.SYSTEM</h3>
         <div className="battery-widget">
           <svg className="tech-ring spin-slow" width="150" height="150" viewBox="0 0 150 150">
             <circle cx="75" cy="75" r="70" fill="none" stroke="var(--border-color)" strokeWidth="2" />
@@ -35,8 +35,12 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ battery, isListening }) => {
               style={{ transformOrigin: 'center', transform: 'rotate(-90deg)' }}
             />
           </svg>
-          <div className="battery-text" style={{ color: battery.percent < 20 && !battery.plugged ? 'var(--alert-glow)' : 'var(--text-primary)'}}>
-            {battery.percent}%
+          <div className="battery-text" style={{ 
+            color: battery.percent < 20 && !battery.plugged ? 'var(--alert-glow)' : 'var(--text-primary)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
+          }}>
+            <span>{battery.percent}%</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px' }}>CHARGE</span>
           </div>
         </div>
         <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>

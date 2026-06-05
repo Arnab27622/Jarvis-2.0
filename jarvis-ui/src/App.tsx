@@ -211,56 +211,59 @@ function App() {
   };
 
   return (
-    <div className={`hud-container ${glitch ? 'glitch-effect' : ''}`}>
-      <header className="hud-header hud-panel">
-        <h1><Terminal size={28} /> JARVIS 2.0_</h1>
-        <div className="status-indicators" style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ color: isOnline ? 'inherit' : 'var(--alert-glow)' }}>
-            SYS.{isOnline ? 'ONLINE' : 'OFFLINE'}
-          </span>
-          <span>SEC.M5</span>
-          <Clock />
-          <Settings 
-            size={24} 
-            style={{ cursor: 'pointer', color: 'var(--primary-glow)', marginLeft: '10px' }} 
-            onClick={() => setIsSettingsOpen(true)} 
-          />
-        </div>
-      </header>
-      
-      <main className="hud-main hud-panel">
-        <DataStream logs={logs} isProcessing={isProcessing} />
-      </main>
-      
-      <aside className="hud-sidebar">
-        <StatusPanel battery={battery} isListening={isListening} />
-        <TelemetryPanel />
-      </aside>
-      
-      <footer className="hud-footer hud-panel">
-        <form onSubmit={handleSend} className="input-container">
-          <Terminal size={20} color="var(--primary-glow)" />
-          <input 
-            type="text" 
-            className="hud-input" 
-            placeholder={isProcessing ? "PROCESSING..." : "AWAITING MANUAL OVERRIDE..."}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isProcessing}
-            autoFocus
-          />
-          {isProcessing ? (
-            <Loader className="spin-slow" size={24} color="var(--primary-glow)" />
-          ) : (
-            <button type="submit" className="hud-btn">EXECUTE</button>
-          )}
-        </form>
-      </footer>
-      
-      <AlertManager alerts={alerts} setAlerts={setAlerts} />
-      <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-    </div>
+    <>
+      <div className="bg-mesh"></div>
+      <div className={`hud-container ${glitch ? 'glitch-effect' : ''}`}>
+        <header className="hud-header hud-panel">
+          <h1><Terminal size={28} /> JARVIS 2.0_</h1>
+          <div className="status-indicators" style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ color: isOnline ? 'inherit' : 'var(--alert-glow)' }}>
+              SYS.{isOnline ? 'ONLINE' : 'OFFLINE'}
+            </span>
+            <span>SEC.M5</span>
+            <Clock />
+            <Settings 
+              size={24} 
+              style={{ cursor: 'pointer', color: 'var(--primary-glow)', marginLeft: '10px' }} 
+              onClick={() => setIsSettingsOpen(true)} 
+            />
+          </div>
+        </header>
+        
+        <main className="hud-main hud-panel">
+          <DataStream logs={logs} isProcessing={isProcessing} />
+        </main>
+        
+        <aside className="hud-sidebar">
+          <StatusPanel battery={battery} isListening={isListening} />
+          <TelemetryPanel />
+        </aside>
+        
+        <footer className="hud-footer hud-panel">
+          <form onSubmit={handleSend} className="input-container">
+            <Terminal size={20} color="var(--primary-glow)" />
+            <input 
+              type="text" 
+              className="hud-input" 
+              placeholder={isProcessing ? "PROCESSING..." : "AWAITING MANUAL OVERRIDE..."}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isProcessing}
+              autoFocus
+            />
+            {isProcessing ? (
+              <Loader className="spin-slow" size={24} color="var(--primary-glow)" />
+            ) : (
+              <button type="submit" className="hud-btn">EXECUTE</button>
+            )}
+          </form>
+        </footer>
+        
+        <AlertManager alerts={alerts} setAlerts={setAlerts} />
+        <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      </div>
+    </>
   );
 }
 

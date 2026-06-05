@@ -105,9 +105,25 @@ const DataStream: React.FC<DataStreamProps> = ({ logs, isProcessing }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current) return;
+    
+    // Create a ResizeObserver to automatically scroll down whenever the 
+    // contents of the chat log change their height (e.g. typewriter effect)
+    const resizeObserver = new ResizeObserver(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+    
+    // Also scroll immediately on mount or log changes
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    
+    // Observe the first child (the AnimatePresence container) to detect all height shifts
+    if (scrollRef.current.firstElementChild) {
+      resizeObserver.observe(scrollRef.current.firstElementChild);
     }
+    
+    return () => resizeObserver.disconnect();
   }, [logs, isProcessing]);
 
   const filteredLogs = logs.filter(log => 
@@ -132,24 +148,38 @@ const DataStream: React.FC<DataStreamProps> = ({ logs, isProcessing }) => {
             <motion.div 
               key={log.id} 
               className={`log-entry ${log.sender}`}
-              initial={{ opacity: 0, x: -20, height: 0 }}
-              animate={{ opacity: 1, x: 0, height: 'auto' }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
               title={new Date(log.timestamp).toLocaleTimeString()}
             >
             <div className="log-icon">
               {log.sender === 'user' ? <User size={24} /> : <Cpu size={24} />}
             </div>
             <div className="log-content">
+              {log.sender === 'user' && (
+                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginRight: '10px' }}>
+                  &gt; COMMAND:
+                </span>
+              )}
               {log.sender === 'jarvis' ? (
-                <TypewriterText text={log.text} duration={log.duration} />
+                <div style={{
+                  borderLeft: '4px solid var(--primary-glow)',
+                  paddingLeft: '15px',
+                  background: 'rgba(0, 240, 255, 0.05)',
+                  padding: '10px 15px',
+                  borderRadius: '0 4px 4px 0',
+                  fontFamily: 'var(--font-main)'
+                }}>
+                  <TypewriterText text={log.text} duration={log.duration} />
+                </div>
               ) : (
-                log.text
+                <span style={{ fontFamily: 'var(--font-main)', color: 'var(--text-primary)' }}>{log.text}</span>
               )}
               {log.image && (
                 <div style={{ marginTop: '10px' }}>
                   <a href={log.image} target="_blank" rel="noopener noreferrer">
-                    <img src={log.image} alt="Generated" style={{ maxWidth: '250px', borderRadius: '8px', cursor: 'pointer', border: '1px solid var(--primary-glow)' }} />
+                    <img src={log.image} alt="Generated" style={{ maxWidth: '250px', borderRadius: '4px', cursor: 'pointer', border: '1px solid var(--primary-glow)' }} />
                   </a>
                 </div>
               )}

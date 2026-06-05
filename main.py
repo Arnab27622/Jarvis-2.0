@@ -34,8 +34,10 @@ def jarvis() -> None:
     and enters the main command execution loop.
     """
     from assistant.core.mouth import wait_for_tts_completion
+    from assistant.core.proactive import proactive_manager
     wish()
     battery_monitor.start_monitoring()
+    proactive_manager.start()
     wait_for_tts_completion()
     command()
 
@@ -89,10 +91,14 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         stop_activity_monitoring()
         battery_monitor.stop_monitoring()
+        from assistant.core.proactive import proactive_manager
+        proactive_manager.stop()
         print("\nJARVIS shutting down...")
     except Exception as e:
         stop_activity_monitoring()
         battery_monitor.stop_monitoring()
+        from assistant.core.proactive import proactive_manager
+        proactive_manager.stop()
         print(f"An error occurred: {e}")
         print("JARVIS shutting down due to error...")
     finally:
