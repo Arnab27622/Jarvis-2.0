@@ -36,6 +36,9 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
 
 const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, duration }) => {
   const [displayedText, setDisplayedText] = React.useState(duration ? '' : text);
+  const startIndexRef = useRef<number>(0);
+  const startTickRef = useRef<number>(0);
+  const textCharsRevealedRef = useRef<number>(0);
 
   React.useEffect(() => {
     if (!duration) {
@@ -69,15 +72,19 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
       return;
     }
 
-    const delayPerChar = (duration * 1000) / totalTextLength;
-    const startTick = Date.now();
+    const delayPerChar = (duration * 1000) / Math.max(totalTextLength, 1);
+    
+    // Every time text/duration updates, we lock in our current progress and start a new elapsed timer
+    startIndexRef.current = textCharsRevealedRef.current;
+    startTickRef.current = Date.now();
 
     const interval = setInterval(() => {
-      const elapsed = Date.now() - startTick;
-      const targetTextChars = Math.floor(elapsed / delayPerChar);
+      const elapsed = Date.now() - startTickRef.current;
+      const expectedNewChars = Math.floor(elapsed / delayPerChar);
+      const targetTextChars = startIndexRef.current + expectedNewChars;
       
       let currentOutput = "";
-      let textCharsRevealed = 0;
+      let currentTextCharsRevealed = 0;
 
       for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
@@ -87,11 +94,11 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
         } else {
           // Reveal text smoothly
           const charsAvailable = token.content.length;
-          const charsToTake = Math.min(charsAvailable, targetTextChars - textCharsRevealed);
+          const charsToTake = Math.min(charsAvailable, targetTextChars - currentTextCharsRevealed);
           
           if (charsToTake > 0) {
             currentOutput += token.content.substring(0, charsToTake);
-            textCharsRevealed += charsToTake;
+            currentTextCharsRevealed += charsToTake;
           }
           
           // If we haven't fully revealed this text block, stop processing future blocks
@@ -101,9 +108,11 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
         }
       }
 
+      // Sync the true clamped number of revealed text characters
+      textCharsRevealedRef.current = currentTextCharsRevealed;
       setDisplayedText(currentOutput);
 
-      if (textCharsRevealed >= totalTextLength) {
+      if (currentTextCharsRevealed >= totalTextLength) {
         clearInterval(interval);
         setDisplayedText(text);
       }
