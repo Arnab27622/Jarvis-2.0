@@ -36,33 +36,78 @@ const CopyButton = ({ textToCopy }: { textToCopy: string }) => {
 
 const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, duration }) => {
   const [displayedText, setDisplayedText] = React.useState(duration ? '' : text);
-  const indexRef = useRef(0);
-  const startTickRef = useRef(0);
-  const startIndexRef = useRef(0);
 
   React.useEffect(() => {
     if (!duration) {
       return;
     }
 
-    const delayPerChar = (duration * 1000) / Math.max(text.length, 1);
-    startTickRef.current = Date.now();
-    startIndexRef.current = indexRef.current;
+    const tokens: Array<{type: 'text' | 'code', content: string}> = [];
+    const regex = /(```[\s\S]*?```)/g;
+    let lastIndex = 0;
+    let match;
+    let totalTextLength = 0;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const textContent = text.substring(lastIndex, match.index);
+        tokens.push({ type: 'text', content: textContent });
+        totalTextLength += textContent.length;
+      }
+      tokens.push({ type: 'code', content: match[0] });
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      const textContent = text.substring(lastIndex);
+      tokens.push({ type: 'text', content: textContent });
+      totalTextLength += textContent.length;
+    }
+
+    if (totalTextLength === 0) {
+      // Avoid synchronous setState warning by pushing to the next tick
+      setTimeout(() => setDisplayedText(text), 0);
+      return;
+    }
+
+    const delayPerChar = (duration * 1000) / totalTextLength;
+    const startTick = Date.now();
 
     const interval = setInterval(() => {
-      const elapsed = Date.now() - startTickRef.current;
-      const expectedNewChars = Math.floor(elapsed / delayPerChar);
+      const elapsed = Date.now() - startTick;
+      const targetTextChars = Math.floor(elapsed / delayPerChar);
+      
+      let currentOutput = "";
+      let textCharsRevealed = 0;
 
-      if (indexRef.current < text.length) {
-        const nextIndex = Math.min(startIndexRef.current + expectedNewChars, text.length);
-        if (nextIndex > indexRef.current) {
-          indexRef.current = nextIndex;
-          setDisplayedText(text.slice(0, indexRef.current));
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (token.type === 'code') {
+          // Instantly reveal code blocks
+          currentOutput += token.content;
+        } else {
+          // Reveal text smoothly
+          const charsAvailable = token.content.length;
+          const charsToTake = Math.min(charsAvailable, targetTextChars - textCharsRevealed);
+          
+          if (charsToTake > 0) {
+            currentOutput += token.content.substring(0, charsToTake);
+            textCharsRevealed += charsToTake;
+          }
+          
+          // If we haven't fully revealed this text block, stop processing future blocks
+          if (charsToTake < charsAvailable) {
+            break;
+          }
         }
-      } else {
-        clearInterval(interval);
       }
-    }, 20); // 20ms polling is smooth and accurate since it uses elapsed time
+
+      setDisplayedText(currentOutput);
+
+      if (textCharsRevealed >= totalTextLength) {
+        clearInterval(interval);
+        setDisplayedText(text);
+      }
+    }, 20); // 20ms polling is smooth and accurate
 
     return () => clearInterval(interval);
   }, [text, duration]);

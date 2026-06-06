@@ -183,7 +183,6 @@ function App() {
           playBeep(1200, 'sine', 0.1);
           break;
         case 'permission_request':
-          setIsProcessing(false);
           setPermissionRequest({ text: payload.text });
           playBeep(400, 'square', 0.5); // Urgent sound
           break;
@@ -272,13 +271,19 @@ function App() {
         {/* Permission Request Modal */}
         {permissionRequest && (
           <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
-            display: 'flex', justifyContent: 'center', alignItems: 'center'
+            position: 'absolute', bottom: '20px', right: '20px', zIndex: 1000,
+            display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end'
           }}>
-            <div className="hud-panel widget" style={{ maxWidth: '400px', border: '1px solid var(--alert-glow)' }}>
-              <h3 style={{ color: 'var(--alert-glow)' }}>SECURITY OVERRIDE REQUEST</h3>
-              <p style={{ marginTop: '15px', color: 'var(--text-primary)' }}>{permissionRequest.text}</p>
+            <div className="hud-panel widget" style={{ 
+              maxWidth: '400px', 
+              border: '1px solid var(--alert-glow)',
+              backgroundColor: 'rgba(20, 5, 5, 0.9)',
+              boxShadow: '0 8px 32px rgba(255, 75, 75, 0.2)'
+            }}>
+              <h3 style={{ color: 'var(--alert-glow)', borderBottom: '1px solid rgba(255, 75, 75, 0.2)', paddingBottom: '10px', fontSize: '16px' }}>
+                SECURITY OVERRIDE REQUEST
+              </h3>
+              <p style={{ marginTop: '15px', color: '#e0ffff', fontSize: '14px', fontFamily: 'var(--font-mono)' }}>{permissionRequest.text}</p>
               <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button 
                   className="hud-btn" 
@@ -290,7 +295,7 @@ function App() {
                 >DENY</button>
                 <button 
                   className="hud-btn" 
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, backgroundColor: 'var(--alert-glow)', color: '#000', borderColor: 'var(--alert-glow)' }}
                   onClick={() => {
                     ws.current?.send(JSON.stringify({ type: 'permission_response', data: { approved: true } }));
                     setPermissionRequest(null);

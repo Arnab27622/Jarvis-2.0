@@ -84,8 +84,8 @@ def open_downloads(text=None):
         import subprocess
         subprocess.Popen(['xdg-open', dl_path])
 
-@on_fuzzy(["how big is my downloads folder", "size of downloads folder", "check downloads size", "downloads folder size", "how much space is downloads taking"], score_cutoff=85)
-def downloads_size(text):
+@on_regex(r"\b(?:how big is|size of|check size of|how much space does|what is the size of)\s+(?:my\s+)?(?:recent\s+)?downloads(?:\\s+folder|directory)?\b", priority=15)
+def downloads_size(text=None):
     dl_path = get_downloads_folder()
     total_size = 0
     try:
