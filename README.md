@@ -6,8 +6,12 @@ Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant
 
 * **Instant Voice Synthesis (Pipelined Kokoro-ONNX)**
   Experience zero-gap conversational fluidity. Jarvis utilizes a two-stage asynchronous audio pipeline: while one sentence is being played, the next is generated in the background using the offline, high-quality Kokoro TTS model.
-* **Intelligent LLM Orchestration**
-  Built-in Multi-LLM Manager defaults to **Gemini 3.1 Flash Lite** for lightning-fast responses, with automatic, robust sequential fallbacks to HuggingFace, OpenRouter, and GPT4Free. Supports true token streaming for instantaneous response starts.
+* **Intelligent Multi-Agent System**
+  The built-in LLM Manager acts as a semantic router, seamlessly delegating your queries to specialized sub-agents (`Coder`, `Vision`, `Researcher`, and `General`). Each agent has unique system prompts and specific tool access to maximize precision and capability.
+* **React Web UI & Terminal Integration**
+  Jarvis provides a gorgeous, sci-fi inspired React interface running on a dedicated WebSocket server. It features dual-stream rendering—spoken text animates to match the audio, while code blocks appear instantly with full syntax highlighting.
+* **Secure Code Execution**
+  The Coder Agent can write, debug, and execute code in multiple languages (Python, Node, C++, PowerShell) directly on your host machine. Execution is safeguarded by an explicit UI permission gate, ensuring you have full control over what runs.
 * **Advanced Speech Recognition**
   Features automatic ambient noise calibration, dynamic energy thresholding, and offline fallbacks using PocketSphinx, ensuring Jarvis perfectly understands you even in noisy environments.
 * **Event-Driven Architecture**
@@ -99,17 +103,27 @@ flowchart TD
     
     Brain -->|Exact Match| TFIDF[TF-IDF Cache]
     Brain -->|Semantic Match| Chroma[ChromaDB]
-    Brain -->|Generative| LLM[LLM Manager]
+    Brain -->|Generative| Router[LLM Manager / Router]
     
-    LLM -->|Streaming Text| Mouth[Mouth Module\nKokoro TTS]
+    Router -->|Coding/Terminal| Coder[Coder Agent]
+    Router -->|Images/Screen| Vision[Vision Agent]
+    Router -->|Web/Weather| Researcher[Researcher Agent]
+    Router -->|General| General[General Agent]
+    
+    Coder -->|Streaming Text| Mouth[Mouth Module\nKokoro TTS]
+    Vision -->|Streaming Text| Mouth
+    Researcher -->|Streaming Text| Mouth
+    General -->|Streaming Text| Mouth
+    
     Commands -->|Text Responses| Mouth
-    
     Mouth -->|Audio| Speaker([Speaker])
 ```
 
 - `main.py`: Main entry loop, Web UI initialization, and subsystem restoration.
+- `jarvis-ui/`: The modern React/Vite web interface that connects to the FastAPI backend via WebSockets.
+- `assistant/agents/`: Specialized AI personas (Coder, Vision, Researcher, General) with customized instructions and toolsets.
 - `assistant/core/`: The core engine:
-  - `brain.py` / `llm_manager.py`: Multi-LLM routing, context memory, and streaming logic.
+  - `brain.py` / `llm_manager.py`: Multi-agent orchestration, context memory, and streaming logic.
   - `mouth.py`: The unified pipelined Kokoro TTS architecture.
   - `ear.py`: Advanced speech recognition and noise calibration.
   - `event_bus.py`: The central Pub/Sub message broker.

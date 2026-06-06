@@ -48,12 +48,20 @@ Jarvis uses a flexible modular command registry. To add a new voice command:
    ```
 4. The registry will automatically discover and register your command when Jarvis starts!
 
+## Adding New Specialized Agents
+
+Jarvis 2.0 uses a Multi-Agent architecture routed by `LLMManager`. To add a new persona:
+1. Create a new file in `assistant/agents/` (e.g., `analyst.py`).
+2. Inherit from `BaseAgent` and define a robust `system_prompt`.
+3. Provide any custom tools (e.g., `tools=[analyze_data]`).
+4. Register your new agent in the `__init__` method of `assistant/core/llm_manager.py`.
+
 ## Adding New LLM Providers
 
 To add a new LLM provider (like Anthropic or OpenAI):
-1. Open `assistant/core/llm_manager.py`.
-2. Add your provider's logic to `get_response_async()`.
-3. Be sure to use the asynchronous `aiohttp.ClientSession` pool passed via `self.session` for maximum performance, and always yield tokens via streaming if the provider supports it.
+1. Open `assistant/core/llm_manager.py` (or `base.py` for agent-specific clients).
+2. Add your provider's logic and configure the API endpoint.
+3. Always yield tokens via streaming if the provider supports it, to ensure the UI and Kokoro TTS pipeline remain completely real-time.
 
 ## Code Style Guide
 
