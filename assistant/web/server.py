@@ -203,6 +203,7 @@ def setup_event_bridge():
     bus.subscribe(EventType.LISTENING, lambda data: broadcast_event(EventType.LISTENING, {"listening": data if isinstance(data, bool) else data.get("state", False)}))
     bus.subscribe(EventType.PROCESSING, lambda data: broadcast_event(EventType.PROCESSING, {"state": data.get("state", False)}))
     bus.subscribe(EventType.COMMAND_EXECUTED, lambda data: broadcast_event(EventType.COMMAND_EXECUTED, data))
+    bus.subscribe(EventType.PERMISSION_REQUEST, lambda data: broadcast_event(EventType.PERMISSION_REQUEST, data))
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -213,7 +214,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            if data.get("type") == "command":
+            msg_type = data.get("type", "")
+            
+            if msg_type == "command":
                 text = data.get("data", {}).get("text", "")
                 if text:
                     import html
@@ -226,6 +229,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         })
                         print(f"[Debug] server.py putting text in queue: {clean_text}")
                         text_command_queue.put(clean_text)
+                        
+            elif msg_type == "permission_response":
+                from assistant.core.event_bus import permission_queue
+                approved = data.get("data", {}).get("approved", False)
+                permission_queue.put(approved)
+                
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 

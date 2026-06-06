@@ -180,9 +180,9 @@ if __name__ == "__main__":
     tell_news()
 
 
-from assistant.core.registry import on_fuzzy
+from assistant.core.registry import on_regex
 
-@on_fuzzy(["tell me news", "what's the news", "today's news", "latest news", "news headlines", "top headlines", "current news"], score_cutoff=90)
+@on_regex(r"^(tell me news|what's the news|today's news|latest news|news headlines|top headlines|current news)$", priority=2)
 def handle_news_cmd():
     """
     Handles voice commands related to news requests.

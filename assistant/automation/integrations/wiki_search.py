@@ -1,7 +1,6 @@
 from datetime import datetime
 import wikipedia
 from assistant.core.speak_selector import speak
-from assistant.LLM.llm_search import llm_response
 from assistant.automation.features.save_data_locally import (
     qa_lock,
     qa_file_path,
@@ -141,6 +140,7 @@ def wiki_search(prompt: str, use_cache: bool = True) -> None:
         """
         error_msg = f"Wikipedia doesn't have a page for '{search_prompt}'"
         print(error_msg)
+        from assistant.core.llm_manager import llm_response
         llm_response(search_prompt)  # Fallback to language model
 
     except wikipedia.exceptions.DisambiguationError as e:
@@ -165,6 +165,7 @@ def wiki_search(prompt: str, use_cache: bool = True) -> None:
         """
         error_msg = f"Wikipedia error: {e}"
         print(error_msg)
+        from assistant.core.llm_manager import llm_response
         llm_response(search_prompt)  # Fallback to language model
 
     except Exception as e:
@@ -176,4 +177,5 @@ def wiki_search(prompt: str, use_cache: bool = True) -> None:
         """
         error_msg = f"Unexpected error: {e}"
         print(error_msg)
+        from assistant.core.llm_manager import llm_response
         llm_response(search_prompt)  # Fallback to language model

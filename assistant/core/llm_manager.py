@@ -77,247 +77,38 @@ SYSTEM_PROMPT = (
 
 import uuid
 import re
-from google import genai
-from google.genai import types
 from assistant.core.event_bus import bus, EventType
-from assistant.core.mouth import tts_queue
 
 class LLMManager:
     """
-    Manages connections and failovers for multiple Large Language Models asynchronously.
+    Acts as the Router Agent, delegating tasks to Specialized Agents.
+    Agents are imported lazily inside __init__ to avoid circular imports.
     """
     def __init__(self) -> None:
-        self.gemini_key = config.gemini_api_key
-        self.openrouter_key = config.openrouter_api_key
-        self.hf_token = config.hf_token
-        self._session: Optional[aiohttp.ClientSession] = None
-        self.gemini_client = None
-        if self.gemini_key:
-            try:
-                self.gemini_client = genai.Client(api_key=self.gemini_key)
-            except Exception as e:
-                logger.error(f"Failed to initialize Gemini client: {e}")
-
-    async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=config.llm_timeout)
-            )
-        return self._session
-
-    async def _call_gemini_streaming(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Calls Gemini natively with token streaming and function calling."""
-        if not self.gemini_client: return None
+        # Lazy imports to break the circular dependency chain:
+        # llm_manager → researcher → tools → wiki_search → llm_search → llm_manager
+        from assistant.agents.base import BaseAgent
+        from assistant.agents.researcher import ResearcherAgent
+        from assistant.agents.coder import CoderAgent
+        from assistant.agents.vision_agent import VisionAgent
         
-        def run_gemini():
-            from assistant.core.tools import AVAILABLE_TOOLS
-            
-            # Convert simple history to google-genai Content objects
-            contents = []
-            for msg in messages:
-                role = "user" if msg["role"] == "user" else "model"
-                contents.append(
-                    types.Content(role=role, parts=[types.Part.from_text(text=msg.get("content", ""))])
-                )
-
-            last_msg = contents.pop()
-            
-            # We use chat so it can maintain the session if needed, but we pass full history here
-            chat = self.gemini_client.chats.create(
-                model="gemini-3.1-flash-lite",
-                history=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=config.llm_temperature
-                )
-            )
-
-            full_text = ""
-            current_sentence = ""
-            message_id = str(uuid.uuid4())
-            
-            # Send the stream
-            response = chat.send_message_stream(last_msg.parts[0].text)
-            
-            for chunk in response:
-                if chunk.text:
-                    full_text += chunk.text
-                    current_sentence += chunk.text
-                    
-                    # Split into sentences dynamically and stream to TTS
-                    # Use a regex that keeps the punctuation attached to the sentence
-                    parts = re.split(r'(?<=[.!?])\s+', current_sentence)
-                    
-                    # If we found at least one complete sentence
-                    if len(parts) > 1:
-                        # Queue all complete sentences
-                        for complete_sentence in parts[:-1]:
-                            if complete_sentence.strip():
-                                bus.emit(EventType.LLM_STREAMING, (complete_sentence.strip(), None, message_id))
-                        # Keep the incomplete part in the buffer
-                        current_sentence = parts[-1]
-            
-            # Flush the remaining buffer
-            if current_sentence.strip():
-                bus.emit(EventType.LLM_STREAMING, (current_sentence.strip(), None, message_id))
-
-            return full_text
-
-        try:
-            return await asyncio.to_thread(run_gemini)
-        except Exception as e:
-            logger.error("Gemini stream error: %s", e)
-            return None
-
-    async def _call_gemini_tools(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Calls Gemini with tools natively using non-streaming to avoid SDK bugs with AFC."""
-        if not self.gemini_client: return None
+        self.researcher = ResearcherAgent()
+        self.coder = CoderAgent()
+        self.vision = VisionAgent()
         
-        def run_gemini():
-            from assistant.core.tools import AVAILABLE_TOOLS
-            contents = []
-            for msg in messages:
-                role = "user" if msg["role"] == "user" else "model"
-                contents.append(
-                    types.Content(role=role, parts=[types.Part.from_text(text=msg.get("content", ""))])
-                )
-
-            last_msg = contents.pop()
-            
-            chat = self.gemini_client.chats.create(
-                model="gemini-3.1-flash-lite",
-                history=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    tools=AVAILABLE_TOOLS,
-                    temperature=config.llm_temperature
-                )
-            )
-
-            # Send message synchronously to allow Automatic Function Calling (AFC) to complete
-            response = chat.send_message(last_msg.parts[0].text)
-            
-            full_text = response.text or ""
-            
-            # Immediately queue the full text for TTS
-            if full_text:
-                from assistant.core.llm_utils import split_sentences
-                sentences = split_sentences(full_text)
-                message_id = str(uuid.uuid4())
-                for sentence in sentences:
-                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
-                    
-            return full_text
-
-        try:
-            return await asyncio.to_thread(run_gemini)
-        except Exception as e:
-            logger.error("Gemini tools error: %s", e)
-            return None
-
-    async def _call_huggingface(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        if not self.hf_token: return None
-        def run_hf():
-            from huggingface_hub import InferenceClient
-            try:
-                client = InferenceClient(token=self.hf_token)
-                res = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
-                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-                    max_tokens=config.llm_max_tokens
-                )
-                return res.choices[0].message.content
-            except Exception as e:
-                logger.error("HuggingFace error: %s", e)
-                return None
-        return await asyncio.to_thread(run_hf)
-
-    async def _call_openrouter(self, messages: List[Dict[str, str]], model: str = "openrouter/free") -> Optional[str]:
-        if not self.openrouter_key: return None
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {self.openrouter_key}"}
-        payload = {
-            "model": model,
-            "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-            "temperature": config.llm_temperature
-        }
-        try:
-            session = await self._get_session()
-            async with session.post(url, headers=headers, json=payload) as response:
-                data = await response.json()
-                return data['choices'][0]['message']['content']
-        except Exception as e:
-            logger.error("OpenRouter error: %s", e)
-            return None
-
-    async def _call_g4f(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        def run_g4f():
-            from g4f.client import Client
-            try:
-                client = Client()
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-                    web_search=True
-                )
-                return response.choices[0].message.content
-            except: return None
-        return await asyncio.to_thread(run_g4f)
-
-    async def _call_vision(self, messages: List[Dict[str, str]]) -> Optional[str]:
-        """Captures the screen and asks Gemini Vision."""
-        if not self.gemini_client: return None
-        
-        def run_vision():
-            from assistant.core.vision import capture_screen
-            contents = []
-            for msg in messages:
-                role = "user" if msg["role"] == "user" else "model"
-                contents.append(
-                    types.Content(role=role, parts=[types.Part.from_text(text=msg.get("content", ""))])
-                )
-            
-            last_msg = contents.pop()
-            
-            chat = self.gemini_client.chats.create(
-                model="gemini-3.1-flash-lite",
-                history=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=config.llm_temperature
-                )
-            )
-            
-            img = capture_screen()
-            if not img:
-                response = chat.send_message(last_msg.parts[0].text + " (Note: I couldn't capture the screen, let the user know.)")
-            else:
-                response = chat.send_message([img, last_msg.parts[0].text])
-                
-            full_text = response.text or ""
-            
-            if full_text:
-                from assistant.core.llm_utils import split_sentences
-                sentences = split_sentences(full_text)
-                message_id = str(uuid.uuid4())
-                for sentence in sentences:
-                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
-                    
-            return full_text
-            
-        try:
-            return await asyncio.to_thread(run_vision)
-        except Exception as e:
-            logger.error("Vision API error: %s", e)
-            return None
+        # General Agent for basic conversation (no tools)
+        self.general = BaseAgent(
+            name="Jarvis", 
+            system_prompt=SYSTEM_PROMPT
+        )
 
     def _identify_intent(self, text: str) -> str:
         text = text.lower()
         if any(kw in text for kw in ["my screen", "screen", "look at this", "see this", "what is this", "what's on"]):
             return "vision"
-        if any(kw in text for kw in ["python", "code", "bug", "error", "fix", "function", "write a", "program"]):
+        if any(kw in text for kw in ["python", "code", "bug", "error", "fix", "function", "write a", "program", "script", "terminal"]):
             return "technical"
-        if any(kw in text for kw in ["news", "weather", "today", "current", "search for"]):
+        if any(kw in text for kw in ["news", "weather", "today", "current", "search for", "find out", "research"]):
             return "web"
         return "general"
 
@@ -325,45 +116,45 @@ class LLMManager:
         record_user_activity()
         intent = self._identify_intent(user_input)
         res = None
-        tts_handled = False
         
         global CHAT_HISTORY
         with HISTORY_LOCK:
             CHAT_HISTORY.append({"role": "user", "content": user_input})
             CHAT_HISTORY = trim_history(CHAT_HISTORY, max_messages=config.llm_max_history)
             save_history()
-            messages_to_send = list(CHAT_HISTORY)
+            
+            import copy
+            import datetime
+            messages_to_send = copy.deepcopy(CHAT_HISTORY)
+            current_time = datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
+            messages_to_send[-1]["content"] = f"[System Context: The current date and time is {current_time}]\nUser Request: {user_input}"
 
         if intent == "vision":
-            logger.info("Vision query. Using Gemini Vision...")
-            res = await self._call_vision(messages_to_send)
-            if res: tts_handled = True
+            logger.info("ROUTING -> VisionAgent")
+            res = await self.vision.run(messages_to_send, stream=True)
         elif intent == "technical":
-            logger.info("Technical query. Using HuggingFace (Primary)...")
-            res = await self._call_huggingface(messages_to_send)
+            logger.info("ROUTING -> CoderAgent")
+            # The coder has tools, so it might not stream cleanly yet
+            res = await self.coder.run(messages_to_send, stream=False)
+            if res:
+                # Manually stream if it didn't stream automatically
+                from assistant.core.llm_utils import split_sentences
+                sentences = split_sentences(res)
+                message_id = str(uuid.uuid4())
+                for sentence in sentences:
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
         elif intent == "web":
-            logger.info("Web query. Using Gemini with Tools (Primary)...")
-            res = await self._call_gemini_tools(messages_to_send)
-            if res: tts_handled = True
+            logger.info("ROUTING -> ResearcherAgent")
+            res = await self.researcher.run(messages_to_send, stream=False)
+            if res:
+                from assistant.core.llm_utils import split_sentences
+                sentences = split_sentences(res)
+                message_id = str(uuid.uuid4())
+                for sentence in sentences:
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
         else:
-            logger.info("General query. Using Gemini Streaming (Primary)...")
-            res = await self._call_gemini_streaming(messages_to_send)
-            if res: tts_handled = True
-
-        if not res:
-            logger.warning("Primary failed. Starting sequential fallback...")
-            fallbacks = [
-                self._call_gemini_streaming,
-                self._call_huggingface,
-                lambda msgs: self._call_openrouter(msgs, model="openai/gpt-oss-120b:free"),
-                self._call_g4f
-            ]
-            for attempt in fallbacks:
-                res = await attempt(messages_to_send)
-                if res:
-                    if attempt == self._call_gemini_streaming:
-                        tts_handled = True
-                    break
+            logger.info("ROUTING -> GeneralAgent (Direct)")
+            res = await self.general.run(messages_to_send, stream=True)
 
         if not res:
             error_msg = "I am unable to reach any of my thinking modules at the moment. Please check your internet connection."
@@ -376,11 +167,6 @@ class LLMManager:
             return error_msg
 
         clean_text = clean_llm_output(res)
-        
-        if not tts_handled:
-            from assistant.core.speak_selector import speak_streaming
-            from assistant.core.llm_utils import split_sentences
-            speak_streaming(split_sentences(clean_text))
         
         with HISTORY_LOCK:
             CHAT_HISTORY.append({"role": "assistant", "content": clean_text})
@@ -406,7 +192,7 @@ def llm_response(text: str) -> str:
 def llm_response_streaming(text: str) -> List[str]:
     """
     Returns split sentences.
-    TTS Streaming is now handled NATIVELY inside _call_gemini_streaming!
+    TTS Streaming is now handled NATIVELY inside the agents!
     So this function simply waits for the response and returns it.
     """
     response = manager.get_response_sync(text)

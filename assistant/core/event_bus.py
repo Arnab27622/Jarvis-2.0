@@ -35,6 +35,7 @@ class EventType(Enum):
     SYS_METRICS = "sys_metrics"  # CPU/RAM status changed
     COMMAND_EXECUTED = "cmd_done" # Command finished executing
     ERROR = "error"              # Something went wrong
+    PERMISSION_REQUEST = "permission_request" # Security override needed
 
 class EventBus:
     """
@@ -107,3 +108,6 @@ bus = EventBus()
 
 # Queue for typed text commands from UI
 text_command_queue = queue.Queue()
+
+# Queue for UI permission responses
+permission_queue = queue.Queue()

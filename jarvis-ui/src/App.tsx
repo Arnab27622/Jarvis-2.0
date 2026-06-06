@@ -50,6 +50,7 @@ function App() {
   const [glitch, setGlitch] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [permissionRequest, setPermissionRequest] = useState<{text: string} | null>(null);
   const ws = useRef<WebSocket | null>(null);
 
   const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
@@ -181,6 +182,11 @@ function App() {
           setIsProcessing(false);
           playBeep(1200, 'sine', 0.1);
           break;
+        case 'permission_request':
+          setIsProcessing(false);
+          setPermissionRequest({ text: payload.text });
+          playBeep(400, 'square', 0.5); // Urgent sound
+          break;
         case 'sys_metrics':
           window.dispatchEvent(new CustomEvent('sys_metrics', { detail: payload }));
           break;
@@ -262,6 +268,38 @@ function App() {
         
         <AlertManager alerts={alerts} setAlerts={setAlerts} />
         <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+        
+        {/* Permission Request Modal */}
+        {permissionRequest && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000,
+            display: 'flex', justifyContent: 'center', alignItems: 'center'
+          }}>
+            <div className="hud-panel widget" style={{ maxWidth: '400px', border: '1px solid var(--alert-glow)' }}>
+              <h3 style={{ color: 'var(--alert-glow)' }}>SECURITY OVERRIDE REQUEST</h3>
+              <p style={{ marginTop: '15px', color: 'var(--text-primary)' }}>{permissionRequest.text}</p>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button 
+                  className="hud-btn" 
+                  style={{ flex: 1, borderColor: 'var(--alert-glow)', color: 'var(--alert-glow)' }}
+                  onClick={() => {
+                    ws.current?.send(JSON.stringify({ type: 'permission_response', data: { approved: false } }));
+                    setPermissionRequest(null);
+                  }}
+                >DENY</button>
+                <button 
+                  className="hud-btn" 
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    ws.current?.send(JSON.stringify({ type: 'permission_response', data: { approved: true } }));
+                    setPermissionRequest(null);
+                  }}
+                >APPROVE</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

@@ -181,6 +181,11 @@ _STANDALONE_UNITS = {
 # (pattern, replacement) — patterns are compiled with IGNORECASE + word boundaries
 _ABBREVIATIONS = [
     # Must come before shorter patterns to avoid partial matches
+    (r'\bVS Code\b',     'V S Code'),
+    (r'\bUSD\b',         'U S D'),
+    (r'\bAPI\b',         'A P I'),
+    (r'\bUI\b',          'U I'),
+    (r'\bAI\b',          'A I'),
     (r'\bw/o\b',         'without'),
     (r'\bb/w\b',         'between'),
     (r'\bw/(?=\s|$)',     'with'),
@@ -288,6 +293,10 @@ def normalize_for_tts(text: str) -> str:
         text = re.sub(rf'\b{escaped}\b', expansion, text)
 
     # ── Stage 4: Symbol-to-word expansion ──
+    # Currency
+    text = re.sub(r'\$(\d+(?:,\d+)*(?:\.\d+)?)', r'\1 dollars', text)
+    text = re.sub(r'€(\d+(?:,\d+)*(?:\.\d+)?)', r'\1 euros', text)
+    text = re.sub(r'£(\d+(?:,\d+)*(?:\.\d+)?)', r'\1 pounds', text)
     # Math / comparison symbols (order matters: multi-char before single-char)
     text = text.replace('±', ' plus or minus ')
     text = text.replace('≈', ' approximately ')
@@ -423,7 +432,9 @@ def clean_for_speech(raw_text: str) -> str:
     return clean
 
 def split_sentences(text: str) -> List[str]:
-    """Splits text into chunks, preserving ALL whitespace and newlines for the UI."""
+    """Splits text into chunks, preserving ALL whitespace and newlines for the UI.
+       Ensures that markdown code blocks (```...```) are kept entirely intact as single chunks.
+    """
     parts = re.split(r'(?<=[.!?])(\s+)', text)
     
     sentences = []
@@ -431,7 +442,11 @@ def split_sentences(text: str) -> List[str]:
     
     for part in parts:
         current_sentence += part
-        if re.match(r'^\s+$', part):
+        # Check if we are inside a code block by counting backticks
+        in_code_block = current_sentence.count("```") % 2 != 0
+        
+        # Only split if we are NOT inside a code block, and we hit a whitespace separator
+        if not in_code_block and re.match(r'^\s+$', part):
             if len(current_sentence.strip()) > 2:
                 sentences.append(current_sentence)
                 current_sentence = ""
