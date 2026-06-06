@@ -3,30 +3,36 @@ from unittest.mock import patch, AsyncMock
 from assistant.core.llm_manager import LLMManager
 
 @pytest.mark.asyncio
-async def test_llm_fallback_chain():
+async def test_llm_routing():
     manager = LLMManager()
     
-    # Mock all the actual LLM calls
-    with patch.object(manager, '_call_huggingface', new_callable=AsyncMock) as mock_hf, \
-         patch.object(manager, '_call_gemini_tools', new_callable=AsyncMock) as mock_gemini_tools, \
-         patch.object(manager, '_call_gemini_streaming', new_callable=AsyncMock) as mock_gemini_stream, \
-         patch.object(manager, '_call_openrouter', new_callable=AsyncMock) as mock_openrouter, \
-         patch.object(manager, '_call_g4f', new_callable=AsyncMock) as mock_g4f, \
-         patch("assistant.core.speak_selector.speak_streaming") as mock_speak:
+    # Mock the BaseAgent run methods instead of the legacy fallback chain
+    with patch.object(manager.general, 'run', new_callable=AsyncMock) as mock_general, \
+         patch.object(manager.vision, 'run', new_callable=AsyncMock) as mock_vision, \
+         patch.object(manager.coder, 'run', new_callable=AsyncMock) as mock_coder, \
+         patch.object(manager.researcher, 'run', new_callable=AsyncMock) as mock_researcher, \
+         patch("assistant.core.speak_selector.speak_streaming"):
          
-        # Simulate primary failing, first fallback (Gemini Streaming) failing, second fallback (OpenRouter) succeeding
-        mock_gemini_stream.return_value = None
-        mock_hf.return_value = None
-        mock_openrouter.return_value = "OpenRouter response"
-        mock_g4f.return_value = None
+        mock_general.return_value = "General response"
+        mock_vision.return_value = "Vision response"
+        mock_coder.return_value = "Coder response"
+        mock_researcher.return_value = "Researcher response"
         
-        # Test fallback works
-        response = await manager.get_response_async("Hello")
+        # Test General Routing
+        response = await manager.get_response_async("Hello Jarvis")
+        assert mock_general.called
         
-        # Ensure it tried the fallbacks
-        assert mock_gemini_stream.called
-        assert mock_openrouter.called
-        assert "OpenRouter response" in response
+        # Test Coder Routing
+        response = await manager.get_response_async("Write a python script")
+        assert mock_coder.called
+        
+        # Test Vision Routing
+        response = await manager.get_response_async("What is on my screen?")
+        assert mock_vision.called
+        
+        # Test Web Routing
+        response = await manager.get_response_async("Search for latest news")
+        assert mock_researcher.called
 
 @pytest.mark.asyncio
 async def test_tts_queue_integration():
