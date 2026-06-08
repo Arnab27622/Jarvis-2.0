@@ -1,10 +1,10 @@
 from assistant.agents.base import BaseAgent
-from assistant.core.tools import search_web, execute_terminal_command, execute_code
+from assistant.core.tools import search_web, execute_terminal_command, execute_code, list_workspace_files, view_workspace_file, edit_workspace_file
 from assistant.core.logger import get_logger
 
 logger = get_logger("CoderAgent")
 
-CODER_TOOLS = [search_web, execute_terminal_command, execute_code]
+CODER_TOOLS = [search_web, execute_terminal_command, execute_code, list_workspace_files, view_workspace_file, edit_workspace_file]
 
 class CoderAgent(BaseAgent):
     def __init__(self):

@@ -193,5 +193,132 @@ def execute_code(language: str, code: str) -> str:
         logger.error(f"Error executing script: {e}")
         return f"Error executing script: {str(e)}"
 
+def list_workspace_files(relative_dir: str = ".") -> str:
+    """
+    Lists the files in the workspace directory tree.
+    Use this to understand the structure of the project before viewing or editing files.
+    """
+    logger.info(f"LLM called tool: list_workspace_files(relative_dir={relative_dir})")
+    try:
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        target_dir = os.path.normpath(os.path.join(project_root, relative_dir))
+        
+        # Security sandbox escape check
+        if not target_dir.startswith(project_root):
+            return "Error: Cannot escape the workspace directory."
+            
+        exclude_dirs = {'.venv', '.git', '__pycache__', '.planning', 'node_modules', '.pytest_cache', 'dist'}
+        file_tree = []
+        
+        for root, dirs, files in os.walk(target_dir):
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+            rel_path = os.path.relpath(root, project_root)
+            indent = "  " * (0 if rel_path == "." else rel_path.count(os.sep) + 1)
+            folder_name = os.path.basename(root)
+            if folder_name and folder_name != ".":
+                file_tree.append(f"{indent}📁 {folder_name}/")
+            
+            file_indent = "  " * (1 if rel_path == "." else rel_path.count(os.sep) + 2)
+            for f in files:
+                file_tree.append(f"{file_indent}📄 {f}")
+                
+        return "\n".join(file_tree) if file_tree else "[Workspace is empty]"
+    except Exception as e:
+        logger.error(f"Error listing files: {e}")
+        return f"Error listing files: {str(e)}"
+
+def view_workspace_file(file_path: str, start_line: int = 1, end_line: int = 200) -> str:
+    """
+    Read the contents of a specific file in the workspace.
+    Supports reading specific line ranges to conserve context token limits.
+    """
+    logger.info(f"LLM called tool: view_workspace_file(file_path={file_path})")
+    try:
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        full_path = os.path.normpath(os.path.join(project_root, file_path))
+        
+        if not full_path.startswith(project_root):
+            return "Error: Cannot escape the workspace directory."
+            
+        if not os.path.exists(full_path):
+            return f"Error: File not found: {file_path}"
+            
+        from assistant.core.event_bus import bus, EventType, permission_queue
+        
+        # UI Security check
+        bus.emit(EventType.PERMISSION_REQUEST, {
+            "action": "View Project File",
+            "details": f"The Agent wants to read file: {file_path} (Lines {start_line}-{end_line})"
+        })
+        
+        approved = permission_queue.get()
+        if not approved:
+            return "Permission to read file denied by the user."
+            
+        with open(full_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            
+        total_lines = len(lines)
+        start_line = max(1, start_line)
+        end_line = min(total_lines, end_line)
+        
+        subset = lines[start_line-1:end_line]
+        numbered_lines = [f"{start_line + i}: {line}" for i, line in enumerate(subset)]
+        
+        return "".join(numbered_lines)
+    except Exception as e:
+        logger.error(f"Error reading file: {e}")
+        return f"Error viewing file: {str(e)}"
+
+def edit_workspace_file(file_path: str, search_content: str, replacement_content: str) -> str:
+    """
+    Edits a specific project file by replacing a block of search content with replacement content.
+    The search content block must match exactly once in the file to guarantee safety.
+    """
+    logger.info(f"LLM called tool: edit_workspace_file(file_path={file_path})")
+    try:
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        full_path = os.path.normpath(os.path.join(project_root, file_path))
+        
+        if not full_path.startswith(project_root):
+            return "Error: Cannot escape the workspace directory."
+            
+        if not os.path.exists(full_path):
+            return f"Error: File not found: {file_path}"
+            
+        from assistant.core.event_bus import bus, EventType, permission_queue
+        
+        # UI Security check
+        bus.emit(EventType.PERMISSION_REQUEST, {
+            "action": "Modify Project File",
+            "details": f"The Agent wants to edit: {file_path}\n\nSearch Content:\n{search_content}\n\nReplacement:\n{replacement_content}"
+        })
+        
+        approved = permission_queue.get()
+        if not approved:
+            return "Permission to write to file denied by the user."
+            
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        occurrences = content.count(search_content)
+        if occurrences == 0:
+            return "Error: The search content was not found in the file. Make sure lines match exactly including leading whitespace."
+        if occurrences > 1:
+            return f"Error: Ambiguous edit. The search content matches {occurrences} times. Provide unique surrounding context."
+            
+        updated_content = content.replace(search_content, replacement_content, 1)
+        
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+            
+        return "File updated successfully."
+    except Exception as e:
+        logger.error(f"Error editing file: {e}")
+        return f"Error editing file: {str(e)}"
+
 # List of tools to pass to the LLM
-AVAILABLE_TOOLS = [get_weather, search_web, execute_terminal_command, execute_code]
+AVAILABLE_TOOLS = [get_weather, search_web, execute_terminal_command, execute_code, list_workspace_files, view_workspace_file, edit_workspace_file]

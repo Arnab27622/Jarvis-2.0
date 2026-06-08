@@ -91,15 +91,17 @@ class LLMManager:
         from assistant.agents.researcher import ResearcherAgent
         from assistant.agents.coder import CoderAgent
         from assistant.agents.vision_agent import VisionAgent
+        from assistant.core.tools import list_workspace_files, view_workspace_file, edit_workspace_file
         
         self.researcher = ResearcherAgent()
         self.coder = CoderAgent()
         self.vision = VisionAgent()
         
-        # General Agent for basic conversation (no tools)
+        # General Agent for basic conversation, now with workspace read access
         self.general = BaseAgent(
             name="Jarvis", 
-            system_prompt=SYSTEM_PROMPT
+            system_prompt=SYSTEM_PROMPT,
+            tools=[list_workspace_files, view_workspace_file, edit_workspace_file]
         )
 
     def _identify_intent(self, text: str) -> str:
@@ -154,8 +156,13 @@ class LLMManager:
                     bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
         else:
             logger.info("ROUTING -> GeneralAgent (Direct)")
-            res = await self.general.run(messages_to_send, stream=True)
-
+            res = await self.general.run(messages_to_send, stream=False)
+            if res:
+                from assistant.core.llm_utils import split_sentences
+                sentences = split_sentences(res)
+                message_id = str(uuid.uuid4())
+                for sentence in sentences:
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
         if not res:
             error_msg = "I am unable to reach any of my thinking modules at the moment. Please check your internet connection."
             from assistant.core.speak_selector import speak

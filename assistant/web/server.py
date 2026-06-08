@@ -224,9 +224,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if msg_type == "command":
                 text = data.get("data", {}).get("text", "")
                 if text:
-                    import html
-                    # Sanitize input to prevent injection
-                    clean_text = html.escape(text.strip())
+                    # Pass input directly, React handles XSS escaping on the frontend
+                    clean_text = text.strip()
                     if clean_text:
                         await manager.broadcast({
                             "type": EventType.USER_TEXT.value,
