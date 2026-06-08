@@ -36,6 +36,11 @@ class EventType(Enum):
     COMMAND_EXECUTED = "cmd_done" # Command finished executing
     ERROR = "error"              # Something went wrong
     PERMISSION_REQUEST = "permission_request" # Security override needed
+    
+    # Authentication events
+    AUTH_STATUS = "auth_status"  # Status updates during auth
+    AUTH_SUCCESS = "auth_success" # Auth passed
+    AUTH_FAILED = "auth_failed"  # Auth failed completely
 
 class EventBus:
     """

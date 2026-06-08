@@ -11,6 +11,7 @@ import threading
 import time
 import subprocess
 import os
+import sys
 import tempfile
 
 from assistant.interface.wish import wish
@@ -74,16 +75,24 @@ if __name__ == "__main__":
             web_thread.start()
             time.sleep(0.5)
             
-            # Queue the startup greetings
-            speak(random.choice(online_dlg))
-            speak("Initializing JARVIS...")
+            # Open browser window exactly BEFORE auth starts so the user sees the SVG loading screen
+            browser_proc = launch_browser()
+            time.sleep(4) # Give UI time to load and connect to websocket
+            
+            # Run Face Authentication
+            from assistant.core.auth import authenticate_user
+            if not authenticate_user():
+                print("\nAuthentication failed or aborted. Exiting JARVIS.")
+                if browser_proc:
+                    try:
+                        browser_proc.terminate()
+                    except Exception:
+                        pass
+                sys.exit(0)
             
             # Wait for JARVIS to actually finish speaking/printing the lines
             from assistant.core.mouth import wait_for_tts_completion
             wait_for_tts_completion()
-            
-            # Open browser window exactly AFTER it finishes saying the lines
-            browser_proc = launch_browser()
             
             jarvis()
         else:

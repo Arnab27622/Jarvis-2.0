@@ -184,12 +184,12 @@ def _play_audio_item(text, audio, image, message_id):
     _current_message_id = message_id
 
     try:
+        import re
+        console_text = re.sub(r'```.*?(?:```|$)', '', text, flags=re.DOTALL).strip()
+        
         if audio is not None:
             # Calculate audio duration for synchronized text printing
             audio_duration = len(audio) / 24000.0
-            delay = (audio_duration - 0.1) / max(len(text), 1)
-            if delay < 0.01:
-                delay = 0.01
 
             # Emit to UI with exact duration
             bus.emit(EventType.SPEAK, {
@@ -204,20 +204,27 @@ def _play_audio_item(text, audio, image, message_id):
             sd.play(audio, samplerate=24000)
             time.sleep(0.1)  # small delay for audio device wake-up
 
-            # Print synchronized text
-            def print_synced():
-                for char in text:
-                    sys.stdout.write(char)
-                    sys.stdout.flush()
-                    time.sleep(delay)
-                print()
+            # Print synchronized text if console_text is not empty
+            print_thread = None
+            if console_text:
+                delay = (audio_duration - 0.1) / max(len(console_text), 1)
+                if delay < 0.01:
+                    delay = 0.01
 
-            print_thread = threading.Thread(target=print_synced)
-            print_thread.start()
+                def print_synced():
+                    for char in console_text:
+                        sys.stdout.write(char)
+                        sys.stdout.flush()
+                        time.sleep(delay)
+                    print()
+
+                print_thread = threading.Thread(target=print_synced)
+                print_thread.start()
 
             # Wait for audio to finish
             sd.wait()
-            print_thread.join()
+            if print_thread:
+                print_thread.join()
             
             # Memory Management: Rely on CPython reference counting
             del audio
@@ -226,16 +233,20 @@ def _play_audio_item(text, audio, image, message_id):
             bus.emit(EventType.SPEAK, {
                 "text": text,
                 "timestamp": time.time(),
-                "duration": len(text) * 0.065,
+                "duration": len(console_text) * 0.065,
                 "image": image,
                 "message_id": message_id
             })
-            print_animated_message(text)
+            if console_text:
+                print_animated_message(console_text)
     except Exception as e:
         logger.error("Playback error: %s", e)
-        # Fallback to just printing
+        # Fallback to just printing clean text
         try:
-            print_animated_message(text)
+            import re
+            fallback_text = re.sub(r'```.*?(?:```|$)', '', text, flags=re.DOTALL).strip()
+            if fallback_text:
+                print_animated_message(fallback_text)
         except:
             pass
     finally:
@@ -399,12 +410,9 @@ def stop_llm_speech() -> None:
     for item in temp_playback:
         _playback_queue.put(item)
         
-    # 3. If currently playing an LLM response (has message_id), stop audio
-    if _current_message_id is not None:
-        try:
-            sd.stop()
-        except Exception as e:
-            print(f"Error stopping audio: {e}")
+    # 3. We deliberately do NOT call sd.stop() here anymore.
+    # Calling sd.stop() from another thread while sd.play() is running can cause PortAudio
+    # to segfault or abort (Exit Code 1). Finishing the current sentence naturally is safer.
             
     logger.info("Stopped LLM streaming speech.")
 

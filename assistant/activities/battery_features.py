@@ -52,7 +52,10 @@ class BatteryMonitor:
             check_interval (int): Seconds between checks.
         """
         self.stop_event.clear()
-        notified_full = False
+        
+        # Initialize silently to prevent immediate blast on boot
+        battery_info = self.get_battery_info()
+        notified_full = (battery_info is not None and battery_info[0] == 100 and battery_info[1])
 
         while not self.stop_event.is_set():
             battery_info = self.get_battery_info()

@@ -204,6 +204,11 @@ def setup_event_bridge():
     bus.subscribe(EventType.PROCESSING, lambda data: broadcast_event(EventType.PROCESSING, {"state": data.get("state", False)}))
     bus.subscribe(EventType.COMMAND_EXECUTED, lambda data: broadcast_event(EventType.COMMAND_EXECUTED, data))
     bus.subscribe(EventType.PERMISSION_REQUEST, lambda data: broadcast_event(EventType.PERMISSION_REQUEST, data))
+    
+    # Auth events
+    bus.subscribe(EventType.AUTH_STATUS, lambda data: broadcast_event(EventType.AUTH_STATUS, data))
+    bus.subscribe(EventType.AUTH_SUCCESS, lambda data: broadcast_event(EventType.AUTH_SUCCESS, data))
+    bus.subscribe(EventType.AUTH_FAILED, lambda data: broadcast_event(EventType.AUTH_FAILED, data))
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

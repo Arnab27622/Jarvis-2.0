@@ -395,8 +395,8 @@ def clean_for_speech(raw_text: str) -> str:
     if not raw_text:
         return ""
         
-    # Remove markdown code blocks completely before parsing
-    clean = re.sub(r'```.*?```', ' ', raw_text, flags=re.DOTALL)
+    # Remove markdown code blocks completely before parsing (supports both closed and unclosed code blocks)
+    clean = re.sub(r'```.*?(?:```|$)', ' ', raw_text, flags=re.DOTALL)
         
     # 1. Convert Markdown to HTML then strip tags
     html = markdown.markdown(clean)

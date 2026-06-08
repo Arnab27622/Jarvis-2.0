@@ -4,6 +4,7 @@ import StatusPanel from './components/StatusPanel';
 import TelemetryPanel from './components/TelemetryPanel';
 import AlertManager from './components/AlertManager';
 import SettingsPanel from './components/SettingsPanel';
+import AuthScreen from './components/AuthScreen';
 import { Terminal, Loader, Settings } from 'lucide-react';
 
 export type LogEntry = {
@@ -51,6 +52,8 @@ function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [permissionRequest, setPermissionRequest] = useState<{text: string} | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  const [authStatus, setAuthStatus] = useState('INITIALIZING BIOMETRICS...');
   const ws = useRef<WebSocket | null>(null);
 
   const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
@@ -118,6 +121,11 @@ function App() {
         case 'speak':
           setIsProcessing(false);
           playBeep(600, 'triangle', 0.2);
+          
+          if (payload.message_id === 'AUTH_HIDDEN') {
+            break;
+          }
+          
           setLogs(prev => {
             const lastLog = prev[prev.length - 1];
             if (payload.message_id && lastLog && lastLog.message_id === payload.message_id) {
@@ -189,6 +197,18 @@ function App() {
         case 'sys_metrics':
           window.dispatchEvent(new CustomEvent('sys_metrics', { detail: payload }));
           break;
+        case 'auth_status':
+          setAuthStatus(payload.status || 'VERIFYING...');
+          playBeep(200, 'square', 0.1);
+          break;
+        case 'auth_success':
+          playBeep(800, 'sine', 0.5);
+          setIsAuthenticating(false);
+          break;
+        case 'auth_failed':
+          setAuthStatus('CRITICAL: AUTHENTICATION FAILED. TERMINATING.');
+          playBeep(100, 'sawtooth', 1.0);
+          break;
       }
     };
     
@@ -214,6 +234,15 @@ function App() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') setInput('');
   };
+
+  if (isAuthenticating) {
+    return (
+      <>
+        <div className="bg-mesh"></div>
+        <AuthScreen statusText={authStatus} />
+      </>
+    );
+  }
 
   return (
     <>
