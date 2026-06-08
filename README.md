@@ -4,6 +4,8 @@ Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant
 
 ## 🌟 Core Features
 
+* **Biometric Face Authentication (Security & Anti-Spoofing)**
+  Secured with dlib-based 68-point facial landmark tracking and `face_recognition` models. The system computes real-time Eye Aspect Ratio (EAR) to detect physical blinks (liveness verification), preventing static photos from bypassing authentication. Processed frames are downscaled by 4x with frame-rate throttling to limit CPU consumption to near 0%, avoiding GIL contention and audio cracking.
 * **Instant Voice Synthesis (Pipelined Kokoro-ONNX)**
   Experience zero-gap conversational fluidity. Jarvis utilizes a two-stage asynchronous audio pipeline: while one sentence is being played, the next is generated in the background using the offline, high-quality Kokoro TTS model.
 * **Intelligent Multi-Agent System**
@@ -78,6 +80,11 @@ Jarvis isn't just a chatbot; it actively controls your digital environment:
    Place the Kokoro TTS models inside the `models/` directory:
    - `models/kokoro-v1.0.onnx`
    - `models/voices-v1.0.bin`
+
+6. **Setup Owner Biometric Photo:**
+   Place a clear front-facing reference image of yourself (the owner) at:
+   - `data/images/owner.jpg`
+   *(This image is utilized by the face recognition engine to authenticate the user at boot).*
 
 ## 🎙️ Usage
 
