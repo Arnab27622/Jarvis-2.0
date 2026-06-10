@@ -12,8 +12,8 @@ Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant
   The built-in LLM Manager acts as a semantic router, seamlessly delegating your queries to specialized sub-agents (`Coder`, `Vision`, `Researcher`, and `General`). Each agent has unique system prompts and specific tool access to maximize precision and capability.
 * **React Web UI & Terminal Integration**
   Jarvis provides a gorgeous, sci-fi inspired React interface running on a dedicated WebSocket server. It features dual-stream rendering—spoken text animates to match the audio, while code blocks appear instantly with full syntax highlighting.
-* **Secure Code Execution**
-  The Coder Agent can write, debug, and execute code in multiple languages (Python, Node, C++, PowerShell) directly on your host machine. Execution is safeguarded by an explicit UI permission gate, ensuring you have full control over what runs.
+* **Secure Code & Local Workspace Execution**
+  The Coder and General Agents can write, debug, and execute code, as well as read/write files directly on your local host filesystem using robust Workspace Tools. Execution is safeguarded by a strict UI Permission Gate inside the React Web interface, ensuring you have explicit visual control over what code or file operations are allowed to run.
 * **Advanced Speech Recognition**
   Features automatic ambient noise calibration, dynamic energy thresholding, and offline fallbacks using PocketSphinx, ensuring Jarvis perfectly understands you even in noisy environments.
 * **Event-Driven Architecture**
@@ -26,7 +26,7 @@ Jarvis isn't just a chatbot; it actively controls your digital environment:
 * **Creative Text-to-Image:** Unified image manager routing prompts seamlessly to Pollinations AI (Flux), Cloudflare AI (Flux-1-Schnell), and Stability AI (Stable Diffusion XL).
 * **Information & Utilities:**
   * Integrated Wikipedia, Google Custom Search, and realtime News/Weather parsing.
-  * Context-aware memory: Jarvis learns from your interactions and takes persistent notes.
+  * Context-aware memory: Jarvis features a dual-layer RAG system (TF-IDF + ChromaDB). You can directly upload documents via the React UI to build his permanent knowledge base.
   * Fully integrated Alarms, Reminders, Battery monitoring, and Internet Speed diagnostics.
 
 ## 📋 Prerequisites
