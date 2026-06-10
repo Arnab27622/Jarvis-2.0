@@ -117,6 +117,8 @@ if __name__ == "__main__":
                 browser_proc.terminate()
             except Exception:
                 pass
+        from assistant.core.proactive import proactive_manager
+        proactive_manager.stop()
         from assistant.core.mouth import wait_for_tts_completion, stop_tts_consumer
         wait_for_tts_completion()
         stop_tts_consumer()

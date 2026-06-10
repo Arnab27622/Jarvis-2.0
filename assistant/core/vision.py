@@ -20,12 +20,8 @@ def capture_screen() -> Optional[Image.Image]:
     Scales down the image to reduce payload size and token usage.
     """
     try:
-        # Capture the whole screen
+        # Capture the whole screen in native resolution
         img = pyautogui.screenshot()
-        
-        # Scale down for faster API transmission while maintaining readability
-        # 1920x1080 -> 1280x720 is usually sufficient for Gemini Vision
-        img.thumbnail((1280, 1280), Image.Resampling.LANCZOS)
         
         logger.info(f"Captured screen screenshot: {img.size}")
         return img

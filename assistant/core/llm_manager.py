@@ -72,7 +72,8 @@ SYSTEM_PROMPT = (
     "2. Efficiency: Keep your answers concise so they can be spoken quickly, but never sound robotic or cold.\n"
     "3. Support: Be encouraging. If Arnab is working on a difficult task, offer supportive and positive feedback.\n"
     "4. Exclusivity: You were built by Arnab, for Arnab. Always prioritize his needs and workflow.\n"
-    "5. Style: When providing code, be precise but explain the 'why' in a friendly way."
+    "5. Style: When providing code, be precise but explain the 'why' in a friendly way.\n"
+    "6. RAG Context: If context is provided to you, synthesize it and answer the user's question concisely in your own words. Never read out large raw lists or regurgitate the context verbatim."
 )
 
 import uuid
@@ -91,27 +92,32 @@ class LLMManager:
         from assistant.agents.researcher import ResearcherAgent
         from assistant.agents.coder import CoderAgent
         from assistant.agents.vision_agent import VisionAgent
-        from assistant.core.tools import list_workspace_files, view_workspace_file, edit_workspace_file
         
         self.researcher = ResearcherAgent()
         self.coder = CoderAgent()
         self.vision = VisionAgent()
         
-        # General Agent for basic conversation, now with workspace read access
+        # General Agent for basic conversation
         self.general = BaseAgent(
             name="Jarvis", 
-            system_prompt=SYSTEM_PROMPT,
-            tools=[list_workspace_files, view_workspace_file, edit_workspace_file]
+            system_prompt=SYSTEM_PROMPT
         )
 
     def _identify_intent(self, text: str) -> str:
         text = text.lower()
-        if any(kw in text for kw in ["my screen", "screen", "look at this", "see this", "what is this", "what's on"]):
+        import re
+        
+        def has_kw(kws):
+            pattern = r'\b(?:' + '|'.join(map(re.escape, kws)) + r')\b'
+            return bool(re.search(pattern, text))
+            
+        if has_kw(["my screen", "screen", "look at this", "see this", "what is this", "what's on", "look", "see", "vision", "image", "picture"]):
             return "vision"
-        if any(kw in text for kw in ["python", "code", "bug", "error", "fix", "function", "write a", "program", "script", "terminal"]):
+        if has_kw(["python", "code", "bug", "error", "fix", "function", "write a", "program", "script", "terminal"]):
             return "technical"
-        if any(kw in text for kw in ["news", "weather", "today", "current", "search for", "find out", "research"]):
+        if has_kw(["news", "weather", "today", "current", "search for", "find out", "research"]):
             return "web"
+            
         return "general"
 
     async def get_response_async(self, user_input: str) -> str:
@@ -129,7 +135,28 @@ class LLMManager:
             import datetime
             messages_to_send = copy.deepcopy(CHAT_HISTORY)
             current_time = datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
-            messages_to_send[-1]["content"] = f"[System Context: The current date and time is {current_time}]\nUser Request: {user_input}"
+            
+            # Fetch RAG Context
+            from assistant.LLM.model import mind
+            rag_context = mind(user_input, threshold=0.5, return_rag=True)
+            
+            context_string = ""
+            if rag_context:
+                context_string = (
+                    f"\n\n--- BEGIN RETRIEVED MEMORY CONTEXT ---\n"
+                    f"{rag_context}\n"
+                    f"--- END RETRIEVED MEMORY CONTEXT ---\n"
+                    f"CRITICAL INSTRUCTION: Use ONLY the memory context above to answer the user's question. "
+                    f"Answer as briefly and naturally as possible."
+                    f"DO NOT read or list out the entire context verbatim. If the answer is a single item, just say that item.\n\n"
+                )
+                
+                # Clear chat history (except system msg) to prevent hallucination from previous RAG answers
+                sys_msg = messages_to_send[0] if messages_to_send and messages_to_send[0].get("role") == "system" else None
+                last_msg = messages_to_send[-1]
+                messages_to_send = [sys_msg, last_msg] if sys_msg else [last_msg]
+
+            messages_to_send[-1]["content"] = f"[System Time: {current_time}]{context_string}User Question: {user_input}"
 
         if intent == "vision":
             logger.info("ROUTING -> VisionAgent")
@@ -156,13 +183,7 @@ class LLMManager:
                     bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
         else:
             logger.info("ROUTING -> GeneralAgent (Direct)")
-            res = await self.general.run(messages_to_send, stream=False)
-            if res:
-                from assistant.core.llm_utils import split_sentences
-                sentences = split_sentences(res)
-                message_id = str(uuid.uuid4())
-                for sentence in sentences:
-                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
+            res = await self.general.run(messages_to_send, stream=True)
         if not res:
             error_msg = "I am unable to reach any of my thinking modules at the moment. Please check your internet connection."
             from assistant.core.speak_selector import speak

@@ -281,6 +281,16 @@ def ingest_document(file_path: str) -> None:
         except ImportError:
             print("PyPDF2 is required for PDF ingestion. Please install it (`pip install PyPDF2`).")
             return
+    elif file_path.endswith('.docx'):
+        try:
+            import docx
+            doc = docx.Document(file_path)
+            for para in doc.paragraphs:
+                if para.text:
+                    text += para.text + "\n"
+        except ImportError:
+            print("python-docx is required for DOCX ingestion. Please install it (`pip install python-docx`).")
+            return
             
     if not text.strip():
         print("No text extracted.")
@@ -291,8 +301,12 @@ def ingest_document(file_path: str) -> None:
     words = text.split()
     chunks = []
     
+    num_chunks = max(1, (len(words) - overlap) // (chunk_size - overlap) + 1)
+    
     for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
+        section_num = (i // (chunk_size - overlap)) + 1
+        prefix = f"[Document: {os.path.basename(file_path)} | Section: {section_num}/{num_chunks}]\n"
+        chunk = prefix + " ".join(words[i:i + chunk_size])
         chunks.append(chunk)
         
     documents = chunks
@@ -310,10 +324,11 @@ def ingest_document(file_path: str) -> None:
         print(f"Failed to ingest document into ChromaDB: {e}")
 
 
-def mind(text: str, threshold: float = 0.7) -> Optional[str]:
+def mind(text: str, threshold: float = 0.7, return_rag: bool = False) -> Optional[str]:
     """
     Main interface function for the local Q&A intelligence system.
     Orchestrates query processing using TF-IDF with ChromaDB semantic search as a fallback.
+    If return_rag is True, it will also search document chunks and return them as context.
     """
     from assistant.core.config import config
     dataset_path = str(config.qna_data_path)
@@ -322,7 +337,7 @@ def mind(text: str, threshold: float = 0.7) -> Optional[str]:
 
     answer, similarity = get_answer(text, _cached_vectorizer, _cached_matrix, _cached_dataset, threshold)
     print(f"TF-IDF Answer: {answer}, Similarity: {similarity}, Threshold: {threshold}")
-    if answer and similarity > 0.85:
+    if answer and similarity >= 0.95:
         # High confidence exact match from TF-IDF
         print("Returning TF-IDF exact match.")
         return answer
@@ -331,7 +346,7 @@ def mind(text: str, threshold: float = 0.7) -> Optional[str]:
     db_path = os.path.join(os.path.dirname(dataset_path), "chroma_db")
     init_chroma(db_path)
     
-    best_answer = answer
+    best_answer = None
     best_distance = float('inf')
     
     try:
@@ -349,32 +364,29 @@ def mind(text: str, threshold: float = 0.7) -> Optional[str]:
         if qna_results['distances'] and qna_results['distances'][0]:
             qna_dist = qna_results['distances'][0][0]
             # all-MiniLM-L6-v2 packs embeddings very tightly. 
-            # Unrelated queries often have distances ~0.8. 
-            # We need a very strict threshold (< 0.3) for QnA exact/near-exact matches.
-            if qna_dist < 0.3:  
+            # We need an EXTREMELY strict threshold (< 0.05) for QnA exact/near-exact matches 
+            # otherwise it will confidently return wrong cached answers for slightly different questions.
+            if qna_dist < 0.05:  
                 best_distance = qna_dist
                 best_answer = qna_results['metadatas'][0][0]['answer']
                 
-        # Query Docs collection (RAG)
-        docs_results = _docs_collection.query(
-            query_embeddings=query_embedding,
-            n_results=1
-        )
-        
-        if docs_results['distances'] and docs_results['distances'][0]:
-            doc_dist = docs_results['distances'][0][0]
-            # RAG chunks are longer, so distance is naturally higher than QnA pairs.
-            if doc_dist < best_distance and doc_dist < 1.0:
-                best_answer = docs_results['documents'][0][0]
+        # Query Docs collection (RAG) - only if requested by LLM Manager
+        if return_rag:
+            max_results = min(40, _docs_collection.count())
+            docs_results = _docs_collection.query(
+                query_embeddings=query_embedding,
+                n_results=max_results
+            )
+            
+            if docs_results['distances'] and docs_results['distances'][0]:
+                # Return all top 10 matching chunks to the LLM for broader context unconditionally
+                return "\n\n...\n\n".join(docs_results['documents'][0])
                 
     except Exception as e:
         # Fallback to TF-IDF answer if Chroma fails
         print(f"ChromaDB Query Error: {e}")
         
-    # If even after ChromaDB we have no answer and similarity is very poor, return None
-    if best_answer is None or (best_distance == float('inf') and similarity < 0.5):
-        return None
-        
+    # If no high-confidence QnA match was found, return None
     return best_answer
 
 

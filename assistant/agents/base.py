@@ -10,12 +10,13 @@ class BaseAgent:
     Base class for all specialized sub-agents.
     Each agent gets its own system prompt and optional tool set.
     """
-    def __init__(self, name: str, system_prompt: str, tools: Optional[List[Any]] = None):
+    def __init__(self, name: str, system_prompt: str, tools: Optional[List[Any]] = None, model_name: str = "gemini-3.1-flash-lite"):
         self.name = name
         self.system_prompt = system_prompt
         self.tools = tools or []
+        self.model_name = model_name
         
-        # Default to Gemini Flash-Lite for extreme speed and low latency
+        # Default to configured model for extreme speed and low latency
         self.api_key = config.gemini_api_key
         self.client = None
         
@@ -49,7 +50,7 @@ class BaseAgent:
             last_msg = contents.pop()
 
             chat = self.client.chats.create(
-                model="gemini-3.1-flash-lite",
+                model=self.model_name,
                 history=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=self.system_prompt,

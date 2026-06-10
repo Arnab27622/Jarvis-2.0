@@ -10,7 +10,7 @@ try:
 except ImportError:
     GPUtil = None
 from typing import List
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi import Request
@@ -150,6 +150,27 @@ async def get_status():
         "tts": "Kokoro TTS"
     })
 
+@app.post("/api/upload")
+async def upload_document(file: UploadFile = File(...)):
+    try:
+        from assistant.LLM.model import ingest_document
+        import shutil
+        import threading
+        
+        doc_dir = config.brain_data_dir / "documents"
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        file_path = doc_dir / file.filename
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Ingest in background so UI isn't blocked
+        threading.Thread(target=ingest_document, args=(str(file_path),)).start()
+        
+        return JSONResponse({"status": "success", "message": f"Processing {file.filename} into RAG memory."})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 class ConnectionManager:
     """Manages active WebSocket connections and message broadcasting."""
     def __init__(self):
@@ -175,6 +196,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 server_loop = None
+IS_AUTHENTICATED = False
 
 def broadcast_event(event_type: EventType, data: dict = None):
     """Bridges synchronous event bus signals to asynchronous WebSocket broadcasts."""
@@ -206,8 +228,13 @@ def setup_event_bridge():
     bus.subscribe(EventType.PERMISSION_REQUEST, lambda data: broadcast_event(EventType.PERMISSION_REQUEST, data))
     
     # Auth events
+    def handle_auth_success(data):
+        global IS_AUTHENTICATED
+        IS_AUTHENTICATED = True
+        broadcast_event(EventType.AUTH_SUCCESS, data)
+        
     bus.subscribe(EventType.AUTH_STATUS, lambda data: broadcast_event(EventType.AUTH_STATUS, data))
-    bus.subscribe(EventType.AUTH_SUCCESS, lambda data: broadcast_event(EventType.AUTH_SUCCESS, data))
+    bus.subscribe(EventType.AUTH_SUCCESS, handle_auth_success)
     bus.subscribe(EventType.AUTH_FAILED, lambda data: broadcast_event(EventType.AUTH_FAILED, data))
 
 @app.websocket("/ws")
@@ -216,6 +243,10 @@ async def websocket_endpoint(websocket: WebSocket):
     global server_loop
     server_loop = asyncio.get_running_loop()
     await manager.connect(websocket)
+    
+    if IS_AUTHENTICATED:
+        await websocket.send_json({"type": "auth_success", "data": {}})
+        
     try:
         while True:
             data = await websocket.receive_json()

@@ -5,7 +5,7 @@ import TelemetryPanel from './components/TelemetryPanel';
 import AlertManager from './components/AlertManager';
 import SettingsPanel from './components/SettingsPanel';
 import AuthScreen from './components/AuthScreen';
-import { Terminal, Loader, Settings } from 'lucide-react';
+import { Terminal, Loader, Settings, Upload } from 'lucide-react';
 
 export type LogEntry = {
   id: string;
@@ -55,6 +55,34 @@ function App() {
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [authStatus, setAuthStatus] = useState('INITIALIZING BIOMETRICS...');
   const ws = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setAlerts(prev => [...prev, { id: Date.now().toString(), text: `Uploading ${file.name}...`, timestamp: Date.now() }]);
+
+    try {
+      const host = window.location.hostname;
+      const res = await fetch(`http://${host}:1410/api/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setAlerts(prev => [...prev, { id: Date.now().toString(), text: `Success: ${data.message}`, timestamp: Date.now() }]);
+      } else {
+        setAlerts(prev => [...prev, { id: Date.now().toString(), text: `Error: ${data.message}`, timestamp: Date.now() }]);
+      }
+    } catch {
+      setAlerts(prev => [...prev, { id: Date.now().toString(), text: `Upload failed`, timestamp: Date.now() }]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const playBeep = (freq = 800, type = 'sine' as OscillatorType, duration = 0.1) => {
     try {
@@ -256,6 +284,17 @@ function App() {
             </span>
             <span>SEC.M5</span>
             <Clock />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              onChange={handleFileUpload} 
+            />
+            <Upload 
+              size={24} 
+              style={{ cursor: 'pointer', color: 'var(--primary-glow)', marginLeft: '15px' }} 
+              onClick={() => fileInputRef.current?.click()} 
+            />
             <Settings 
               size={24} 
               style={{ cursor: 'pointer', color: 'var(--primary-glow)', marginLeft: '10px' }} 
