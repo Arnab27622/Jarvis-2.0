@@ -152,6 +152,10 @@ async def get_status():
 
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...)):
+    global IS_AUTHENTICATED
+    if not IS_AUTHENTICATED:
+        return JSONResponse({"status": "error", "message": "Unauthorized. Please authenticate first."}, status_code=401)
+        
     try:
         from assistant.LLM.model import ingest_document
         import shutil

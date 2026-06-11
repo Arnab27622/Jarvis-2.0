@@ -373,14 +373,15 @@ def mind(text: str, threshold: float = 0.7, return_rag: bool = False) -> Optiona
         # Query Docs collection (RAG) - only if requested by LLM Manager
         if return_rag:
             max_results = min(40, _docs_collection.count())
-            docs_results = _docs_collection.query(
-                query_embeddings=query_embedding,
-                n_results=max_results
-            )
-            
-            if docs_results['distances'] and docs_results['distances'][0]:
-                # Return all top 10 matching chunks to the LLM for broader context unconditionally
-                return "\n\n...\n\n".join(docs_results['documents'][0])
+            if max_results > 0:
+                docs_results = _docs_collection.query(
+                    query_embeddings=query_embedding,
+                    n_results=max_results
+                )
+                
+                if docs_results['distances'] and docs_results['distances'][0]:
+                    # Return all top matching chunks to the LLM for broader context unconditionally
+                    return "\n\n...\n\n".join(docs_results['documents'][0])
                 
     except Exception as e:
         # Fallback to TF-IDF answer if Chroma fails
