@@ -6,7 +6,7 @@ Black Forest Labs flux-1-schnell model.
 
 Requires environment variables:
 - CLOUDFLARE_API_TOKEN
-- CLOUDFLARE_ACCOUNT_ID (or CLOUDFLARE_ACOUNT_ID)
+- CLOUDFLARE_ACCOUNT_ID (or CLOUDFLARE_ACCOUNT_ID)
 """
 
 import time

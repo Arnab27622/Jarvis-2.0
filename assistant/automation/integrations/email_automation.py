@@ -130,7 +130,7 @@ def send_email(recipient, subject):
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "llama-3.3-70b-versatile",
+                "model": "llama-3.1-8b-instant",
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.5,
                 "max_tokens": 50

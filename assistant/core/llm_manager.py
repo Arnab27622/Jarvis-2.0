@@ -1,7 +1,7 @@
 """
 LLM Manager Module - Intelligent Provider Orchestration
 
-Consolidates multiple LLM providers (Gemini, Groq, OpenRouter, HF, g4f) into a 
+Consolidates multiple LLM providers (Gemini, Groq) into a 
 single, high-performance asynchronous system. Features intelligent model selection based on 
 query intent to minimize latency while maximizing response quality.
 """

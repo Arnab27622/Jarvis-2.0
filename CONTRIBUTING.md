@@ -21,8 +21,9 @@ First off, thank you for considering contributing to Jarvis 2.0! It's people lik
    pip install -r requirements.txt
    ```
 
-4. **Environment Variables:**
-   Copy `.env.example` to `.env` and fill in your API keys (Gemini, OpenRouter, etc.).
+4. **Environment Variables & Local Credentials:**
+   - Copy `.env.example` to `.env` and fill in your API keys (Gemini, Groq, etc.).
+   - If using Google Workspace Integrations (Gmail, Google Calendar), ensure you run their respective authentication flows to generate `token.json` and `calendar_token.json` securely.
 
 5. **Frontend Setup:**
    ```bash

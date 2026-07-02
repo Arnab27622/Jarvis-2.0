@@ -36,15 +36,7 @@ def clean_llm_output(raw_text: str) -> str:
     }
     for old, new in replacements.items():
         clean = clean.replace(old, new)
-
-    # 5. Remove promotional ads (specifically g4f/op.wtf)
-    ad_patterns = [
-        r"Need proxies cheaper than the market\?https://op\.wtf.*",
-        r"Give us a star on GitHub.*",
-        r"Enjoying g4f\?.*"
-    ]
-    for pattern in ad_patterns:
-        clean = re.sub(pattern, "", clean, flags=re.IGNORECASE)
+    # (g4f promotional ads removed as it is no longer supported)
 
     # 6. Strip LaTeX commands and symbols that TTS struggles with (without removing markdown chars)
     clean = clean.replace('$', '')

@@ -9,7 +9,6 @@ Usage:
 
     # API keys (loaded from .env)
     config.gemini_api_key       # Optional[str]
-    config.openrouter_api_key   # Optional[str]
 
     # Paths (auto-derived from project root)
     config.project_root         # Path
@@ -71,13 +70,11 @@ class JarvisConfig:
 
         # ── API Keys (all Optional — Jarvis works with whatever is available) ──
         self.gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
-        self.openrouter_api_key: Optional[str] = os.getenv("OPENROUTER_API_KEY")
-        self.hf_token: Optional[str] = os.getenv("HF_TOKEN")
         self.groq_api_key: Optional[str] = os.getenv("GROQ_API_KEY")
         self.stability_api_key: Optional[str] = os.getenv("STABILITY_API_KEY")
         self.cloudflare_api_token: Optional[str] = os.getenv("CLOUDFLARE_API_TOKEN")
         self.cloudflare_account_id: Optional[str] = (
-            os.getenv("CLOUDFLARE_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACOUNT_ID")
+            os.getenv("CLOUDFLARE_ACCOUNT_ID") or os.getenv("CLOUDFLARE_ACCOUNT_ID")
         )
         self.pollination_api_key: Optional[str] = os.getenv("POLLINATION_API_KEY")
         self.news_api_key: Optional[str] = os.getenv("NEWS_API_KEY")
@@ -182,8 +179,6 @@ class JarvisConfig:
         """Report which API providers are configured at startup."""
         providers = {
             "Gemini": self.has_gemini,
-            "OpenRouter": self.has_openrouter,
-            "HuggingFace": self.has_huggingface,
             "Groq": self.has_groq,
             "Stability AI": self.has_stability,
             "Cloudflare": self.has_cloudflare,
@@ -204,14 +199,6 @@ class JarvisConfig:
     @property
     def has_gemini(self) -> bool:
         return bool(self.gemini_api_key)
-
-    @property
-    def has_openrouter(self) -> bool:
-        return bool(self.openrouter_api_key)
-
-    @property
-    def has_huggingface(self) -> bool:
-        return bool(self.hf_token)
 
     @property
     def has_groq(self) -> bool:
@@ -250,14 +237,8 @@ class JarvisConfig:
         providers = []
         if self.has_gemini:
             providers.append("Gemini")
-        if self.has_huggingface:
-            providers.append("HuggingFace")
-        if self.has_openrouter:
-            providers.append("OpenRouter")
         if self.has_groq:
             providers.append("Groq")
-        # g4f is always available (no API key needed)
-        providers.append("GPT4Free")
         return providers
 
 

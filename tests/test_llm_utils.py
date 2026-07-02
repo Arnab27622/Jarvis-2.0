@@ -7,10 +7,6 @@ from assistant.core.llm_utils import (
 )
 
 def test_clean_llm_output():
-    # Test removing g4f ads
-    text = "Here is the code. Need proxies cheaper than the market?https://op.wtf"
-    assert "proxies cheaper" not in clean_llm_output(text)
-
     # Test latex removal
     text = r"The value is $\approx$ 5 \times 10."
     clean = clean_llm_output(text)

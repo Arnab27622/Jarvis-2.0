@@ -11,7 +11,7 @@ Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant
 * **Intelligent Multi-Agent System**
   The built-in LLM Manager acts as a semantic router, seamlessly delegating your queries to specialized sub-agents (`Coder`, `Vision`, `Researcher`, and `General`). Each agent has unique system prompts and specific tool access to maximize precision and capability.
 * **React Web UI & Terminal Integration**
-  Jarvis provides a gorgeous, sci-fi inspired React interface running on a dedicated WebSocket server. It features dual-stream rendering—spoken text animates to match the audio, while code blocks appear instantly with full syntax highlighting.
+  Jarvis provides a gorgeous, sci-fi inspired React interface running on a dedicated FastAPI server (port 1410). It features dual-stream rendering—spoken text animates to match the audio, while code blocks appear instantly with full syntax highlighting. The UI receives real-time bidirectional WebSocket telemetry (live CPU, RAM, Network stats) and offers 4 built-in CSS themes (`cyan`, `amber`, `minimal`, `oled`) configured via `config.json`.
 * **Secure Code & Local Workspace Execution**
   The Coder and General Agents can write, debug, and execute code, as well as read/write files directly on your local host filesystem using robust Workspace Tools. Execution is safeguarded by a strict UI Permission Gate inside the React Web interface, ensuring you have explicit visual control over what code or file operations are allowed to run.
 * **Advanced Speech Recognition**
@@ -22,12 +22,19 @@ Jarvis 2.0 is a highly advanced, ultra-low latency voice-controlled AI assistant
 ## ⚙️ Intelligent Automations
 
 Jarvis isn't just a chatbot; it actively controls your digital environment:
-* **System Control:** Open/close applications, control system volume, and manage web browsing.
+* **Agent Toolkit:** The Multi-Agent system has access to powerful capabilities via function calling:
+  * **Code & Workspace:** Write/view/edit files, list directories, run terminal commands, and execute Python/C/C++/JS scripts in secure temp environments.
+  * **System Control:** Battery checks, CPU/RAM monitoring, screen captures, volume/mute control, window management, and opening/closing applications.
+  * **Media Control:** Built-in Local Music Player (play, shuffle, track management) and YouTube Automation (search, play, pause, captions, fullscreen via PyAutoGUI).
+  * **Productivity:** Google Calendar (add/read events), Gmail (read unread, send emails), and Task Scheduling.
+  * **Information & Utilities:** Google Web Search, Weather, Realtime News parsing, Current Location tracking, and integrated Wikipedia searching.
 * **Creative Text-to-Image:** Unified image manager routing prompts seamlessly to Pollinations AI (Flux), Cloudflare AI (Flux-1-Schnell), and Stability AI (Stable Diffusion XL).
-* **Information & Utilities:**
-  * Integrated Wikipedia, Google Custom Search, and realtime News/Weather parsing.
-  * Context-aware memory: Jarvis features a dual-layer RAG system (TF-IDF + ChromaDB). You can directly upload documents via the React UI to build his permanent knowledge base.
-  * Fully integrated Alarms, Reminders, Battery monitoring, and Internet Speed diagnostics.
+* **Context-Aware Memory:**
+  * **RAG System:** Dual-layer RAG system (TF-IDF + ChromaDB). You can directly upload documents via the React UI to build his permanent knowledge base.
+  * **Short/Long-term Memory:** Save and recall user facts using local JSON storage and Groq-powered natural summarization.
+* **Proactive Assistance:** The built-in `ProactiveManager` runs a background thread to poll Google Calendar and your Gmail inbox every 120 seconds, proactively notifying you of upcoming events or important unread emails without you needing to ask.
+* **File Management:** Search for files across directories, clear temporary folders, check disk sizes, and manage utilities.
+* **Misc:** Fully integrated Alarms, Reminders, Internet Speed diagnostics, Date/Time parsing, and even telling Jokes.
 
 ## 📋 Prerequisites
 
@@ -57,23 +64,21 @@ Jarvis isn't just a chatbot; it actively controls your digital environment:
 4. **Setup Environment Variables:**
    Create a `.env` file in the root directory. Configure keys based on your desired features:
    ```env
-   # Core LLMs
-   GEMINI_API_KEY=your_gemini_api_key
-   OPENROUTER_API_KEY=your_openrouter_api_key
-   HF_TOKEN=your_huggingface_token
-   GROQ_API_KEY=your_groq_api_key
+    # Automations
+    YOUTUBE_API_KEY=your_youtube_api_key_here
+    WEATHER_API_KEY=your_weather_api_key_here
+    SERPAPI_API_KEY=your_serpapi_api_key_here
+    NEWS_API_KEY=your_news_api_key_here
 
-   # Image Generation Models
-   STABILITY_API_KEY=your_stability_api_key
-   CLOUDFLARE_API_TOKEN=your_cloudflare_api_token
-   CLOUDFLARE_ACOUNT_ID=your_cloudflare_account_id
-   POLLINATION_API_KEY=your_pollinations_api_key
+    # Core LLMs
+    GEMINI_API_KEY=your_gemini_api_key_here
+    GROQ_API_KEY=your_groq_api_key_here
 
-   # Automations
-   NEWS_API_KEY=your_news_api_key
-   WEATHER_API_KEY=your_openweathermap_api_key
-   YOUTUBE_API_KEY=your_youtube_api_key
-   SERPAPI_API_KEY=your_serpapi_key
+    # Image Generation Models (Cloudflare, Pollination, and Stability )
+    CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here
+    CLOUDFLARE_API_TOKEN=your_cloudflare_api_token_here
+    POLLINATION_API_KEY=your_pollinations_api_key_here
+    STABILITY_API_KEY=your_stability_api_key_here
    ```
 
 5. **Download Kokoro ONNX Models:**
@@ -84,7 +89,7 @@ Jarvis isn't just a chatbot; it actively controls your digital environment:
 6. **Setup Owner Biometric Photo:**
    Place a clear front-facing reference image of yourself (the owner) at:
    - `data/images/owner.jpg`
-   *(This image is utilized by the face recognition engine to authenticate the user at boot).*
+   *(This image is utilized by the face recognition engine to authenticate the user at boot. See [UPDATE_FACE_GUIDE.md](UPDATE_FACE_GUIDE.md) for detailed instructions).*
 
 ## 🎙️ Usage
 
@@ -131,10 +136,10 @@ flowchart TD
 - `assistant/agents/`: Specialized AI personas (Coder, Vision, Researcher, General) with customized instructions and toolsets.
 - `assistant/core/`: The core engine:
   - `brain.py` / `llm_manager.py`: Multi-agent orchestration, context memory, and streaming logic.
-  - `mouth.py`: The unified pipelined Kokoro TTS architecture.
+  - `mouth.py`: The unified dual-stage Kokoro TTS pipeline (runs ONNX inference and PyGame playback in separate background threads for zero-latency audio).
   - `ear.py`: Advanced speech recognition and noise calibration.
-  - `event_bus.py`: The central Pub/Sub message broker.
-  - `registry.py`: The command router.
+  - `event_bus.py`: The central Pub/Sub message broker featuring 15+ internal events (e.g., `SPEAK`, `USER_VOICE`, `SYS_METRICS`) that decouple the UI from the AI logic.
+  - `registry.py`: The command router featuring a 3-Tier matching system (Keyword literal match → Regex with extraction → Rapidfuzz fuzzy matching).
 - `assistant/interface/`: Command regex routing, wake-word detection, and welcome logic.
 - `assistant/automation/`: A vast array of integrations spanning App Control, Web Search, Text-to-Image, and background tasks.
 - `assistant/activities/`: System hardware diagnostics, battery tracking, and user activity logging.
