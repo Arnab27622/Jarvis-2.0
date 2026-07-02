@@ -9,21 +9,32 @@ functionalities. It serves as the central coordinator for all assistant capabili
 from assistant.interface.welcome import welcome
 from assistant.activities.advice import rand_advice
 from assistant.activities.activity_monitor import *
-from assistant.core.ear import listen
+from assistant.core.ear import listen, recognizer
 from assistant.core.brain import brain
 from data.dlg_data.dlg import *
-from assistant.core.event_bus import text_command_queue
+from assistant.core.event_bus import text_command_queue, bus, EventType
 from assistant.core.registry import cmd_registry
 from assistant.core.logger import get_logger
+from assistant.core.speak_selector import speak, play_ack_sound, notify
+from assistant.core.mouth import stop_llm_speech
 import random
 import re
 import time
 import importlib
 import pkgutil
+import threading
+import traceback
 
 logger = get_logger("Commands")
 
 FILLER_WORDS = ["please", "can you", "could you", "would you mind", "hey", "jarvis", "ok", "okay", "alright"]
+FILLER_PATTERN = re.compile(r'^(?:' + '|'.join(FILLER_WORDS) + r')\b\s*|\s*\b(?:' + '|'.join(FILLER_WORDS) + r')$')
+
+# Optimized exact match sets and prefix tuples
+STOPCMD_EXACT = set(k.strip() for k in stopcmd)
+STOPCMD_PREFIX = tuple(k.strip() + " " for k in stopcmd)
+CANCEL_CMD_EXACT = set(k.strip() for k in cancel_cmd)
+CANCEL_CMD_PREFIX = tuple(k.strip() + " " for k in cancel_cmd)
 
 def normalize_command(text: str) -> str:
     """
@@ -41,7 +52,6 @@ def normalize_command(text: str) -> str:
     text = text.lower().strip()
     
     # 2. Strip only "ending" punctuation that doesn't affect internal logic
-    # We keep . and : for times/dates, and ' for contractions
     text = re.sub(r'[?,!;]', '', text)
     
     # 3. Remove wake word 'jarvis'
@@ -50,14 +60,13 @@ def normalize_command(text: str) -> str:
     # 4. Remove filler words from start/end (repeatedly until clean)
     changed = True
     while changed:
-        changed = False
-        for word in FILLER_WORDS:
-            new_text = re.sub(rf'^{word}\b', '', text).strip()
-            new_text = re.sub(rf'\b{word}$', '', new_text).strip()
-            if new_text != text:
-                text = new_text
-                changed = True
-    
+        new_text = FILLER_PATTERN.sub('', text).strip()
+        if new_text != text:
+            text = new_text
+            changed = True
+        else:
+            changed = False
+            
     return text
 
 
@@ -84,14 +93,13 @@ def load_plugins():
     else:
         logger.info("All plugins loaded successfully.")
 
-# Load plugins at module level
-load_plugins()
+# Load plugins in a background thread to prevent blocking main startup
+threading.Thread(target=load_plugins, daemon=True).start()
 
 def wait_for_wakeword() -> bool:
     """
     Wait for the hotword/wake word to be spoken.
     """
-    from assistant.core.speak_selector import speak
     speak("Awaiting your command...")
 
     while True:
@@ -132,7 +140,6 @@ def command() -> None:
     Main command loop managing wake word state and command mode.
     """
     start_activity_monitoring()
-    from assistant.core.speak_selector import speak
     command_mode = False
 
     # Start text command worker thread
@@ -145,15 +152,14 @@ def command() -> None:
                     record_user_activity()
                     normalized_text = normalize_command(text)
                     print(f"[Debug] normalized: {normalized_text}")
-                    if any(keyword.strip() in normalized_text for keyword in stopcmd):
+                    if normalized_text in STOPCMD_EXACT or normalized_text.startswith(STOPCMD_PREFIX):
                         speak(random.choice(stopdlg))
-                    elif any(keyword.strip() in normalized_text for keyword in cancel_cmd):
-                        from assistant.core.mouth import stop_llm_speech
+                    elif normalized_text in CANCEL_CMD_EXACT or normalized_text.startswith(CANCEL_CMD_PREFIX):
                         stop_llm_speech()
                         speak("Cancelled response.")
                     else:
                         print("[Debug] calling process_command")
-                        process_command(normalized_text)
+                        process_command(normalized_text, raw_text=text)
                 text_command_queue.task_done()
             except Exception as e:
                 print(f"Error in text worker: {e}")
@@ -197,48 +203,40 @@ def command() -> None:
         normalized_text = normalize_command(text_lower)
 
         # Exact match or startswith for stop commands to prevent substring false positives
-        if any(normalized_text == keyword.strip() or normalized_text.startswith(keyword.strip() + " ") for keyword in stopcmd):
-            from assistant.core.speak_selector import notify
+        if normalized_text in STOPCMD_EXACT or normalized_text.startswith(STOPCMD_PREFIX):
             notify("Understood. Entering sleep mode.")
             command_mode = False
             continue
 
         try:
-            process_command(normalized_text)
+            process_command(normalized_text, raw_text=text)
         except Exception as e:
             print(f"Error in command execution: {e}")
-            from assistant.core.speak_selector import speak
             speak("I encountered an internal problem while executing that command.")
 
 
-def process_command(normalized_text: str) -> None:
+def process_command(normalized_text: str, raw_text: str = None) -> None:
     """
     Process and execute voice commands using a modular registry system.
     """
     start_time = time.time()
-    from assistant.core.speak_selector import speak
-    import threading
     
     try:
         background_task_started = False
         if not normalized_text:
-            from assistant.interface.welcome import welcome
             welcome()
             return
 
         # Emit PROCESSING event
-        from assistant.core.event_bus import bus, EventType
         bus.emit(EventType.PROCESSING, {"state": True})
         
         # Play instant acknowledgment chirp so the user gets immediate feedback
-        from assistant.core.speak_selector import play_ack_sound
         play_ack_sound()
 
         # Attempt to execute command from registry
         if not cmd_registry.execute(normalized_text):
             # Check for exact matches in cancel_cmd BEFORE falling back to brain
-            if any(normalized_text == keyword.strip() or normalized_text.startswith(keyword.strip() + " ") for keyword in cancel_cmd):
-                from assistant.core.mouth import stop_llm_speech
+            if normalized_text in CANCEL_CMD_EXACT or normalized_text.startswith(CANCEL_CMD_PREFIX):
                 stop_llm_speech()
                 speak("Cancelled response.")
                 return
@@ -246,13 +244,11 @@ def process_command(normalized_text: str) -> None:
             # Fallback to AI brain for unrecognized commands
             # Run in a background thread to prevent blocking the main listening loop
             background_task_started = True
-            threading.Thread(target=brain, args=(normalized_text,), daemon=True).start()
-    except Exception as e:
-        import traceback
+            threading.Thread(target=brain, args=(raw_text or normalized_text,), daemon=True).start()
+    except Exception:
         print(f"Error in process_command:\n{traceback.format_exc()}")
         speak("I had trouble understanding or executing that command.")
     finally:
-        from assistant.core.ear import recognizer
         actual_start = getattr(recognizer, 'last_recognition_time', start_time)
         execution_time = time.time() - actual_start
         print(f"[Timer] Command executed in {execution_time:.2f} seconds.")

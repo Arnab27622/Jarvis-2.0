@@ -51,7 +51,31 @@ def handle_brightness(command_text: str) -> None:
     """
     Adjusts or reports screen brightness levels.
     """
-    if "increase" in command_text or "up" in command_text:
+    import re
+    command_text = command_text.lower()
+    
+    # Try digit match first
+    match = re.search(r'(\d+)', command_text)
+    new_brightness = None
+    if match:
+        new_brightness = int(match.group(1))
+    else:
+        # Try word match for common percentage values
+        word_map = {
+            "zero": 0, "ten": 10, "twenty": 20, "thirty": 30, "forty": 40,
+            "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+            "hundred": 100, "one hundred": 100
+        }
+        for word, val in word_map.items():
+            if word in command_text:
+                new_brightness = val
+                break
+                
+    if new_brightness is not None:
+        new_brightness = max(0, min(100, new_brightness))
+        sbc.set_brightness(new_brightness)
+        notify(f"Brightness set to {new_brightness}%")
+    elif "increase" in command_text or "up" in command_text:
         current_brightness = sbc.get_brightness()[0]
         new_brightness = min(100, current_brightness + 20)
         sbc.set_brightness(new_brightness)

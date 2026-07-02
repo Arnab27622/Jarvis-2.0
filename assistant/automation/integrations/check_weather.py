@@ -50,6 +50,22 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
 
     # 2. Fallback to IP geolocation
     try:
+        # Try ip-api.com first (highly reliable and free)
+        response = requests.get("http://ip-api.com/json/", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "success":
+                lat = data.get("lat")
+                lon = data.get("lon")
+                city = data.get("city", "your location")
+                country = data.get("country", "")
+                if lat is not None and lon is not None:
+                    return {"latitude": lat, "longitude": lon, "city": city, "country": country}
+    except Exception as e:
+        print(f"ip-api.com failed: {e}")
+
+    try:
+        # Try ipapi.co next
         location_response = requests.get("https://ipapi.co/json/", timeout=5)
         if location_response.status_code == 200:
             location_data = location_response.json()
@@ -60,7 +76,11 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
             
             if lat is not None and lon is not None:
                 return {"latitude": lat, "longitude": lon, "city": city, "country": country}
+    except Exception as e:
+        print(f"ipapi.co failed: {e}")
 
+    try:
+        # Last resort: geocoder (which queries ipinfo.io and may fail with 503)
         g = geocoder.ip("me")
         if g.ok:
             return {
@@ -69,23 +89,11 @@ def get_location() -> Optional[Dict[str, Union[float, str]]]:
                 "city": g.city if g.city else "your location",
                 "country": g.country if g.country else ""
             }
-        
-        print("Could not determine location from any service")
-        return None
     except Exception as e:
-        print(f"Error getting location: {str(e)}")
-        try:
-            g = geocoder.ip("me")
-            if g.ok:
-                return {
-                    "latitude": g.latlng[0],
-                    "longitude": g.latlng[1],
-                    "city": g.city if g.city else "your location",
-                    "country": g.country if g.country else ""
-                }
-        except:
-            pass
-        return None
+        print(f"geocoder failed: {e}")
+
+    print("Could not determine location from any service")
+    return None
 
 def get_wind_direction(degrees: float) -> str:
     """
@@ -312,23 +320,29 @@ if __name__ == "__main__":
     get_overall_weather(units="metric")
 
 
-from assistant.core.registry import on_regex, on_fuzzy
+from assistant.core.registry import on_regex
 
-@on_fuzzy(["check temperature", "check the temperature", "what is the temperature"], score_cutoff=90)
+@on_regex(r"^(?:tell\s+me\s+(?:the\s+)?|what(?:'s|\s+is)\s+(?:the\s+)?|how(?:'s|\s+is)\s+(?:the\s+)?|check\s+(?:the\s+)?)?temperature(?:\s+like)?(?:\s+today|\s+now|\s+right now)?$")
 def handle_temp():
     """Handles voice commands to check current temperature."""
     speak("Checking the temperature. Please wait a moment...")
     get_current_temperature()
 
-@on_regex(r"(?:check\s+(?:the\s+)?)?weather$")
-@on_fuzzy(["what's the weather today", "check today's weather", "today's weather", "weather today", "check the weather"], score_cutoff=90)
+@on_regex(r"(?:tell\s+me\s+(?:the\s+)?|what(?:'s|\s+is)\s+(?:the\s+)?|how(?:'s|\s+is)\s+(?:the\s+)?|check\s+(?:the\s+)?)?weather(?:\s+like)?(?:\s+today|\s+now|\s+right now)?$")
 def handle_weather_today():
     """Handles voice commands to check today's weather."""
     speak("Checking Today's weather conditions. Please wait a moment...")
     get_overall_weather()
 
-@on_regex(r"(?:check\s+the\s+)?weather\s+(?:in|for|at|of)\s+(?P<location>.*)$")
+@on_regex(r"(?:tell\s+me\s+(?:the\s+)?|what(?:'s|\s+is)\s+(?:the\s+)?|how(?:'s|\s+is)\s+(?:the\s+)?|check\s+(?:the\s+)?)?weather(?:\s+like)?\s+(?:in|for|at|of)\s+(?P<location>(?!tomorrow\b|today\b|now\b|yesterday\b|next week\b).+?)(?:\s+right now|\s+today|\s+now)?$")
 def handle_weather_location(location):
     """Handles voice commands to check weather in a specific location."""
-    speak(f"Checking the weather in {location}. Please wait a moment...")
-    get_weather_by_address(address=location)
+    loc_lower = location.strip().lower()
+    
+    # Reroute general current weather requests
+    if loc_lower in ["today", "now", "right now", "current", "my location", "me", "here"]:
+        handle_weather_today()
+        return
+        
+    speak(f"Checking the weather in {location.strip()}. Please wait a moment...")
+    get_weather_by_address(address=location.strip())

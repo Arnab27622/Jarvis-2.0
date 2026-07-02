@@ -161,9 +161,12 @@ class JarvisConfig:
 
     def save_settings(self, data: dict) -> None:
         """Update and save settings to config.json."""
-        if "tts_voice" in data: self.tts_voice = data["tts_voice"]
-        if "tts_speed" in data: self.tts_speed = float(data["tts_speed"])
-        if "theme" in data: self.theme = data["theme"]
+        if "tts_voice" in data:
+            self.tts_voice = data["tts_voice"]
+        if "tts_speed" in data:
+            self.tts_speed = float(data["tts_speed"])
+        if "theme" in data:
+            self.theme = data["theme"]
         
         try:
             with open(self.config_file, "w") as f:

@@ -222,7 +222,7 @@ def parse_relative_time(command_text: str) -> Optional[Tuple[datetime.datetime, 
         message = extract_reminder_message_simple(command_lower, duration_minutes)
         return target_time, message
 
-    return None, ""
+    return None, None
 
 def parse_absolute_time(command_text: str, is_reminder: bool = False) -> Optional[Tuple[datetime.datetime, str]]:
     """Parses commands with specific times like 'remind me at 5pm'."""
@@ -231,12 +231,12 @@ def parse_absolute_time(command_text: str, is_reminder: bool = False) -> Optiona
 
     time_match = re.search(r"(\d{1,2}:\d{2}(?:\s*[ap]\.?m\.?)?|\d{3,4}(?:\s*[ap]\.?m\.?)?|\d{1,2}(?:\s*[ap]\.?m\.?)?|noon|midnight|midday)", command_lower)
     if not time_match:
-        return None, ""
+        return None, None
 
     time_str = time_match.group(1)
     parsed_time = parse_time(time_str)
     if not parsed_time:
-        return None, ""
+        return None, None
 
     hour, minute = parsed_time
     target_date = now.date()
@@ -263,21 +263,21 @@ def parse_absolute_time(command_text: str, is_reminder: bool = False) -> Optiona
         pattern = rf"(?:{month_name}\s+(\d+)(?:st|nd|rd|th)?|(\d+)(?:st|nd|rd|th)?\s+(?:of\s+)?{month_name})"
         match = re.search(pattern, command_lower)
         if match:
-            day = int(match.group(1) or match.group(2))
+            target_day_val = int(match.group(1) or match.group(2))
             try:
-                target_date = datetime.date(now.year, i, day)
+                target_date = datetime.date(now.year, i, target_day_val)
                 if target_date < now.date():
-                    target_date = datetime.date(now.year + 1, i, day)
+                    target_date = datetime.date(now.year + 1, i, target_day_val)
                 break
             except ValueError as e:
                 print(f"Error creating date: {e}")
-                return None, ""
+                return None, None
 
     try:
         target_datetime = datetime.datetime.combine(target_date, datetime.time(hour, minute))
     except ValueError as e:
         print(f"Error creating datetime: {e}")
-        return None, ""
+        return None, None
 
     if (
         target_datetime <= now

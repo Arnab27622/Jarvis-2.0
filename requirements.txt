@@ -45,7 +45,6 @@ flatbuffers==25.12.19
 frozenlist==1.8.0
 fsspec==2026.4.0
 future==1.0.0
-g4f==7.5.6
 geocoder==1.38.1
 google-api-core==2.30.3
 google-api-python-client==2.197.0
@@ -221,3 +220,6 @@ dlib-bin==20.0.1
 setuptools==69.5.1
 python-multipart==0.0.32
 python-docx==1.2.0
+bandit==1.9.4
+mypy==2.1.0
+duckduckgo-search==8.1.1

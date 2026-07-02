@@ -1,8 +1,8 @@
 from assistant.agents.base import BaseAgent
-from assistant.core.tools import get_weather, search_web
+from assistant.core.tools import get_weather, search_web, get_current_location
 
 # Tools specific to the researcher: web search and weather lookup
-RESEARCH_TOOLS = [search_web, get_weather]
+RESEARCH_TOOLS = [search_web, get_weather, get_current_location]
 
 class ResearcherAgent(BaseAgent):
     def __init__(self):
@@ -11,7 +11,10 @@ class ResearcherAgent(BaseAgent):
             system_prompt=(
                 "You are the Lead Researcher Agent for JARVIS. Your job is to find factual, up-to-date information. "
                 "Use your search_web tool to look up current events, facts, or any question about the real world. "
-                "Use your get_weather tool when the user asks about weather.\n\n"
+                "Use your get_weather tool when the user asks about current weather.\n"
+                "CRITICAL: If the user asks for a weather forecast (e.g. 'tomorrow') or any local information, "
+                "FIRST use your get_current_location tool to find out where the user is, then include that city "
+                "in your search_web query.\n\n"
                 "Chain of Thought: When asked a question, first determine what facts need verifying, "
                 "search for them, and synthesize a clear, objective answer.\n\n"
                 "Domain Rules: Prioritize primary sources. If a topic is controversial, remain strictly neutral "

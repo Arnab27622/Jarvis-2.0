@@ -93,9 +93,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
             try:
                 error_data = response.json()
                 if error_data.get("name") == "content_moderation":
-                    speak(
-                        "I'm sorry, but your prompt was flagged by the content moderation system. I cannot generate that image."
-                    )
+                    print("Prompt flagged by content moderation.")
                     return None
             except:
                 pass
@@ -104,7 +102,6 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
             )
     except Exception as e:
         print(f"Image generation failed: {e}")
-        speak("I encountered an error while trying to generate that image.")
         return None
 
     # Parse JSON response containing generated image data
@@ -124,7 +121,6 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
             # Decode base64 image data and save as PNG file
             f.write(base64.b64decode(image["base64"]))
         last_filename = filename
-        speak("Image saved in Images folder.")
     
     return last_filename
 

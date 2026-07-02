@@ -20,7 +20,7 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
     """
     api_key = config.pollination_api_key
     if not api_key:
-        speak("I encountered an error while trying to generate that image.")
+        print("Pollinations API key not set.")
         return None
 
     # Image Settings
@@ -72,7 +72,6 @@ def generate_image_from_text(prompt_text: str) -> Optional[str]:
             
     except Exception as e:
         print(f"Image generation failed: {e}")
-        speak("I encountered an error while trying to generate that image.")
         return None
 
     folder_path = str(config.images_dir)

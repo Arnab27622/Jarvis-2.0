@@ -16,6 +16,10 @@ data/remembered_info.json
 ingest_document.py
 test.py
 test2.py
+test3.py
+test_genai_scratch.py
+test_llm.py
+test_stream.py
 tools/
 chat_history.json
 data/logs

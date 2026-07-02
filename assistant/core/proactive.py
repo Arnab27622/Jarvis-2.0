@@ -4,6 +4,8 @@ import threading
 from typing import Set
 from assistant.core.logger import get_logger
 from assistant.core.speak_selector import speak
+from google.auth.exceptions import RefreshError
+import os
 
 logger = get_logger("Proactive")
 
@@ -59,9 +61,17 @@ class ProactiveManager:
         await asyncio.to_thread(self._sync_check_calendar)
         
     def _sync_check_calendar(self):
-        from assistant.automation.integrations.calendar_automation import get_calendar_service
-        service = get_calendar_service()
-        if not service: return
+        from assistant.automation.integrations.calendar_automation import get_calendar_service, TOKEN_PATH
+        try:
+            service = get_calendar_service()
+        except RefreshError:
+            if os.path.exists(TOKEN_PATH):
+                os.remove(TOKEN_PATH)
+            speak("Sir, your calendar token has expired. I have opened the browser to re-authenticate.")
+            service = get_calendar_service()
+            
+        if not service:
+            return
         
         try:
             now = datetime.datetime.utcnow()
@@ -106,9 +116,17 @@ class ProactiveManager:
         await asyncio.to_thread(self._sync_check_email)
         
     def _sync_check_email(self):
-        from assistant.automation.integrations.email_automation import get_gmail_service
-        service = get_gmail_service()
-        if not service: return
+        from assistant.automation.integrations.email_automation import get_gmail_service, TOKEN_PATH
+        try:
+            service = get_gmail_service()
+        except RefreshError:
+            if os.path.exists(TOKEN_PATH):
+                os.remove(TOKEN_PATH)
+            speak("Sir, your email token has expired. I have opened the browser to re-authenticate.")
+            service = get_gmail_service()
+            
+        if not service:
+            return
         
         try:
             results = service.users().messages().list(userId='me', labelIds=['UNREAD', 'INBOX', 'IMPORTANT']).execute()

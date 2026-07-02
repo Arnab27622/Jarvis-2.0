@@ -56,7 +56,7 @@ def recall_info(query: str = None) -> None:
         speak("I don't have any information stored to recall")
         return
 
-    api_key = config.gemini_api_key
+    api_key = config.groq_api_key
     if not api_key:
         speak("I cannot access my thinking modules to analyze the memory.")
         return
@@ -74,23 +74,32 @@ def recall_info(query: str = None) -> None:
     
     prompt += f"\nHere is your stored memory data (timestamps and notes):\n{data_str}"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.5,
+        "max_tokens": 300
+    }
     
     try:
         import requests
-        response = requests.post(url, json=payload, timeout=10)
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
         response.raise_for_status()
         
         result = response.json()
-        summary = result['candidates'][0]['content']['parts'][0]['text']
+        summary = result['choices'][0]['message']['content']
         
         summary = summary.replace("*", "").replace("#", "")
         
         speak(summary)
         
     except Exception as e:
-        print(f"Error accessing Gemini for recall: {e}")
+        print(f"Error accessing Groq for recall: {e}")
         speak("I had trouble analyzing the memory file, but you do have notes saved.")
 
 

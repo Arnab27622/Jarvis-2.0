@@ -5,6 +5,7 @@ import time
 import re
 from urllib.parse import quote
 import pyautogui as ui
+ui.FAILSAFE = False
 import pygetwindow as gw
 from assistant.core.config import config
 from assistant.automation.features.window_automation import toggle_fullscreen
@@ -38,8 +39,6 @@ def activate_youtube_window(timeout: int = 5) -> bool:
 def play_on_youtube(search_query: str) -> None:
     """Searches for and plays a video or playlist on YouTube."""
     try:
-        from googleapiclient.discovery import build
-        
         remove_words = ["play", "youtube", "on", "jarvis"]
         for word in remove_words:
             search_query = re.sub(rf'\b{word}\b', '', search_query, flags=re.IGNORECASE).strip()
@@ -49,48 +48,71 @@ def play_on_youtube(search_query: str) -> None:
             return
 
         YOUTUBE_API_KEY = config.youtube_api_key
+        video_url = None
 
-        if not YOUTUBE_API_KEY:
-            encoded_query = quote(search_query)
-            url = f"https://www.youtube.com/results?search_query={encoded_query}"
-            webbrowser.open(url)
-            speak(f"Showing results for {search_query} on YouTube")
-            return
+        if YOUTUBE_API_KEY:
+            try:
+                from googleapiclient.discovery import build
+                youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+                request = youtube.search().list(part="snippet", maxResults=1, q=search_query, type="video,playlist")
+                response = request.execute()
 
-        youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-        request = youtube.search().list(part="snippet", maxResults=1, q=search_query, type="video,playlist")
-        response = request.execute()
+                if response.get("items"):
+                    item = response["items"][0]
+                    item_id = item["id"]
+                    
+                    if item_id["kind"] == "youtube#playlist":
+                        playlist_id = item_id["playlistId"]
+                        video_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+                        speak(f"Playing {search_query} playlist on YouTube")
+                        youtube_player_state["current_video_id"] = playlist_id
+                    else:
+                        video_id = item_id["videoId"]
+                        video_url = f"https://www.youtube.com/watch?v={video_id}"
+                        speak(f"Playing {search_query} on YouTube")
+                        youtube_player_state["current_video_id"] = video_id
+            except Exception as e:
+                print(f"YouTube API failed: {e}")
 
-        if response.get("items"):
-            item = response["items"][0]
-            item_id = item["id"]
-            
-            if item_id["kind"] == "youtube#playlist":
-                playlist_id = item_id["playlistId"]
-                video_url = f"https://www.youtube.com/playlist?list={playlist_id}"
-                speak(f"Playing {search_query} playlist on YouTube")
-                youtube_player_state["current_video_id"] = playlist_id
-            else:
-                video_id = item_id["videoId"]
-                video_url = f"https://www.youtube.com/watch?v={video_id}"
-                speak(f"Playing {search_query} on YouTube")
-                youtube_player_state["current_video_id"] = video_id
-                
+        # Fallback to scraping if API failed or API key was missing
+        if not video_url:
+            try:
+                import requests
+                from urllib.parse import quote
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+                r = requests.get(f"https://www.youtube.com/results?search_query={quote(search_query)}", headers=headers, timeout=5)
+                if r.status_code == 200:
+                    playlist_ids = re.findall(r"\"playlistId\":\"([^\"]+)\"", r.text)
+                    video_ids = re.findall(r"\"videoId\":\"([^\"]+)\"", r.text)
+                    
+                    if "playlist" in search_query.lower() and playlist_ids:
+                        playlist_id = playlist_ids[0]
+                        video_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+                        speak(f"Playing {search_query} playlist on YouTube")
+                        youtube_player_state["current_video_id"] = playlist_id
+                    elif video_ids:
+                        video_id = video_ids[0]
+                        video_url = f"https://www.youtube.com/watch?v={video_id}"
+                        speak(f"Playing {search_query} on YouTube")
+                        youtube_player_state["current_video_id"] = video_id
+            except Exception as e:
+                print(f"Scraping YouTube fallback failed: {e}")
+
+        if video_url:
             webbrowser.open(video_url)
             time.sleep(5)
             ui.hotkey("alt", "tab")
         else:
+            # Final fallback: open search results page
+            from urllib.parse import quote
             encoded_query = quote(search_query)
             url = f"https://www.youtube.com/results?search_query={encoded_query}"
             webbrowser.open(url)
-            speak(f"No videos found for {search_query}. Showing search results instead.")
+            speak(f"Showing results for {search_query} on YouTube")
 
     except Exception as e:
-        print(f"Error with YouTube API: {e}")
-        encoded_query = quote(search_query)
-        url = f"https://www.youtube.com/results?search_query={encoded_query}"
-        webbrowser.open(url)
-        speak(f"Showing results for {search_query} on YouTube")
+        print(f"Error in play_on_youtube: {e}")
+        speak("Sorry, I couldn't play that on YouTube.")
 
 def search_on_youtube(search_query: str) -> None:
     """Opens a YouTube search results page for the given query."""

@@ -10,12 +10,12 @@ def test_keyword_registry():
     registry.register_keyword(["apple", "banana"], handler_foo)
     
     # Should match
-    assert registry.execute("I like apple pie") == True
+    assert registry.execute("I like apple pie")
     assert "foo" in called
     
     # Should not match
     called.clear()
-    assert registry.execute("I like orange juice") == False
+    assert not registry.execute("I like orange juice")
     assert len(called) == 0
 
 def test_regex_registry():
@@ -28,7 +28,7 @@ def test_regex_registry():
     # Using named group
     registry.register_regex(r"weather in (?P<city>[a-zA-Z]+)", handler_bar)
     
-    assert registry.execute("what is the weather in London today?") == True
+    assert registry.execute("what is the weather in London today?")
     assert called.get("city") == "London"
 
 def test_fuzzy_registry():
@@ -41,12 +41,12 @@ def test_fuzzy_registry():
     registry.register_fuzzy(["play music", "start song"], handler_baz, score_cutoff=80)
     
     # Minor typo should still match
-    assert registry.execute("play mucis") == True
+    assert registry.execute("play mucis")
     assert "baz" in called
     
     # Completely different shouldn't match
     called.clear()
-    assert registry.execute("turn off the lights") == False
+    assert not registry.execute("turn off the lights")
     assert len(called) == 0
 
 def test_priority():

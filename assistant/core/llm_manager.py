@@ -7,15 +7,17 @@ query intent to minimize latency while maximizing response quality.
 """
 
 import os
-import aiohttp
 import asyncio
 import threading
-from typing import List, Dict, Optional
+from typing import List, Dict
 from assistant.core.config import config
 from assistant.core.logger import get_logger
 from assistant.core.llm_utils import clean_llm_output, split_sentences, trim_history, save_to_brain
 from assistant.activities.activity_monitor import record_user_activity
 import json
+import uuid
+import re
+from assistant.core.event_bus import bus, EventType
 
 logger = get_logger("LLM")
 
@@ -76,10 +78,6 @@ SYSTEM_PROMPT = (
     "6. RAG Context: If context is provided to you, synthesize it and answer the user's question concisely in your own words. Never read out large raw lists or regurgitate the context verbatim."
 )
 
-import uuid
-import re
-from assistant.core.event_bus import bus, EventType
-
 class LLMManager:
     """
     Acts as the Router Agent, delegating tasks to Specialized Agents.
@@ -92,6 +90,7 @@ class LLMManager:
         from assistant.agents.researcher import ResearcherAgent
         from assistant.agents.coder import CoderAgent
         from assistant.agents.vision_agent import VisionAgent
+        from assistant.core.tools import AVAILABLE_TOOLS
         
         self.researcher = ResearcherAgent()
         self.coder = CoderAgent()
@@ -102,23 +101,106 @@ class LLMManager:
             name="Jarvis", 
             system_prompt=SYSTEM_PROMPT
         )
+        
+        self.tool_agent = BaseAgent(
+            name="ToolManager",
+            system_prompt=(
+                "You are Jarvis, Arnab's trusted assistant. Your primary function right now is to execute "
+                "tools to help him with his request (like managing memory, setting reminders, reading emails, "
+                "or interacting with the system). Act friendly, execute the tool, and answer Arnab's question "
+                "naturally based on the tool output. If the user asks a yes/no question (such as 'is my battery low?'), "
+                "make sure to answer it directly and naturally (for example: 'No, Arnab, your battery is at 100% and is plugged in').\n"
+                "Capabilities you possess via tools:\n"
+                "- Weather (use location='current' unless user specifies a city like 'Tokyo')\n"
+                "- Image Generation\n"
+                "- Alarms & Reminders\n"
+                "- Terminal & Code Execution\n"
+                "- File Management\n"
+                "- YouTube (Always call search first, wait for results, then call play if needed. Do NOT call both simultaneously.)\n"
+                "- System controls (brightness, volume, battery, memory, screenshot)\n"
+                "CRITICAL INSTRUCTION: When you run a command or script on the user's system (e.g. powershell or python), "
+                "ALWAYS output the exact command or script in a markdown block in your final text response so the user can see what was executed and it is saved in the chat history."
+            ),
+            tools=AVAILABLE_TOOLS
+        )
 
     def _identify_intent(self, text: str) -> str:
         text = text.lower()
-        import re
         
         def has_kw(kws):
             pattern = r'\b(?:' + '|'.join(map(re.escape, kws)) + r')\b'
             return bool(re.search(pattern, text))
             
-        if has_kw(["my screen", "screen", "look at this", "see this", "what is this", "what's on", "look", "see", "vision", "image", "picture"]):
+        if has_kw(["my screen", "screen", "look at this", "see this", "what is this", "what's on", "look", "see", "vision"]):
             return "vision"
         if has_kw(["python", "code", "bug", "error", "fix", "function", "write a", "program", "script", "terminal"]):
             return "technical"
+        if has_kw([
+            "remind", "alarm", "timer", "remember", "memory", "youtube", "play", 
+            "email", "system", "screenshot", "volume", "brightness", "image", "location",
+            "playlist", "music", "song", "inbox", "gmail", "mail", "emails", 
+            "battery", "power", "charge", "mind", "forget", "where am i", 
+            "current city", "stretch", "take a break", "break", "wifi", "password",
+            "file", "workspace", "directory", "folder", "read", "edit"
+        ]):
+            return "tools"
         if has_kw(["news", "weather", "today", "current", "search for", "find out", "research"]):
             return "web"
             
         return "general"
+
+    def _build_messages_with_context(self, intent: str, user_input: str, chat_history: list[dict[str, str]]) -> list[dict[str, str]]:
+        import copy
+        import datetime
+        messages_to_send = copy.deepcopy(chat_history)
+        current_time = datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
+        
+        # Fetch RAG Context (ChromaDB docs) - ONLY for general intent!
+        rag_context = ""
+        if intent == "general":
+            from assistant.LLM.model import mind
+            rag_context = mind(user_input, threshold=0.5, return_rag=True)
+        
+        # Fetch remembered facts (always available as helper context)
+        from assistant.automation.integrations.task_schedule_automation import _load_remembered_info
+        remembered = _load_remembered_info()
+        remembered_str = ""
+        if remembered:
+            remembered_items = []
+            for k, v in remembered.items():
+                clean_key = re.sub(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}_', '', k)
+                remembered_items.append(f"- {clean_key}: {v}")
+            remembered_str = "Personal Facts/Memories:\n" + "\n".join(remembered_items)
+
+        context_string = ""
+        if intent == "general" and (remembered_str or rag_context):
+            # For general conversation, we provide combined context and restrict the model to it.
+            # In this case we clear the chat history (except system and last msg) to focus the model.
+            combined_context = ""
+            if remembered_str:
+                combined_context += remembered_str + "\n\n"
+            if rag_context:
+                combined_context += "Document Context:\n" + rag_context
+                
+            context_string = (
+                f"\n\n--- BEGIN RETRIEVED MEMORY CONTEXT ---\n"
+                f"{combined_context}\n"
+                f"--- END RETRIEVED MEMORY CONTEXT ---\n"
+                f"CRITICAL INSTRUCTION: If the user is asking about personal facts or memories, use the context above to answer. "
+                f"Otherwise, ignore the memory context and continue the conversation naturally based on the chat history. "
+                f"DO NOT read or list out the entire context verbatim. Answer as briefly and naturally as possible.\n\n"
+            )
+        elif remembered_str:
+            # For specialized tool/web/code agents, we inject the remembered facts as simple background info
+            # WITHOUT clearing history, and WITHOUT the strict RAG instruction, so they can still use their tools!
+            context_string = (
+                f"\n\n--- USER INFORMATION & MEMORIES ---\n"
+                f"{remembered_str}\n"
+                f"------------------------------------\n\n"
+            )
+
+        messages_to_send[-1]["content"] = f"[System Time: {current_time}]{context_string}User Question: {user_input}"
+        return messages_to_send
 
     async def get_response_async(self, user_input: str) -> str:
         record_user_activity()
@@ -131,32 +213,8 @@ class LLMManager:
             CHAT_HISTORY = trim_history(CHAT_HISTORY, max_messages=config.llm_max_history)
             save_history()
             
-            import copy
-            import datetime
-            messages_to_send = copy.deepcopy(CHAT_HISTORY)
-            current_time = datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p")
-            
-            # Fetch RAG Context
-            from assistant.LLM.model import mind
-            rag_context = mind(user_input, threshold=0.5, return_rag=True)
-            
-            context_string = ""
-            if rag_context:
-                context_string = (
-                    f"\n\n--- BEGIN RETRIEVED MEMORY CONTEXT ---\n"
-                    f"{rag_context}\n"
-                    f"--- END RETRIEVED MEMORY CONTEXT ---\n"
-                    f"CRITICAL INSTRUCTION: Use ONLY the memory context above to answer the user's question. "
-                    f"Answer as briefly and naturally as possible."
-                    f"DO NOT read or list out the entire context verbatim. If the answer is a single item, just say that item.\n\n"
-                )
-                
-                # Clear chat history (except system msg) to prevent hallucination from previous RAG answers
-                sys_msg = messages_to_send[0] if messages_to_send and messages_to_send[0].get("role") == "system" else None
-                last_msg = messages_to_send[-1]
-                messages_to_send = [sys_msg, last_msg] if sys_msg else [last_msg]
+            messages_to_send = self._build_messages_with_context(intent, user_input, CHAT_HISTORY)
 
-            messages_to_send[-1]["content"] = f"[System Time: {current_time}]{context_string}User Question: {user_input}"
 
         if intent == "vision":
             logger.info("ROUTING -> VisionAgent")
@@ -167,7 +225,6 @@ class LLMManager:
             res = await self.coder.run(messages_to_send, stream=False)
             if res:
                 # Manually stream if it didn't stream automatically
-                from assistant.core.llm_utils import split_sentences
                 sentences = split_sentences(res)
                 message_id = str(uuid.uuid4())
                 for sentence in sentences:
@@ -176,7 +233,14 @@ class LLMManager:
             logger.info("ROUTING -> ResearcherAgent")
             res = await self.researcher.run(messages_to_send, stream=False)
             if res:
-                from assistant.core.llm_utils import split_sentences
+                sentences = split_sentences(res)
+                message_id = str(uuid.uuid4())
+                for sentence in sentences:
+                    bus.emit(EventType.LLM_STREAMING, (sentence, None, message_id))
+        elif intent == "tools":
+            logger.info("ROUTING -> ToolAgent")
+            res = await self.tool_agent.run(messages_to_send, stream=False)
+            if res:
                 sentences = split_sentences(res)
                 message_id = str(uuid.uuid4())
                 for sentence in sentences:
@@ -200,7 +264,6 @@ class LLMManager:
             CHAT_HISTORY.append({"role": "assistant", "content": clean_text})
             save_history()
             
-        from assistant.core.llm_utils import save_to_brain
         await asyncio.to_thread(save_to_brain, user_input, clean_text)
         
         return clean_text
@@ -224,6 +287,5 @@ def llm_response_streaming(text: str) -> List[str]:
     So this function simply waits for the response and returns it.
     """
     response = manager.get_response_sync(text)
-    from assistant.core.llm_utils import split_sentences
     sentences = split_sentences(response)
     return sentences

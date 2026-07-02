@@ -17,7 +17,6 @@ Key Features:
 import sys
 from assistant.LLM.model import mind
 from assistant.activities.activity_monitor import record_user_activity
-from assistant.core.speak_selector import speak
 from assistant.LLM.llm_search import llm_response_streaming
 from assistant.automation.features.save_data_locally import (
     qa_lock,
@@ -95,7 +94,7 @@ def brain(text: str, threshold: float = 0.85) -> None:
                 qa_dict[text] = response
                 save_qa_data(qa_file_path, qa_dict)
 
-    except Exception as e:
+    except Exception:
         # Handle any processing errors gracefully
         import traceback
         error_msg = f"Error in brain function:\n{traceback.format_exc()}"

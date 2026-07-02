@@ -6,7 +6,6 @@ including geographic location and public IP address.
 import time
 import requests
 from assistant.core.speak_selector import speak
-import geocoder
 
 
 def get_current_location() -> None:
@@ -21,13 +20,16 @@ def get_current_location() -> None:
             city = location_data.get("city", "")
             country = location_data.get("country", "")
             
-            # If the OS provided lat/lon but no city name, fallback to IP geocoding for the name
+            # If the OS provided lat/lon but no city name, fallback to reverse geocoding via OpenWeatherMap
             if not city:
-                import geocoder
-                g = geocoder.ip("me")
-                if g.ok:
-                    city = g.city or ""
-                    country_code = g.country or ""
+                try:
+                    from assistant.automation.integrations.check_weather import _fetch_weather_data
+                    weather_data = _fetch_weather_data(lat=location_data["latitude"], lon=location_data["longitude"])
+                    if weather_data:
+                        city = weather_data.get("name", "")
+                        country_code = weather_data.get("sys", {}).get("country", "")
+                except Exception as e:
+                    print(f"Reverse geocoding fallback failed: {e}")
                     
                     # Convert common ISO codes to full country names for better TTS pronunciation
                     country_map = {

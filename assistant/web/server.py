@@ -256,6 +256,10 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             msg_type = data.get("type", "")
             
+            if not IS_AUTHENTICATED:
+                await websocket.send_json({"type": "error", "data": {"message": "Unauthorized. Please authenticate first."}})
+                continue
+                
             if msg_type == "command":
                 text = data.get("data", {}).get("text", "")
                 if text:

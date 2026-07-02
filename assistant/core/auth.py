@@ -51,25 +51,30 @@ def authenticate_user() -> bool:
     import dlib
     
     reference_image_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "images", "owner.jpg")
+    reference_encoding_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "images", "owner_encoding.npy")
     
-    if not os.path.exists(reference_image_path):
-        bus.emit(EventType.AUTH_STATUS, {"status": "ERROR: data/images/owner.jpg NOT FOUND"})
-        time.sleep(3)
-        return False
-        
     if not download_landmarks():
         bus.emit(EventType.AUTH_STATUS, {"status": "ERROR: Could not load landmark models."})
         time.sleep(3)
         return False
         
     try:
-        ref_img = face_recognition.load_image_file(reference_image_path)
-        ref_encodings = face_recognition.face_encodings(ref_img)
-        if not ref_encodings:
-             bus.emit(EventType.AUTH_STATUS, {"status": "ERROR: NO FACE DETECTED IN owner.jpg"})
-             time.sleep(3)
-             return False
-        ref_encoding = ref_encodings[0]
+        if os.path.exists(reference_encoding_path):
+            ref_encoding = np.load(reference_encoding_path)
+        else:
+            if not os.path.exists(reference_image_path):
+                bus.emit(EventType.AUTH_STATUS, {"status": "ERROR: data/images/owner.jpg NOT FOUND"})
+                time.sleep(3)
+                return False
+                
+            ref_img = face_recognition.load_image_file(reference_image_path)
+            ref_encodings = face_recognition.face_encodings(ref_img)
+            if not ref_encodings:
+                 bus.emit(EventType.AUTH_STATUS, {"status": "ERROR: NO FACE DETECTED IN owner.jpg"})
+                 time.sleep(3)
+                 return False
+            ref_encoding = ref_encodings[0]
+            np.save(reference_encoding_path, ref_encoding)
     except Exception as e:
         print(f"Auth init error: {e}")
         return False

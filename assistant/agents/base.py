@@ -100,7 +100,12 @@ class BaseAgent:
                 return full_text
             else:
                 # Synchronous call (needed when using Tools / AFC)
-                response = chat.send_message(last_msg.parts[0].text)
+                import assistant.core.mouth as mouth
+                try:
+                    mouth.mute_speak = True
+                    response = chat.send_message(last_msg.parts[0].text)
+                finally:
+                    mouth.mute_speak = False
                 return response.text or ""
 
         try:

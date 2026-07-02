@@ -31,12 +31,26 @@ def get_web_info(query: str, max_results: int = 5, prints: bool = False) -> str:
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
+        if "error" in results:
+            raise Exception(results["error"])
+        items = results.get("organic_results", [])
     except Exception as e:
-        print(f"SerpApi Error: {e}")
-        speak("I'm sorry, I encountered an error while searching the web.")
-        return "[]"
-
-    items = results.get("organic_results", [])
+        print(f"SerpApi Error: {e}, falling back to DuckDuckGo...")
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                ddg_results = list(ddgs.text(query, max_results=max_results))
+                items = []
+                for res in ddg_results:
+                    items.append({
+                        "title": res.get("title", ""),
+                        "link": res.get("href", ""),
+                        "snippet": res.get("body", "")
+                    })
+        except Exception as ddg_err:
+            print(f"DDG Error: {ddg_err}")
+            speak("I'm sorry, I encountered an error while searching the web.")
+            return "[]"
 
     response = []
     for item in items:

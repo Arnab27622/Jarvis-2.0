@@ -117,18 +117,35 @@ def send_email(recipient, subject):
     speak("Generating a smart subject line and sending your email...")
     
     # Generate a smart subject line using the LLM based on the actual body
-    from assistant.core.llm_manager import manager
-    if manager and manager.gemini_client:
+    from assistant.core.config import config
+    api_key = config.groq_api_key
+    if api_key:
         try:
+            import requests
             prompt = f"Generate a short, professional email subject line for an email with this body: '{body}'. The user originally described the topic as: '{subject}'. Output ONLY the subject line without any quotes, labels, or extra text."
-            response = manager.gemini_client.models.generate_content(
-                model='gemini-3.1-flash-lite',
-                contents=prompt
-            )
-            if response.text:
-                subject = response.text.strip().strip('"').strip("'")
+            
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.5,
+                "max_tokens": 50
+            }
+            
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            
+            if 'choices' in result and len(result['choices']) > 0:
+                gen_subject = result['choices'][0]['message']['content']
+                if gen_subject:
+                    subject = gen_subject.strip().strip('"').strip("'")
         except Exception as e:
-            print(f"Failed to generate smart subject: {e}")
+            print(f"Failed to generate smart subject via Groq: {e}")
             pass
         
     message = EmailMessage()

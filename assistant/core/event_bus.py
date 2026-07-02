@@ -112,7 +112,7 @@ class EventBus:
 bus = EventBus()
 
 # Queue for typed text commands from UI
-text_command_queue = queue.Queue()
+text_command_queue: queue.Queue = queue.Queue()
 
 # Queue for UI permission responses
-permission_queue = queue.Queue()
+permission_queue: queue.Queue = queue.Queue()

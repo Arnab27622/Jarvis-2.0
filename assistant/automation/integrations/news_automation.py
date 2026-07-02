@@ -19,6 +19,30 @@ def get_country_by_ip() -> str:
     """
     Detects the user's country code via IP geolocation services.
     """
+    # 1. Try ip-api.com
+    try:
+        response = requests.get("http://ip-api.com/json/", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "success":
+                country = data.get("countryCode", "").lower()
+                if country:
+                    return country
+    except Exception as e:
+        print(f"Location lookup (ip-api.com) failed: {e}")
+
+    # 2. Try ipapi.co
+    try:
+        response = requests.get("https://ipapi.co/json/", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            country = data.get("country", "").lower()
+            if country:
+                return country
+    except Exception as e:
+        print(f"Location lookup (ipapi.co) failed: {e}")
+
+    # 3. Try ipinfo.io
     try:
         response = requests.get("https://ipinfo.io", timeout=10)
         if response.status_code == 200:
@@ -26,23 +50,19 @@ def get_country_by_ip() -> str:
             country = data.get("country", "").lower()
             if country:
                 return country
-        
+    except Exception as e:
+        print(f"Location lookup (ipinfo.io) failed: {e}")
+
+    # 4. Fallback to geocoder
+    try:
         import geocoder
         g = geocoder.ip("me")
         if g.ok and g.country:
             return g.country.lower()
-            
-        return "in"
     except Exception as e:
-        print(f"Location lookup error: {e}")
-        try:
-            import geocoder
-            g = geocoder.ip("me")
-            if g.ok and g.country:
-                return g.country.lower()
-        except:
-            pass
-        return "in"  # Default to India if the lookup fails
+        print(f"Location lookup (geocoder) failed: {e}")
+
+    return "in"  # Default to India if all lookups fail
 
 
 def get_news_everything_endpoint(category: str = "general", limit: int = 3) -> None:

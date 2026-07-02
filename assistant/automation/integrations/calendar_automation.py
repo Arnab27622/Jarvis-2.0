@@ -110,19 +110,32 @@ def add_calendar_event(topic):
         
     speak(f"I am parsing the time and scheduling {topic}.")
     
-    from assistant.core.llm_manager import manager
-    if manager and manager.gemini_client:
+    from assistant.core.config import config
+    api_key = config.groq_api_key
+    if api_key:
         try:
+            import requests
             now = datetime.datetime.now().astimezone().isoformat()
             prompt = f"Given the current local time is {now}, convert this natural language time '{time_text}' into a strict ISO 8601 datetime format WITH timezone offset (e.g., YYYY-MM-DDTHH:MM:SS+05:30). Output ONLY the ISO string, nothing else."
             
-            response = manager.gemini_client.models.generate_content(
-                model='gemini-3.1-flash-lite',
-                contents=prompt
-            )
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "max_tokens": 50
+            }
             
-            if response.text:
-                iso_time = response.text.strip().strip('"').strip("'")
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            
+            if 'choices' in result and len(result['choices']) > 0:
+                iso_time = result['choices'][0]['message']['content'].strip().strip('"').strip("'")
                 
                 dt_start = datetime.datetime.fromisoformat(iso_time)
                 dt_end = dt_start + datetime.timedelta(hours=1)
@@ -141,7 +154,7 @@ def add_calendar_event(topic):
                 speak("The event has been successfully added to your calendar.")
                 return
         except Exception as e:
-            print(f"Failed to parse time with LLM: {e}")
+            print(f"Failed to parse time with Groq LLM: {e}")
             
     speak("I couldn't understand the time format or failed to reach the server. The event was not scheduled.")
 

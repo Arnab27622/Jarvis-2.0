@@ -33,7 +33,6 @@ def validate_token() -> bool:
     
     if not token or not account_id:
         print("❌ CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID environment variable not set")
-        speak("Cloudflare API token or Account ID is not set. Please check your environment variables.")
         return False
 
     return True
@@ -126,8 +125,7 @@ def generate(
 
     except requests.exceptions.Timeout:
         error_msg = "API request timed out"
-        print(error_msg)
-        speak("The image generation is taking too long. Please try again.")
+        print("Image generation timed out after maximum retries.")
         return False, error_msg
 
     except requests.exceptions.HTTPError as e:

@@ -16,11 +16,9 @@ Provides two output channels:
 import sys
 import os
 import time
-import wave
 import queue
 import threading
 import uuid
-import numpy as np
 import sounddevice as sd
 from kokoro_onnx import Kokoro
 import asyncio
@@ -98,6 +96,7 @@ def play_ack_sound() -> None:
             pass  # Silently fail - this is just a UX enhancement
 
 # --- Queues & State ---
+mute_speak = False
 tts_queue = queue.Queue()             # Stage 1: text items waiting for audio generation
 _playback_queue = queue.Queue(maxsize=5)  # Stage 2: generated audio waiting for playback
 _is_tts_running = False
@@ -247,7 +246,7 @@ def _play_audio_item(text, audio, image, message_id):
             fallback_text = re.sub(r'```.*?(?:```|$)', '', text, flags=re.DOTALL).strip()
             if fallback_text:
                 print_animated_message(fallback_text)
-        except:
+        except Exception:
             pass
     finally:
         _current_message_id = None
@@ -303,6 +302,9 @@ def speak(text: str, image: str = None, message_id: str = None) -> None:
     Always queues text to TTS. Use for conversational content
     (LLM responses, weather, jokes, news, etc.).
     """
+    if mute_speak:
+        logger.info("[Muted speak] %s", text)
+        return
     if not _is_tts_running:
         start_tts_consumer()
     tts_queue.put((text, image, message_id))
@@ -323,6 +325,9 @@ def notify(text: str) -> None:
     Speaks when voice is idle, prints to console when voice is busy.
     In a future UI, this becomes a toast notification.
     """
+    if mute_speak:
+        logger.info("[Muted notify] %s", text)
+        return
     if _is_voice_busy or not tts_queue.empty():
         print(f"[Jarvis] {text}")
     else:
@@ -331,6 +336,9 @@ def notify(text: str) -> None:
 
 def speak_streaming(sentences: list[str]) -> None:
     """Streams a list of sentences to the TTS consumer."""
+    if mute_speak:
+        logger.info("[Muted speak_streaming]")
+        return
     if not _is_tts_running:
         start_tts_consumer()
         

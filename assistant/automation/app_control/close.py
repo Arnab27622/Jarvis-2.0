@@ -17,7 +17,7 @@ def close_command(app_name: Optional[str] = None) -> None:
     Otherwise, it triggers the Alt+F4 shortcut to close the active window.
     """
     if app_name:
-        notify(f"Closing {app_name}")
+        notify(f"Closed {app_name}")
         app_name_lower = app_name.lower()
         killed = False
         for proc in psutil.process_iter(['name']):

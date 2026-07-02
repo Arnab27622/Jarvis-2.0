@@ -54,17 +54,20 @@ class ImageManager:
             
             if "stability" in engine_name:
                 res = self._run_stability(prompt)
-                if res: return res
+                if res:
+                    return res
                 print("[ImageManager] Stability AI failed. Falling back...")
             
             elif "cloudflare" in engine_name:
                 res = self._run_cloudflare(prompt)
-                if res: return res
+                if res:
+                    return res
                 print("[ImageManager] Cloudflare failed. Falling back...")
                 
             elif "pollination" in engine_name:
                 res = self._run_pollinations(prompt)
-                if res: return res
+                if res:
+                    return res
                 print("[ImageManager] Pollinations failed. Falling back...")
         
         print("[ImageManager] Starting sequential fallback chain...")
@@ -79,7 +82,7 @@ class ImageManager:
                 
             print(f"[ImageManager] Engine {name} failed, trying next...")
 
-        speak("I'm sorry, but all of my image generation modules are currently unavailable.")
+        print("I'm sorry, but all of my image generation modules are currently unavailable.")
         return None
 
 image_manager = ImageManager()
