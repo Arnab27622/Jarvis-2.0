@@ -6,6 +6,7 @@ import AlertManager from './components/AlertManager';
 import SettingsPanel from './components/SettingsPanel';
 import AuthScreen from './components/AuthScreen';
 import { Terminal, Loader, Settings, Upload } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type LogEntry = {
   id: string;
@@ -337,17 +338,24 @@ function App() {
         <SettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         
         {/* Permission Request Modal */}
-        {permissionRequest && (
-          <div style={{
-            position: 'absolute', bottom: '20px', right: '20px', zIndex: 1000,
-            display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end'
-          }}>
-            <div className="hud-panel widget" style={{ 
-              maxWidth: '400px', 
-              border: '1px solid var(--alert-glow)',
-              backgroundColor: 'rgba(20, 5, 5, 0.9)',
-              boxShadow: '0 8px 32px rgba(255, 75, 75, 0.2)'
-            }}>
+        <AnimatePresence>
+          {permissionRequest && (
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              style={{
+                position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000,
+                display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end'
+              }}
+            >
+              <div className="hud-panel widget" style={{ 
+                maxWidth: '400px', 
+                border: '1px solid var(--alert-glow)',
+                backgroundColor: 'rgba(20, 5, 5, 0.9)',
+                boxShadow: '0 8px 32px rgba(255, 75, 75, 0.2)'
+              }}>
               <h3 style={{ color: 'var(--alert-glow)', borderBottom: '1px solid rgba(255, 75, 75, 0.2)', paddingBottom: '10px', fontSize: '16px' }}>
                 SECURITY OVERRIDE REQUEST
               </h3>
@@ -371,8 +379,9 @@ function App() {
                 >APPROVE</button>
               </div>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   );

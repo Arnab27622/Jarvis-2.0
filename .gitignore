@@ -26,6 +26,9 @@ data/logs
 data/brain_data/chroma_db/
 data/brain_data/documents/
 *.joblib
+.ruff_cache
+.mypy_cache
 data/credentials/
 GMAIL_SETUP_GUIDE.md
 GOOGLE_CALENDAR_SETUP_GUIDE.md
+*.backup

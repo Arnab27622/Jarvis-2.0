@@ -54,7 +54,7 @@ const SettingsPanel = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{
               position: 'fixed', top: 0, right: 0, width: '350px', height: '100vh',
               background: 'var(--panel-bg)', borderLeft: '1px solid var(--border-color)',
@@ -98,9 +98,9 @@ const SettingsPanel = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
                 value={settings.theme}
                 onChange={e => setSettings({...settings, theme: e.target.value})}
               >
-                <option value="cyan">IRON MAN HUD (CYAN)</option>
-                <option value="amber">WARM AMBER</option>
-                <option value="minimal">MINIMAL LIGHT</option>
+                <option value="cyan">COLD LUXURY (DEFAULT)</option>
+                <option value="amber">TERMINAL BRUTALISM</option>
+                <option value="minimal">EDITORIAL MINIMALIST</option>
                 <option value="oled">OLED BLACK</option>
               </select>
             </div>

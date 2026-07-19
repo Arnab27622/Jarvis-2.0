@@ -112,5 +112,5 @@ class BaseAgent:
             logger.info(f"[{self.name}] Agent executing query...")
             return await asyncio.to_thread(_execute)
         except Exception as e:
-            logger.error(f"[{self.name}] Error during execution: {e}")
+            logger.exception(f"[{self.name}] Error during execution: {e}")
             return None

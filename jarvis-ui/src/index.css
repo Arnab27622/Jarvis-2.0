@@ -1,38 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..600&family=Geist+Mono:wght@300..600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 :root {
   --primary-glow: #00f0ff;
   --secondary-glow: #0077ff;
-  --bg-color: #050810;
-  --panel-bg: rgba(5, 12, 25, 0.7);
-  --border-color: rgba(0, 240, 255, 0.3);
-  --text-primary: #e0ffff;
-  --text-secondary: #00a2ff;
+  --bg-color: #050508;
+  --panel-bg: rgba(255, 255, 255, 0.02);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #888899;
   --alert-glow: #ff4b4b;
-  --font-main: 'Inter', sans-serif;
-  --font-mono: 'Share Tech Mono', monospace;
+  --font-main: 'Geist', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+  --panel-radius: 12px;
+  --panel-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.6);
+  --hud-text-shadow: none;
 }
 
 [data-theme="amber"] {
   --primary-glow: #ff9900;
   --secondary-glow: #cc5500;
-  --bg-color: #1a0f00;
-  --panel-bg: rgba(26, 15, 0, 0.7);
-  --border-color: rgba(255, 153, 0, 0.3);
-  --text-primary: #ffebcc;
-  --text-secondary: #ff9900;
+  --bg-color: #000000;
+  --panel-bg: transparent;
+  --border-color: #333333;
+  --text-primary: #ff9900;
+  --text-secondary: #cc5500;
   --alert-glow: #ff0000;
+  --panel-radius: 0px;
+  --panel-shadow: none;
+  --hud-text-shadow: none;
 }
 
 [data-theme="minimal"] {
-  --primary-glow: #0055ff;
-  --secondary-glow: #0022cc;
-  --bg-color: #f0f5ff;
-  --panel-bg: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(0, 85, 255, 0.2);
-  --text-primary: #112244;
-  --text-secondary: #0055ff;
-  --alert-glow: #dd0000;
+  --primary-glow: #111111;
+  --secondary-glow: #555555;
+  --bg-color: #f7f5f1;
+  --panel-bg: rgba(255, 255, 255, 0.7);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --text-primary: #1a1814;
+  --text-secondary: #5a554c;
+  --alert-glow: #cc0000;
+  --panel-radius: 4px;
+  --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --hud-text-shadow: none;
 }
 
 [data-theme="oled"] {
@@ -40,11 +50,15 @@
   --secondary-glow: #aaaaaa;
   --bg-color: #000000;
   --panel-bg: #000000;
-  --border-color: rgba(255, 255, 255, 0.2);
+  --border-color: rgba(255, 255, 255, 0.15);
   --text-primary: #ffffff;
-  --text-secondary: #cccccc;
+  --text-secondary: #888888;
   --alert-glow: #ff3333;
+  --panel-radius: 8px;
+  --panel-shadow: none;
+  --hud-text-shadow: none;
 }
+
 
 * {
   box-sizing: border-box;
@@ -57,13 +71,11 @@ body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   overflow: hidden;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(0, 50, 100, 0.1) 0%, transparent 60%),
-    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
-  background-size: 100% 100%, 30px 30px, 30px 30px;
+    none;
+  
 }
 
 /* Dynamic Animated Background Mesh */
@@ -76,8 +88,8 @@ body {
   z-index: -1;
   pointer-events: none;
   background: 
-    radial-gradient(circle at 15% 50%, rgba(var(--primary-glow), 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(var(--secondary-glow), 0.08) 0%, transparent 50%);
+    radial-gradient(circle at 15% 50%, color-mix(in srgb, var(--primary-glow) 4%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, color-mix(in srgb, var(--secondary-glow) 4%, transparent) 0%, transparent 50%);
   animation: mesh-breath 12s ease-in-out infinite alternate;
 }
 
@@ -86,24 +98,11 @@ body {
   100% { opacity: 1; transform: scale(1.05); }
 }
 
-/* CRT Scanline effect */
-body::after {
-  content: " ";
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-  z-index: 2;
-  background-size: 100% 2px, 3px 100%;
-  pointer-events: none;
-}
+
 
 .hud-container {
   position: relative;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -120,35 +119,18 @@ body::after {
 .hud-panel {
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 240, 255, 0.05);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(24px);
+  
   position: relative;
   overflow: hidden;
-  border-radius: 4px;
-  transition: box-shadow 0.3s ease;
+  border-radius: var(--panel-radius);
+  transition: box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hud-panel:hover {
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02);
-}
-
-/* Decorative corners */
-.hud-panel::before, .hud-panel::after {
-  content: '';
-  position: absolute;
-  width: 15px;
-  height: 15px;
-  border: 2px solid var(--primary-glow);
-  transition: all 0.3s ease;
-}
-
-.hud-panel::before {
-  top: -1px; left: -1px;
-  border-right: none; border-bottom: none;
-}
-.hud-panel::after {
-  bottom: -1px; right: -1px;
-  border-left: none; border-top: none;
+  box-shadow: var(--panel-shadow);
+  transform: translateY(-1px);
 }
 
 .hud-header {
@@ -163,7 +145,7 @@ body::after {
 
 .hud-header h1 {
   font-size: 24px;
-  text-shadow: 0 0 10px var(--primary-glow);
+  text-shadow: var(--hud-text-shadow);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -196,7 +178,7 @@ body::after {
 
 .chat-log::-webkit-scrollbar,
 .hud-sidebar::-webkit-scrollbar {
-  width: 4px; /* Make scrollbar visible but thin */
+  width: 6px; /* Slightly thicker for usability but thin */
 }
 
 .chat-log::-webkit-scrollbar-track,
@@ -208,6 +190,8 @@ body::after {
 .hud-sidebar::-webkit-scrollbar-thumb {
   background: var(--primary-glow);
   border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
   box-shadow: 0 0 10px var(--primary-glow);
 }
 
@@ -215,6 +199,7 @@ body::after {
   display: flex;
   gap: 15px;
   align-items: flex-start;
+  margin-bottom: 8px;
   animation: slideIn 0.3s ease-out;
 }
 
@@ -223,8 +208,8 @@ body::after {
 }
 
 .log-entry.jarvis {
-  color: var(--primary-glow);
-  text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+  color: var(--text-primary);
+  text-shadow: var(--hud-text-shadow);
 }
 
 .log-icon {
@@ -252,7 +237,7 @@ body::after {
 .log-content h1, .log-content h2, .log-content h3 {
   margin-top: 10px;
   margin-bottom: 10px;
-  color: var(--primary-glow);
+  color: var(--text-primary);
 }
 
 .hud-sidebar {
@@ -272,22 +257,22 @@ body::after {
 
 @keyframes glitch {
   0% {
-    transform: translate(0)
+    transform: translate3d(0, 0, 0)
   }
   20% {
-    transform: translate(-5px, 5px)
+    transform: translate3d(-5px, 5px, 0)
   }
   40% {
-    transform: translate(-5px, -5px)
+    transform: translate3d(-5px, -5px, 0)
   }
   60% {
-    transform: translate(5px, 5px)
+    transform: translate3d(5px, 5px, 0)
   }
   80% {
-    transform: translate(5px, -5px)
+    transform: translate3d(5px, -5px, 0)
   }
   100% {
-    transform: translate(0)
+    transform: translate3d(0, 0, 0)
   }
 }
 
@@ -329,12 +314,13 @@ body::after {
   font-size: 18px;
   padding: 10px 5px;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hud-input:focus {
-  border-bottom-color: var(--primary-glow);
-  box-shadow: 0 10px 15px -5px rgba(0, 240, 255, 0.2), inset 0 -2px 10px -2px rgba(0, 240, 255, 0.1);
+  border-bottom-color: var(--text-primary);
+  box-shadow: 0 10px 15px -5px color-mix(in srgb, var(--primary-glow) 20%, transparent), inset 0 -2px 10px -2px color-mix(in srgb, var(--primary-glow) 10%, transparent);
+  background: rgba(0,0,0,0.2);
 }
 
 .hud-input option {
@@ -345,19 +331,20 @@ body::after {
 .hud-btn {
   background: rgba(0, 240, 255, 0.1);
   border: 1px solid var(--primary-glow);
-  color: var(--primary-glow);
+  color: var(--text-primary);
   padding: 10px 20px;
   cursor: pointer;
   font-family: inherit;
   font-size: 16px;
   text-transform: uppercase;
-  transition: all 0.2s;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none;
+  border-radius: var(--panel-radius);
 }
 
 .hud-btn:hover {
   background: rgba(0, 240, 255, 0.2);
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+  box-shadow: none;
   transform: scale(1.02);
 }
 
@@ -379,7 +366,7 @@ body::after {
 
 /* Toasts */
 .toast-container {
-  position: absolute;
+  position: fixed;
   top: 80px;
   right: 30px;
   display: flex;
@@ -391,6 +378,7 @@ body::after {
 .toast {
   background: var(--panel-bg);
   border-left: 4px solid var(--primary-glow);
+  backdrop-filter: blur(12px);
   padding: 15px 20px;
   color: var(--text-primary);
   display: flex;
@@ -437,7 +425,7 @@ body::after {
 .battery-text {
   font-size: 32px;
   font-weight: bold;
-  text-shadow: 0 0 10px var(--primary-glow);
+  text-shadow: var(--hud-text-shadow);
   position: absolute;
 }
 
@@ -538,7 +526,7 @@ body::after {
   left: 0;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 1px rgba(0, 240, 255, 0.6)) drop-shadow(0 0 5px rgba(0, 240, 255, 0.3));
+  filter: drop-shadow(0 0 1px color-mix(in srgb, var(--primary-glow) 60%, transparent)) drop-shadow(0 0 5px color-mix(in srgb, var(--primary-glow) 30%, transparent));
 }
 
 .svg-layer-1 { --z-offset: 40px; animation: spin 6s linear infinite; transform-origin: center; }
@@ -595,10 +583,10 @@ body::after {
 }
 
 .auth-status-text {
-  color: var(--primary-glow);
+  color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 18px;
   letter-spacing: 4px;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+  text-shadow: var(--hud-text-shadow);
 }

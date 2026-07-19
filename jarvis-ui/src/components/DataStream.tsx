@@ -135,14 +135,14 @@ const TypewriterText: React.FC<{ text: string, duration?: number }> = ({ text, d
                 style={vscDarkPlus as any}
                 language={match[1]}
                 PreTag="div"
-                customStyle={{ width: '100%', overflowX: 'auto', boxSizing: 'border-box', maxWidth: '100%', paddingTop: '30px' }}
+                customStyle={{ width: '100%', overflowX: 'auto', boxSizing: 'border-box', maxWidth: '100%', paddingTop: '30px', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.2)' }}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             </div>
           ) : (
-            <code className={className} style={{background: 'rgba(0, 240, 255, 0.1)', padding: '2px 4px', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-word'}} {...props}>
+            <code className={className} style={{background: 'rgba(0, 240, 255, 0.1)', padding: '2px 4px', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word'}} {...props}>
               {children}
             </code>
           );
@@ -197,14 +197,15 @@ const DataStream: React.FC<DataStreamProps> = ({ logs, isProcessing }) => {
         />
       </div>
       <div className="chat-log" ref={scrollRef}>
-        <AnimatePresence initial={false}>
-          {filteredLogs.map((log) => (
+        <div className="chat-log-content">
+          <AnimatePresence initial={false}>
+            {filteredLogs.map((log) => (
             <motion.div 
               key={log.id} 
               className={`log-entry ${log.sender}`}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20 }}
               title={new Date(log.timestamp).toLocaleTimeString()}
             >
             <div className="log-icon">
@@ -242,6 +243,7 @@ const DataStream: React.FC<DataStreamProps> = ({ logs, isProcessing }) => {
           ))}
           {isProcessing && <TypingIndicator key="typing-indicator" />}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );

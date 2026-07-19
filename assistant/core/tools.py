@@ -118,7 +118,7 @@ def execute_terminal_command(command: str) -> str:
     return output
 
 @llm_tool
-def execute_code(language: str, code: str) -> str:
+def execute_code(language: str, code: str = None, default_code: str = None) -> str:
     """
     Executes a multi-line script on the user's local machine by saving it to a temporary file,
     running it, capturing the output, and then deleting the file.
@@ -128,6 +128,10 @@ def execute_code(language: str, code: str) -> str:
         language: The programming language of the code. Supported: 'python', 'javascript', 'node', 'batch', 'powershell', 'c', 'c++', 'cpp'.
         code: The complete code to execute.
     """
+    code = code or default_code
+    if not code:
+        return "Error: No code provided."
+        
     language = language.lower()
     
     lang_config = {

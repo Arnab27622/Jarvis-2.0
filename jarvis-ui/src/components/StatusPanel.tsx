@@ -31,7 +31,7 @@ const StatusPanel: React.FC<StatusPanelProps> = ({ battery, isListening }) => {
               strokeLinecap="round"
               initial={{ strokeDasharray: "0 440" }}
               animate={{ strokeDasharray: `${(battery.percent / 100) * 440} 440` }}
-              transition={{ duration: 1, ease: "easeOut" }}
+              transition={{ type: "spring", stiffness: 50, damping: 20 }}
               style={{ transformOrigin: 'center', transform: 'rotate(-90deg)' }}
             />
           </svg>

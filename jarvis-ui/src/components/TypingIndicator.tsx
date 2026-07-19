@@ -13,7 +13,7 @@ const TypingIndicator = () => {
         <motion.div
           key={i}
           animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+          transition={{ duration: 1, repeat: Infinity, repeatType: "reverse", ease: "easeInOut", delay: i * 0.15 }}
           style={{
             width: '6px',
             height: '6px',

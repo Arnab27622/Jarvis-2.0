@@ -135,7 +135,14 @@ async def update_settings(request: Request):
     
     # Broadcast changes to active clients only if they actually changed
     if data.get("theme") and data.get("theme") != old_theme:
-        broadcast_event(EventType.NOTIFY, {"text": f"Theme updated to {data['theme'].upper()}"})
+        theme_names = {
+            "cyan": "COLD LUXURY",
+            "amber": "TERMINAL BRUTALISM",
+            "minimal": "EDITORIAL MINIMALIST",
+            "oled": "OLED BLACK"
+        }
+        friendly_name = theme_names.get(data['theme'], data['theme'].upper())
+        broadcast_event(EventType.NOTIFY, {"text": f"Theme updated to {friendly_name}"})
     if data.get("tts_voice") and data.get("tts_voice") != old_voice:
         broadcast_event(EventType.NOTIFY, {"text": f"Voice updated to {data['tts_voice'].upper()}"})
         

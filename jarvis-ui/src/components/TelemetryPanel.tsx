@@ -42,7 +42,7 @@ const TelemetryPanel: React.FC = () => {
         <motion.div 
           style={{ background: color, height: '100%', boxShadow: `0 0 10px ${color}` }}
           animate={{ width: `${value}%` }}
-          transition={{ ease: "easeOut", duration: 0.5 }}
+          transition={{ type: "spring", stiffness: 100, damping: 20 }}
         />
       </div>
       <span style={{ minWidth: '40px', textAlign: 'right' }}>{Math.round(value)}%</span>

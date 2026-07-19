@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthScreenProps {
   statusText: string;
@@ -215,7 +216,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ statusText }) => {
       </div>
 
       <div className="auth-status-container">
-        <h2 className="auth-status-text glitch" data-text={statusText}>{statusText}</h2>
+        <AnimatePresence mode="wait">
+          <motion.h2 
+            key={statusText}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="auth-status-text glitch" 
+            data-text={statusText}
+          >
+            {statusText}
+          </motion.h2>
+        </AnimatePresence>
       </div>
     </div>
   );
